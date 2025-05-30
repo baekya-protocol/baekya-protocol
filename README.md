@@ -6,18 +6,18 @@
 
 <p align="center"><i>A decentralized protocol for contribution-based issuance that guarantees contributors Basic and Political rights</i></p>
 
-### [Protocol Overview](https://github.com/baekya-protocol/baekya-protocol/blob/main/docs/protocol_overview.md)
+### [개요](https://github.com/baekya-protocol/baekya-protocol/blob/main/docs/protocol_overview_kr.md)
 
-The Baekya Protocol guarantees the right to distribution, the right to survival, and the right to political participation by issuing basic and political tokens based on the principle of “equivalent exchange between contribution and guarantee” between individuals and the community.
+백야 프로토콜은 구성원과 공동체간의 '기여-보장 등가교환'의 원리를 기반으로 화폐토큰과 참정토큰을 발행함으로써 기여분배권 및 기여생존권, 기여참정권을 보장합니다.
 
-### Advantages
-“Circular Economy”, “Sustainable Guarantee”, “Participatory Governance”
+### 이점
+"순환경제", "지속보장", "참여정치"
 
-1. By issuing currency directly to economic agents in proportion to their productive contributions, a fundamental engine of production is created. This ensures that currency issuance is tied to real economic activity and circulates within the production market, preventing economic stagnation.
-2. The total amount of B-tokens issued based on each member’s contributive activity is translated into an hourly cumulative issuance system, functioning as a continuous guarantee of survival that can effectively replace traditional pension systems.
-3. P-tokens are issued to top contributors over a defined period, forming a rational social contract where “those who contribute to the community participate in its decision-making.”
+1. 경제주체에게 화폐가 발행됨으로써 생산원동력이 마련되고, 이에 따라 화폐는 생산시장 자체에서 발행되어 순환하므로 경제가 침체되지 않습니다.
+2. 구성원의 기여적 경제활동으로 산출된 화폐 발행량을 "기여에 대한 지속적인 생존권보장"으로써 시간당 발행량으로 환산하여 연금제도를 대체합니다.
+3. 일정기간동안의 공동체 상위 기여자에게 참정토큰을 발행하여 "공동체 기여자가 곧 공동체 의사결정 참여자"라는 합리적인 사회계약을 구축합니다.
 
-### Architecture
+### 설계
 
 [Core Engine](https://github.com/baekya-protocol/baekya-protocol/tree/main/core)
 
@@ -55,18 +55,17 @@ The Baekya Protocol guarantees the right to distribution, the right to survival,
 - Wallet App
 - DAO Portal
 
-### Start
+### 시작
 
 ```bash
 git clone https://github.com/baekya-org/baekya-protocol.git
 cd baekya-protocol
 ```
-### Contributing
 
-- You can fork this repository and open a Pull Request with your improvements, fixes, or proposals.
-- If your PR is merged, you’ll be recognized as a contributor.
-- We operate with an open membership model — active contributors may be invited as collaborators.
+### 기여
 
-This project follows a contribution-equals-membership principle:
-Meaningful contributions are the path to joining the Baekya community.
+- 누구나 이 레포지토리를 포크하여 수정, 제안, 개선 내용을 Pull Request로 제출할 수 있습니다.
+- PR이 머지되면 공식 기여자로 인정되며, 기여 활동은 자동으로 기록되고 기여도에 따라 B-토큰이 발행됩니다.
+- 백야 프로토콜은 “기여 = 구성원”이라는 원칙을 따릅니다. 기여자는 백야 DAO의 일원이 되어 거버넌스와 시스템 설계에 참여할 수 있습니다.
+- 시스템은 폐쇄적으로 운영되지 않으며, 모든 중요한 결정은 구성원의 합의로 이루어집니다.
 
