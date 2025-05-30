@@ -34,7 +34,7 @@
 
 ### [코어엔진](https://github.com/baekya-protocol/baekya-protocol/blob/main/core/README.md)
 
-1. Blockchain Engine: 백야 프로토콜의 근간이 되는 기여증명 합의 메커니즘 기반의 자체 블록체인 엔진입니다. 이는 CEA-프레임워크와 긴밀하게 연동되어 작동하며, 안정적이고 효율적인 런타임 및 P2P 네트워킹이 뒷받침됩니다.
+1. Blockchain Engine: 백야 프로토콜의 근간이 되는 기여증명 합의 메커니즘 기반의 자체 블록체인 엔진입니다. 이는 기여증명 프레임워크와 긴밀하게 연동되어 작동하며, 안정적이고 효율적인 런타임 및 P2P 네트워킹이 뒷받침됩니다.
 2. Gas System: 프로토콜의 독립성을 위해 B-Token을 사용하는 자체 가스시스템을 구현합니다. 가스비 계산 로직, 수수료 분배 메커니즘을 자체적으로 구축하며, 검증자 보상 풀(Validation Reward Pool) 및 SPA 보상 풀(SPA Reward Pool) 등으로 구성된 가스 풀(gas-pools) 관리가 핵심입니다.
 3. Node Manager: 검증자 노드, 전체 노드, 경량 노드의 역할과 기능을 명확히 정의하고, 각 노드 운영에 필요한 소프트웨어를 개발합니다.
 
