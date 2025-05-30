@@ -2,13 +2,13 @@
   <img src="https://github.com/user-attachments/assets/da0ebf98-0ebe-434b-b361-f4bfc5e2bedd" alt="Baekya Profile" width="200"/>
 </p>
 
-<h1 align="center">Baekya Protocol</h1>
+<h1 align="center">백야 프로토콜</h1>
 
-<p align="center"><i>A decentralized protocol for contribution-based issuance that guarantees contributors Basic and Political rights</i></p>
+<p align="center"><i>기여자의 기여분배권, 기여생존권, 기여참정권을 보장하는 새로운 사회 프로토콜</i></p>
 
-### [개요](https://github.com/baekya-protocol/baekya-protocol/blob/main/docs/protocol_overview_kr.md)
+### 개요
 
-백야 프로토콜은 구성원과 공동체간의 '기여-보장 등가교환'의 원리를 기반으로 화폐토큰과 참정토큰을 발행함으로써 기여분배권 및 기여생존권, 기여참정권을 보장합니다.
+백야 프로토콜은 구성원과 공동체간의 '기여-보장 등가교환'의 원리를 기반으로 화폐토큰과 참정토큰을 발행함으로써 기여분배권 및 기여생존권, 기여참정권을 보장합니다. 자세한 개요 및 설계구조는 [프로토콜 개요](https://github.com/baekya-protocol/baekya-protocol/blob/main/docs/protocol_overview_kr.md)를 참고하세요.
 
 ### 이점
 "순환경제", "지속보장", "참여정치"
