@@ -1,1 +1,1 @@
-# did-identity
+# DID Identity
