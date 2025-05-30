@@ -1,1 +1,1 @@
-# dao-governance
+# DAO Governance
