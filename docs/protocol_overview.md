@@ -28,9 +28,9 @@ The Baekya Protocol guarantees the right to distribution, survival, and politica
 2. The total amount of B-tokens issued based on each member’s contributive activity is translated into an hourly cumulative issuance system, functioning as a continuous guarantee of survival that can effectively replace traditional pension systems.
 3. P-tokens are issued to top contributors over a defined period, forming a rational social contract where “those who contribute to the community participate in its decision-making.”
 
-# architecture
+# Architecture
 
-### Flow map
+### Flow Map
 
 ![protocol diagram](https://github.com/user-attachments/assets/5c641d00-4917-43e1-9529-158a521bcda7)
 
@@ -38,11 +38,11 @@ When a Contributive Economic Activity (CEA) is triggered, a transaction is gener
 
 ### [Core Engine](https://github.com/baekya-protocol/baekya-protocol/blob/main/core/README.md)
 
-1. Blockchain Engine: The foundational layer of the Baekya Protocol, built on a proprietary blockchain engine with a contribution-based consensus mechanism. It integrates closely with the CEA framework and ensures reliable runtime and peer-to-peer networking.
+1. Blockchain Engine: The foundational layer of the Baekya Protocol, built on a proprietary blockchain engine with a contribution-based consensus mechanism. It integrates closely with the PoC framework and ensures reliable runtime and peer-to-peer networking.
 2. Gas System: Implements a self-contained gas system based on B-tokens, preserving the protocol's independence. It includes gas calculation logic, fee distribution mechanisms, and manages the gas pool consisting of the Validator Reward Pool and SPA Reward Pool.
 3. Node Manager: Clearly defines the roles and responsibilities of validator, full, and light nodes. Develops and maintains node software required for operation and coordination.
 
-### [CRCM](https://github.com/baekya-protocol/baekya-protocol/blob/main/crcm/README.md)
+### [PoC Framework](https://github.com/baekya-protocol/baekya-protocol/blob/main/crcm/README.md)
 
 1. Activity Detection: Detects contributive economic activities (labor, consumption, production, social contribution) and records them on-chain via relevant transactions. Supports integration with off-chain detectors via an integration layer.
 2. Proof of Contribution: Based on the detected data, generates verifiable PoC. Incorporates multi-signature validation, reputation systems, and anti-abuse mechanisms to prevent manipulation.
