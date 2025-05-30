@@ -21,7 +21,7 @@
 "순환경제", "지속보장", "참여정치"
 
 1. 경제주체에게 화폐가 발행됨으로써 생산원동력이 마련되고, 이에 따라 화폐는 생산시장 자체에서 발행되어 순환하므로 경제가 침체되지 않습니다.
-2. 구성원의 기여적 경제활동으로 산출된 화폐 발행량을 "기여에 대한 지속적인 생존권보장"으로써 시간당 발행량으로 환산, 누적하여 연금제도를 대체하게 됩니다.
+2. 구성원의 기여적 경제활동으로 산출된 화폐 발행량을 "기여에 대한 지속적인 생존권보장"으로써 시간당 발행량으로 환산하여 연금제도를 대체합니다.
 3. 일정기간동안의 공동체 상위 기여자에게 참정토큰을 발행하여 "공동체 기여자가 곧 공동체 의사결정 참여자"라는 합리적인 사회계약을 구축합니다.
 
 # 설계
@@ -32,29 +32,44 @@
 
 기여적 경제활동(CEA) 트리거로 인해 트랜잭션이 발생하고, 기여증명(PoC) 발행 메커니즘인 CRCM 모듈을 통해 BMR, TCCM 산출 및 반영되어 DID-wallet에 발행됩니다. 발행된 B-token은 다시 CEA에 사용되어 순환구조를 형성하고, 일부는 네트워크상 트랜잭션 수수료에 사용되어 Gas Pool(VR Pool, SPAR Pool)에 축적됩니다. TCCM에 따라 조건적으로 발행된 P-token은 B-token과 교환되거나, DAO-consortium의 선택적 정치활동(SPA)에 사용됩니다.
 
-### CRCM
+### [코어엔진](https://github.com/baekya-protocol/baekya-protocol/blob/main/core/README.md)
 
+1. Blockchain Engine: 백야 프로토콜의 근간이 되는 기여증명 합의 메커니즘 기반의 자체 블록체인 엔진입니다. 이는 CEA-프레임워크와 긴밀하게 연동되어 작동하며, 안정적이고 효율적인 런타임 및 P2P 네트워킹이 뒷받침됩니다.
+2. Gas System: 프로토콜의 독립성을 위해 B-Token을 사용하는 자체 가스시스템을 구현합니다. 가스비 계산 로직, 수수료 분배 메커니즘을 자체적으로 구축하며, 검증자 보상 풀(Validation Reward Pool) 및 SPA 보상 풀(SPA Reward Pool) 등으로 구성된 가스 풀(gas-pools) 관리가 핵심입니다.
+3. Node Manager: 검증자 노드, 전체 노드, 경량 노드의 역할과 기능을 명확히 정의하고, 각 노드 운영에 필요한 소프트웨어를 개발합니다.
 
+### [기여증명](https://github.com/baekya-protocol/baekya-protocol/blob/main/crcm/README.md)
 
+activity-detection:  다양한 형태의 기여적 경제활동(노동, 소비, 생산, 사회적 기여)을 정확하게 감지하고 데이터를 수집하는 정교한 메커니즘을 개발합니다. 필요시 외부 시스템(IoT, 생체인증, 위치 서비스 등)과의 연동을 위한 integration-layer 를 구축합니다.
+proof-of-contribution:  감지된 경제활동 데이터를 기반으로 신뢰할 수 있는 기여증명(PoC)을 생성하고, 이를 검증하는 시스템을 구축합니다. 다중서명 검증, 평판 시스템 등을 활용하여 조작 및 어뷰징을 방지합니다.
+contribution-calculator (CRCM):  생성된 PoC를 바탕으로 각 구성원의 기여도를 정량적으로 산출하는 핵심 계산 엔진(CRCM)을 개발합니다. 이는 B-Token 발행량의 근거가 되는 BMR(기초화폐요구량)과 P-Token 발행량의 근거가 되는 TCCM(참정토큰기여량)을 계산하며, 지역별 상황, 시간적 가중치, 기여 카테고리 간 균형 등을 고려한 정교한 로직이 필요합니다.
 
+### [토큰 생태계](https://github.com/baekya-protocol/baekya-protocol/blob/main/token/README.md)
 
+b-token (화폐토큰 시스템):  CRCM에서 산출된 BMR을 기반으로 B-Token을 발행하는 엔진(minting-engine.rs)을 개발합니다.  기여에 대한 지속적인 생존권 보장을 위해 연금 누적기(pension-accumulator.rs)  기능을 구현하여 시간당 발행량을 누적합니다.
+p-token (참정토큰 시스템):  CRCM에서 산출된 TCCM을 기반으로 P-Token을 조건부로 발행하는 엔진(conditional-minter.rs)을 개발합니다.  투표권 계산 로직(voting-power-calc.rs) 과 토큰의 시간 감쇠 메커니즘(decay-mechanism.rs) 을 통해 공정하고 활발한 거버넌스 참여를 유도합니다.
+token-bridge: B-Token과 P-Token 간의 교환 기능을 제공하여 토큰 활용성을 높입니다.
+economic-models:  인플레이션 제어, 화폐 유통 속도 추적, 시스템 안정성 확보를 위한 경제 모델을 지속적으로 연구하고 프로토콜 파라미터에 반영합니다.
 
+### [분산조직 거버넌스](https://github.com/baekya-protocol/baekya-protocol/blob/main/governance/README.md)
 
+voting-system:  P-Token을 활용한 직접민주주의 방식의 투표 시스템을 구축합니다. 제안의 생명주기 관리, 투표 집계, 정족수 계산 등의 기능을 포함합니다.
+proposal-engine:  커뮤니티 구성원이 프로토콜 변경이나 개선에 대한 제안을 제출하고, 이에 대한 검증, 영향도 평가, 비용 추정, 실행 계획 등을 관리하는 시스템을 개발합니다.
+spa-framework (선택적 정치활동 프레임워크):  공동체 운영에 필요한 특정 정치적 활동을 정의하고, 이에 대한 참여 추적, P-Token 기반의 보상 분배, 위임 관리 기능을 구현합니다.
+governance-rules:  프로토콜의 헌법, 주요 정책 변경을 위한 수정 절차, 비상 상황 발생 시 대응 프로토콜, 갈등 해결 메커니즘 등을 코드 또는 명문화된 규칙으로 정의합니다.
 
+### [분산신원 지갑](https://github.com/baekya-protocol/baekya-protocol/blob/main/identity/README.md)
 
+identity-core:  각 구성원의 기여와 보장을 기록하고 관리하기 위한 안전하고 신뢰할 수 있는 분산신원(DID) 시스템을 구축합니다. DID 레지스트리, 신원 관리, 키 순환 및 복구 메커니즘이 포함됩니다.
+wallet-engine:  사용자가 자신의 DID를 관리하고, B-Token과 P-Token을 안전하게 보관하며, CEA(기여적 경제활동) 보고, 트랜잭션 서명 및 전송 등의 기능을 수행할 수 있는 지갑의 핵심 로직을 개발합니다.
+privacy-layer:  영지식 증명, 선택적 정보 공개 등의 기술을 활용하여 사용자의 프라이버시를 보호하면서도 필요한 기여 정보는 투명하게 검증될 수 있도록 합니다.
 
+### [어플리케이션](https://github.com/baekya-protocol/baekya-protocol/blob/main/app/README.md)
 
-
-
-
-
-
-
-
-
-
-
-
+wallet-app:  did-identity의 wallet-engine을 기반으로 사용자들이 CEA를 손쉽게 기록하고, 토큰을 관리하며, 거버넌스에 참여할 수 있는 직관적인 모바일, 웹, 데스크톱 지갑 애플리케이션을 개발합니다.
+dao-portal:  DAO 거버넌스 활동(제안 제출 및 토론, 투표, SPA 참여 등)을 위한 사용자 친화적인 웹 포털을 구축합니다.
+기타 merchant-ecosystem, community-platform  등은 프로토콜의 실제 사용성을 높이고 생태계를 확장하는 데 기여할 애플리케이션입니다.
+기타 지원 폴더 (development-tools, research-simulation, testing-framework, deployment-ops, configuration, .github, legal-compliance, internationalization )
 
 
 
