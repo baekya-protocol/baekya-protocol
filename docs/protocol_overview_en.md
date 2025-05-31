@@ -70,3 +70,19 @@ When a Contributive Economic Activity (CEA) is triggered, a transaction is gener
 
 1. Wallet App: Based on the wallet engine, this application enables users to easily record CEAs, manage tokens, and participate in governance. Available on mobile, web, and desktop platforms.
 2. DAO Portal: A user-friendly web portal for participating in DAO governance activities including proposal submission, discussions, voting, and SPA engagement.
+
+### DAPP UI Example
+
+![ui 예시](https://github.com/user-attachments/assets/08acd0c3-17c8-4c33-845c-811567ec9cae)
+
+# Significance
+
+A credit-based monetary system leads to wealth polarization and economic stagnation, while representative democracy renders timely and accurate feedback on community issues virtually impossible. These structural flaws ultimately paralyze social security systems and undermine the foundations of communal sustainability.
+
+The Baekya Protocol presents a practical alternative aimed at breaking this vicious cycle by proposing a social structure where contribution and distribution, contribution and survival, and contribution and governance are integrally connected.
+
+To achieve this, Baekya tokenizes the essential rights required for maintaining a community, establishes issuance and usage standards based on individual contributions, and introduces a decentralized social protocol accessible to all members.
+
+B-Tokens guarantee distribution and survival, while P-Tokens ensure participatory governance. All functions are implemented on a decentralized application (DApp), enabling the operation of a society for all—without reliance on any central authority.
+
+![의의](https://github.com/user-attachments/assets/350a28f6-60d7-4106-a3e8-5f794d3e9328)
