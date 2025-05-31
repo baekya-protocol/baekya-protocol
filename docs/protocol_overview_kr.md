@@ -71,7 +71,8 @@
 
 ### DAPP UI 예시
 
-![ui 예시](https://github.com/user-attachments/assets/a183de2a-19c0-47ba-9baa-95c85e4300d4)
+![ui 예시](https://github.com/user-attachments/assets/00b97401-797f-421c-8ba0-717c0b6e54d4)
+
 
 # 의의
 
@@ -80,4 +81,5 @@
 이를 위해 공동체유지에 필수적인 권한을 토큰화하고, 기여에 기반한 적절한 발행기준과 사용기준을 설정하여 전체 구성원에게 분산화한 새로운 사회 프로토콜을 제시합니다.
 B-Token은 분배와 생존을, P-Token은 참정을 보장하며, 그 모든 작동을 DApp위에서 구현하여 중앙 없이도 작동하는 모두의 사회를 제시합니다.
 
-![의의](https://github.com/user-attachments/assets/173bd021-7da2-4762-8ce5-63cb83ca6266)
+![의의](https://github.com/user-attachments/assets/d3d52ff4-bbbd-4ab1-a127-0bf3586eb4ed)
+
