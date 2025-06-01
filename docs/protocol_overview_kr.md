@@ -28,7 +28,7 @@
 
 ### 흐름도
 
-![protocol diagram](https://github.com/user-attachments/assets/be863e12-cd7d-4245-a2dd-91178cb26ab2)
+![protocol diagram](https://github.com/user-attachments/assets/c362992c-fa49-4976-a4ef-bd0a8e489394)
 
 기여적 경제활동(CEA) 트리거로 인해 트랜잭션이 발생하고, 기여증명(PoC) 발행 메커니즘인 CRCM 모듈을 통해 BMR, TCCM 산출 및 반영되어 DID-wallet에 발행됩니다. 발행된 B-token은 다시 CEA에 사용되어 순환구조를 형성하고, 일부는 네트워크상 트랜잭션 수수료에 사용되어 Gas Pool(VR Pool, SPAR Pool)에 축적됩니다. TCCM에 따라 조건적으로 발행된 P-token은 B-token과 교환되거나, DAO-consortium의 선택적 정치활동(SPA)에 사용됩니다.
 
