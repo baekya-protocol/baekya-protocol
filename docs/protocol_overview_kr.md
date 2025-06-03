@@ -32,7 +32,7 @@
 
 ![protocol diagram](https://github.com/user-attachments/assets/866aba42-0e72-415b-849d-6c0079cb49d2)
 
-DAO에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션이 발생하고, 기여증명(PoC) 발행 메커니즘인 CVCM 모듈이 이를 감지하여 검증하며, BMR을 산출 및 반영합니다. DID-wallet에 발행된 B-token은 화폐로써 시장활동에 사용되며, 일부는 네트워크상의 거래 수수료(TF)로 지불되어 Gas Pool에 축적됩니다. 축적된 TF의 일부는 네트워크 검증자 보상으로 사용되어 네트워크 안전성을 확보합니다. 또 다른 일부는 공동체 상위 기여자에 한하여 분기마다 발행될 P-token의 B-token과의 교환가치 보장에 사용되어 토큰 효용성을 높입니다. 발행된 P-token은 
+DAO에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션이 발생하고, 기여증명(PoC) 발행 메커니즘인 CVCM 모듈이 이를 감지하여 검증하며, BMR을 산출 및 반영합니다. DID-wallet에 발행된 B-token은 화폐로써 시장활동에 사용되며, 일부는 네트워크상의 거래 수수료(TF)로 지불되어 Gas Pool에 축적됩니다. 축적된 TF의 일부는 네트워크 검증자 보상으로 사용되어 네트워크 안전성을 확보합니다. 또 다른 일부는 DAO금고에 예치되며, 프로토콜증진 기여에 대한 이익배당(PCY)을 부여받습니다. 
 
 ### [코어엔진](https://github.com/baekya-protocol/baekya-protocol/blob/main/core/README.md)
 
