@@ -30,9 +30,11 @@
 
 ### 흐름도
 
-![protocol diagram](https://github.com/user-attachments/assets/866aba42-0e72-415b-849d-6c0079cb49d2)
+![protocol diagram](https://github.com/user-attachments/assets/915d5437-d2cc-4e34-9136-a4c8cdb0d524)
 
-DAO에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션이 발생하고, 기여증명(PoC) 발행 메커니즘인 CVCM 모듈이 이를 감지하여 검증하며, BMR을 산출 및 반영합니다. DID-wallet에 발행된 B-token은 화폐로써 시장활동에 사용되며, 일부는 네트워크상의 거래 수수료(TF)로 지불되어 Gas Pool에 축적됩니다. 축적된 TF의 일부는 네트워크 검증자 보상으로 사용되어 네트워크 안전성을 확보합니다. 또 다른 일부는 DAO금고에 예치되며, 프로토콜증진 기여에 대한 이익배당(PCY)을 부여받습니다. 
+DAO에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션이 발생하고, 기여증명(PoC) 발행 메커니즘인 CVCM 모듈이 이를 감지 및 검증하며, BMR을 산출합니다. BMR이 반영되어 DID-wallet에 발행된 B-token은 화폐로써 시장활동에 사용되며, 일부는 네트워크상의 거래 수수료(TF)로 지불되어 Gas Pool에 축적됩니다. 축적된 TF의 일부는 네트워크 검증자 보상으로 사용되어 네트워크 안전성을 확보합니다. 또 다른 일부는 DAO금고에 예치되며, 프로토콜증진 기여에 대한 이익배당(PCY)을 부여받습니다. 각 DAO는 일정기간마다 해당기간동안의 기여량에 대한 상위기여자를 선정하고, P-token을 발행합니다(TCCM). 발행된 P-token은 참정권으로써 DAO 구성원간의 의사결정 합의과정(제안, 투표)에 사용됩니다.
+
+1. 
 
 ### [코어엔진](https://github.com/baekya-protocol/baekya-protocol/blob/main/core/README.md)
 
