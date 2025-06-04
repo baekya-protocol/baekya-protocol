@@ -26,15 +26,23 @@
 2. 구성원의 기여활동으로 산출된 화폐 발행량을 "기여에 대한 지속적인 생존권보장"으로써 시간당 발행량으로 환산하여 연금제도를 대체합니다.
 3. 일정기간동안의 공동체 상위 기여자에게 참정토큰을 분배하여 "공동체 기여자가 곧 공동체 의사결정 참여자"라는 합리적인 사회계약을 구축합니다.
 
-# 설계
+# 핵심구조
 
 ### 흐름도
 
-![protocol diagram](https://github.com/user-attachments/assets/915d5437-d2cc-4e34-9136-a4c8cdb0d524)
+![protocol diagram](https://github.com/user-attachments/assets/8c1b4491-361d-4225-98d5-993abc2856a6)
 
 DAO에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션이 발생하고, 기여증명(PoC) 발행 메커니즘인 CVCM 모듈이 이를 감지 및 검증하며, BMR을 산출합니다. BMR이 반영되어 DID-wallet에 발행된 B-token은 화폐로써 시장활동에 사용되며, 일부는 네트워크상의 거래 수수료(TF)로 지불되어 Gas Pool에 축적됩니다. 축적된 TF의 일부는 네트워크 검증자 보상으로 사용되어 네트워크 안전성을 확보합니다. 또 다른 일부는 DAO금고에 예치되며, 프로토콜증진 기여에 대한 이익배당(PCY)을 부여받습니다. 각 DAO는 일정기간마다 해당기간동안의 기여량에 대한 상위기여자를 선정하고, P-token을 발행합니다(TCCM). 발행된 P-token은 참정권으로써 DAO 구성원간의 의사결정 합의과정(제안, 투표)에 사용됩니다.
 
+### 핵심기능
+
 1. 
+
+
+
+
+
+# 개발구조
 
 ### [코어엔진](https://github.com/baekya-protocol/baekya-protocol/blob/main/core/README.md)
 
