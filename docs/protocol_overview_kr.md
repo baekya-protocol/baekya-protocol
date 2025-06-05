@@ -30,7 +30,7 @@
 
 ![protocol diagram](https://github.com/user-attachments/assets/8c1b4491-361d-4225-98d5-993abc2856a6)
 
-DAO에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션이 발생하고, 기여증명(PoC) 발행 메커니즘인 CVCM 모듈이 이를 감지 및 검증하며, BMR을 산출합니다. BMR이 반영되어 DID-wallet에 발행된 B-token은 화폐로써 시장활동에 사용되며, 일부는 네트워크상의 거래 수수료(TF)로 지불되어 Gas Pool에 축적됩니다. 축적된 TF의 일부는 네트워크 검증자 보상으로 사용되어 네트워크 안전성을 확보합니다. 또 다른 일부는 DAO금고에 예치되며, 프로토콜증진 기여에 대한 이익배당(PCY)을 부여받습니다. 각 DAO는 일정 주기마다 해당 기간 동안의 모든 기여자에게 등차적으로 P-token을 발행합니다(CAPM). 발행된 P-token은 참정권으로써 DAO 구성원간의 의사결정 합의과정(제안, 투표)에 사용됩니다.
+DAO-consortium에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션이 발생하고, 기여증명(PoC) 발행 메커니즘인 CVCM 모듈이 이를 감지 및 검증하며, BMR을 산출합니다. BMR이 반영되어 DID-wallet에 발행된 B-token은 화폐로써 시장활동에 사용되며, 일부는 네트워크상의 거래 수수료(TF)로 지불되어 Gas Pool에 축적됩니다. 축적된 TF의 일부는 네트워크 검증자 보상으로 사용되어 네트워크 안전성을 확보합니다. 또 다른 일부는 DAO금고에 예치되며, 프로토콜증진 기여에 대한 이익배당(PCY)을 부여받습니다. 각 DAO는 일정 주기마다 해당 기간 동안의 모든 기여자에게 등차적으로 P-token을 발행합니다(CAPM). 발행된 P-token은 참정권으로써 DAO 구성원간의 의사결정 합의과정(제안, 투표)에 사용됩니다.
 
 ### DAO-consortium
 
@@ -41,20 +41,82 @@ DAO에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션이 발생하
 ### CVCM
 
 1. 기여-> 검증-> 계산-> 발행 메커니즘으로, 구성원의 기여를 증명하여 화폐(B-token)를 발행합니다.
-2. 기여(Contribution): 구성원은 자신의 의사/선호/상황에 맞는 DAO 내 지정된 기여활동(DCA)을 자율적으로 행합니다.
+2. 기여(Contribution): 구성원은 자신의 의사/선호/상황에 맞게 DAO 내 지정된 기여활동(DCA)을 자율적으로 행합니다.
 3. 검증(Verification): 구성원의 기여는 DCA의 고유한 검증기준에 따라 검증되며, 트랜잭션을 발생시켜 BMR계산모듈에 전송합니다.
 4. 계산(Calculation): 전송된 구성원의 정보 및 DCA의 B-token가치 정보를 바탕으로 B-token의 시간당 발행량(BMR)을 산출합니다.
-   - B-token은 구성원의 남은 기대 생애기간(R = 평균 기대수명 − 현재 나이)을 기준으로, 기여 시점을 중심으로 시간이 흐를수록 점차 감소하는 구조로 발행됩니다.
+   - B-token은 구성원의 남은 기대 생애기간 (R = 평균 기대수명 − 현재 나이)에 걸쳐서, 기여시점에 가중치를 두고 시간이 흐를수록 점차 감소하는 구조로 발행됩니다(지수감쇠 방식). 
    ```math
-   \text{DCA의 B-token 가치} = \int_{0}^{R} BMR(t) \, dt = B_{\text{total}}
+   \text{DCA의 B-token 가치} = B_{\text{total}} = \int_{0}^{R} BMR(t) \, dt
    ```
    ```math
    BMR(t) = A \cdot e^{-kt}
    ```
+   - `R`: 남은 기대 생애기간 (R = 평균 기대수명 − 현재 나이)
    - `BMR(t)`: t년 후의 B-token 발행량
    - `A`: 초기 발행량 (t = 0 시점)
-   - `k`: 시간 감쇠율
+   - `k`: 시간 감쇠율 (예: DCA의 B-token 가치의 0.02%)
    - `t`: 기여 시점 이후 경과 시간
+5. 발행량 누적(Minting-rate-accumulate): DCA를 행할 때마다 BMR이 산출되며, 이는 기여자에게 누적됩니다.
+6. 예시: 개발DAO의 DCA인 의견제안은 80B의 기여가치를, PR(Pull Reuests)은 250B의 기여가치를 가지며, merged의 여부가 검증기준이 됩니다.
+   - 30살 남성 모 구성원은 프로토콜의 더 효율적인 메커니즘을 제안했고, 누군가가 이 의견에 대한 PR-> merged 되어 트랜잭션을 발생시켰습니다.
+   - DCA의 B-token가치=80B, 남성 평균 기대수명은 80세로 R=50, 시간 감쇠율(K)은 DCA에 대한 B-token 가치의 0.02%로 계산합니다.
+     ```math
+     B_{\text{total}} = \int_{0}^{R} A \cdot e^{-kt} \, dt = 80B
+     ```
+     ```math
+     \int_{0}^{50} A \cdot e^{-0.016t} \, dt = A \times \left[-\frac{1}{0.016} \times e^{-0.016t}\right]_0^{50}
+     ```
+     ```math
+     A \times 34.44 = 80 \quad \Rightarrow \quad A = \frac{80}{34.44} \approx 2.32B
+     ```
+     ```math
+     BMR(t) = 2.32 \times e^{-0.016t}
+     ```
+     <div align="center"><br>
+     <table>
+     <tr><th>시점</th><th>계산식</th><th>연간 발행량</th><th>월간 발행량</th><th>일간 발행량</th><th>시간당 발행량</th></tr>
+     <tr><td>t=0 (즉시)</td><td><code>2.32 × e^0</code></td><td><strong>2.32B</strong></td><td><strong>0.193B</strong></td><td><strong>0.00636B</strong></td><td><strong>0.000265B</strong></td></tr>
+     <tr><td>t=1 (1년 후)</td><td><code>2.32 × e^(-0.016)</code></td><td><strong>2.28B</strong></td><td><strong>0.190B</strong></td><td><strong>0.00625B</strong></td><td><strong>0.000260B</strong></td></tr>
+     <tr><td>t=5 (5년 후)</td><td><code>2.32 × e^(-0.08)</code></td><td><strong>2.14B</strong></td><td><strong>0.178B</strong></td><td><strong>0.00586B</strong></td><td><strong>0.000244B</strong></td></tr>
+     <tr><td>t=10 (10년 후)</td><td><code>2.32 × e^(-0.16)</code></td><td><strong>1.97B</strong></td><td><strong>0.164B</strong></td><td><strong>0.00540B</strong></td><td><strong>0.000225B</strong></td></tr>
+     <tr><td>t=25 (25년 후)</td><td><code>2.32 × e^(-0.4)</code></td><td><strong>1.55B</strong></td><td><strong>0.129B</strong></td><td><strong>0.00425B</strong></td><td><strong>0.000177B</strong></td></tr>
+     <tr><td>t=50 (50년 후)</td><td><code>2.32 × e^(-0.8)</code></td><td><strong>1.04B</strong></td><td><strong>0.087B</strong></td><td><strong>0.00285B</strong></td><td><strong>0.000119B</strong></td></tr>
+     </table>
+     </div><br>
+   - 이 구성원은 이번엔 자신의 의견을 직접 PR하기로 했으며, PR-> merged 되어 트랜잭션을 발생시켰습니다.
+     ```math
+     B_{\text{total}} = \int_{0}^{R} A \cdot e^{-kt} \, dt = 250B
+     ```
+     ```math
+     BMR(t) = 7.26 \times e^{-0.016t}
+     ```
+     <div align="center"><br>
+     <table>
+     <tr><th>시점</th><th>계산식</th><th>연간 발행량</th><th>월간 발행량</th><th>일간 발행량</th><th>시간당 발행량</th></tr>
+     <tr><td>t=0 (즉시)</td><td><code>7.26 × e^0</code></td><td><strong>7.26B</strong></td><td><strong>0.605B</strong></td><td><strong>0.0199B</strong></td><td><strong>0.000829B</strong></td></tr>
+     <tr><td>t=1 (1년 후)</td><td><code>7.26 × e^(-0.016)</code></td><td><strong>7.14B</strong></td><td><strong>0.595B</strong></td><td><strong>0.0196B</strong></td><td><strong>0.000815B</strong></td></tr>
+     <tr><td>t=5 (5년 후)</td><td><code>7.26 × e^(-0.08)</code></td><td><strong>6.70B</strong></td><td><strong>0.558B</strong></td><td><strong>0.0184B</strong></td><td><strong>0.000765B</strong></td></tr>
+     <tr><td>t=10 (10년 후)</td><td><code>7.26 × e^(-0.16)</code></td><td><strong>6.17B</strong></td><td><strong>0.514B</strong></td><td><strong>0.0169B</strong></td><td><strong>0.000704B</strong></td></tr>
+     <tr><td>t=25 (25년 후)</td><td><code>7.26 × e^(-0.4)</code></td><td><strong>4.86B</strong></td><td><strong>0.405B</strong></td><td><strong>0.0133B</strong></td><td><strong>0.000555B</strong></td></tr>
+     <tr><td>t=50 (50년 후)</td><td><code>7.26 × e^(-0.8)</code></td><td><strong>3.26B</strong></td><td><strong>0.272B</strong></td><td><strong>0.00893B</strong></td><td><strong>0.000372B</strong></td></tr>
+     </table>
+     </div><br>
+   - 위 1회 PR에 대한 BMR은 기존에 반영되어 있던 구성원의 1회 의견제안에 대한 BMR에 누적되어 아래와 같은 BMR을 가집니다.
+     <div align="center"><br>
+     <table>
+     <tr><th>시점</th><th>계산식</th><th>연간 발행량</th><th>월간 발행량</th><th>일간 발행량</th><th>시간당 발행량</th></tr>
+     <tr><td>t=0 (즉시)</td><td><code>(2.32 + 7.26) × e^0</code></td><td><strong>9.58B</strong></td><td><strong>0.798B</strong></td><td><strong>0.0263B</strong></td><td><strong>0.001094B</strong></td></tr>
+     <tr><td>t=1 (1년 후)</td><td><code>(2.32 + 7.26) × e^(-0.016)</code></td><td><strong>9.42B</strong></td><td><strong>0.785B</strong></td><td><strong>0.0259B</strong></td><td><strong>0.001075B</strong></td></tr>
+     <tr><td>t=5 (5년 후)</td><td><code>(2.32 + 7.26) × e^(-0.08)</code></td><td><strong>8.84B</strong></td><td><strong>0.736B</strong></td><td><strong>0.0243B</strong></td><td><strong>0.001009B</strong></td></tr>
+     <tr><td>t=10 (10년 후)</td><td><code>(2.32 + 7.26) × e^(-0.16)</code></td><td><strong>8.14B</strong></td><td><strong>0.678B</strong></td><td><strong>0.0223B</strong></td><td><strong>0.000929B</strong></td></tr>
+     <tr><td>t=25 (25년 후)</td><td><code>(2.32 + 7.26) × e^(-0.4)</code></td><td><strong>6.41B</strong></td><td><strong>0.534B</strong></td><td><strong>0.0176B</strong></td><td><strong>0.000732B</strong></td></tr>
+     <tr><td>t=50 (50년 후)</td><td><code>(2.32 + 7.26) × e^(-0.8)</code></td><td><strong>4.30B</strong></td><td><strong>0.359B</strong></td><td><strong>0.0118B</strong></td><td><strong>0.000491B</strong></td></tr>
+     </table>
+     </div><br>
+7. 의의
+   - 현대의 법정화폐는 실질적 “기여” 기준이 아닌, “자산 보유” 또는 “신용등급” 기준으로 대출되어 민간에게 분배됩니다. 이러한 발행방식은 오히려 임금대비 물가상승을 유발하여 기여자의 기여원동력을 해치므로 공동체는 필연적으로 붕괴합니다. 백야 프로토콜의 CVCM-기여증명 발행방식은 기여에 대해 등가적으로 화폐를 발행하므로,
+   - 이 방식은 기여시점에 가중치를 부여해 구성원의 동기를 이끌어냄과 동시에, 기여자의 전체 생애기간에 걸쳐 실시간으로 발행하므로 "기여에 대한 생존권의 지속적, 실질적 보장"으로 볼 수 있습니다.
+
 
 
 # 개발구조
