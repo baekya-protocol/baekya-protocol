@@ -38,7 +38,7 @@ DAO-consortium에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션�
 
 1. 공통의 목적을 가진 탈중앙화 자율 조직으로, 프로토콜상 각각의 모든 DAO는 공통목적과 이에 대한 기여활동을 지정합니다.
 2. 지정된 기여활동(DCA)은 고유한 가치기준과 검증기준을 가지며, 이에 따라 BMR산출값 및 검증방식이 결정됩니다. (DCA는 B-token 및 P-token 발행의 원천이 됩니다.)
-3. 누구나 지정된 기여활동을 행할 수 있으며, 한 번이라도 기여한 경우 해당 DAO의 기여자로 자동 간주됩니다.
+3. 누구나 지정된 기여활동을 행할 수 있으며, 한 번이라도 기여한 경우 해당 DAO의 기여자로 자동 간주됩니다. (DAO구성원만 기여할 수 있는 것이 아니라 누구나 모든 DAO에 기여할 수 있으며, 해당 기여자가 곧 DAO구성원이 됩니다.)
 4. 모든 DAO-consortium에서는, '제안-투표-검토'의 구성원간 합의과정을 거쳐 의사가 결정 및 반영됩니다. [(OP-Governance)](https://github.com/baekya-protocol/baekya-protocol/blob/main/docs/protocol_overview.md#governance)
 
 ### CVCM
