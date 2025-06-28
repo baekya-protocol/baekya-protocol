@@ -237,6 +237,9 @@ class BaekyaProtocol {
 
       // 시스템 간 연결 설정
       this.setupInterconnections();
+      
+      // Founder 계정 초기 설정
+      await this.initializeFounderAccount();
 
       this.isInitialized = true;
       console.log('✅ 모든 프로토콜 구성요소 초기화 완료!\n');
@@ -268,6 +271,107 @@ class BaekyaProtocol {
     this.components.blockchain.setDIDRegistry(this.components.didSystem);
     
     console.log('🔗 시스템 간 상호연결 설정 완료');
+  }
+
+  /**
+   * Founder 계정 초기 설정
+   * 서버 시작 시 자동으로 founder 계정을 생성하고 모든 권한과 토큰을 부여
+   */
+  async initializeFounderAccount() {
+    try {
+      console.log('👑 Founder 계정 초기 설정 중...');
+      
+      // founder 계정이 이미 있는지 확인
+      const existingFounder = this.components.authSystem.getDIDByUsername('founder');
+      
+      if (existingFounder.success) {
+        console.log('✅ Founder 계정이 이미 존재합니다:', existingFounder.didHash.substring(0, 16) + '...');
+        return;
+      }
+      
+      // founder 계정 생성
+      console.log('🔨 Founder 계정 생성 중...');
+      const founderData = {
+        username: 'founder',
+        password: 'Founder123!', // 영문 대소문자와 숫자, 특수문자 포함
+        name: 'Protocol Founder',
+        birthDate: '1990-01-01'
+      };
+      
+      const result = this.components.authSystem.generateDID(
+        founderData.username,
+        founderData.password,
+        founderData.name,
+        founderData.birthDate
+      );
+      
+      if (!result.success) {
+        console.error('❌ Founder 계정 생성 실패:', result.error);
+        return;
+      }
+      
+      const founderDID = result.didHash;
+      console.log('✅ Founder 계정 생성 완료:', founderDID.substring(0, 16) + '...');
+      
+      // DID 시스템에 등록
+      this.components.didSystem.registerDID(founderDID, result);
+      
+      // 4개 기본 DAO의 OP로 설정
+      const defaultDAOs = ['Operations DAO', 'Development DAO', 'Community DAO', 'Political DAO'];
+      let totalPTokens = 0;
+      
+      for (const daoName of defaultDAOs) {
+        const dao = Array.from(this.components.dao.daos.values())
+          .find(d => d.name === daoName);
+          
+        if (dao) {
+          // OP로 설정
+          dao.operatorDID = founderDID;
+          dao.founderDID = founderDID;
+          
+          // DAO 구성원으로 추가
+          const members = this.components.dao.daoMembers.get(dao.id);
+          members.add(founderDID);
+          
+          // P-Token 30개 부여
+          const currentBalance = this.components.ptoken.getPTokenBalance(founderDID) || 0;
+          this.components.ptoken.setPTokenBalance(founderDID, currentBalance + 30);
+          totalPTokens += 30;
+          
+          console.log(`  ✅ ${daoName} OP 설정 완료 (+30P)`);
+        }
+      }
+      
+      // B-Token 30개 부여
+      const Transaction = require('./blockchain/Transaction');
+      const bTokenTx = new Transaction(
+        'did:baekya:system000000000000000000000000000000000',
+        founderDID,
+        30,
+        'B-Token',
+        { type: 'founder_initial', reason: 'founder_account_creation' }
+      );
+      bTokenTx.signature = 'founder-initial-grant';
+      this.components.blockchain.addTransaction(bTokenTx);
+      
+      // 즉시 블록 생성하여 토큰 반영
+      const bTokenBlock = this.components.blockchain.mineBlock([bTokenTx]);
+      this.components.blockchain.setBalance(founderDID, 30, 'B-Token');
+      
+      console.log(`
+👑 Founder 계정 초기 설정 완료!
+   • 아이디: founder
+   • 비밀번호: Founder123!
+   • DID: ${founderDID.substring(0, 16)}...
+   • B-Token: 30B
+   • P-Token: ${totalPTokens}P (각 DAO별 30P)
+   • 역할: 4개 기본 DAO의 Operator
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+      
+    } catch (error) {
+      console.error('❌ Founder 계정 초기 설정 실패:', error.message);
+    }
   }
 
   async start() {
@@ -701,6 +805,22 @@ class BaekyaProtocol {
 
   getUserDashboard(userDID) {
     try {
+      // 사용자가 소속된 DAO 찾기
+      const userDAOs = [];
+      if (this.components.dao) {
+        for (const [daoId, dao] of this.components.dao.daos) {
+          const members = this.components.dao.daoMembers.get(daoId);
+          if (members && members.has(userDID)) {
+            userDAOs.push({
+              id: daoId,
+              name: dao.name,
+              role: dao.operatorDID === userDID ? 'operator' : 'member',
+              joinedAt: dao.createdAt // 실제로는 가입 시간을 따로 추적해야 함
+            });
+          }
+        }
+      }
+
       return {
         user: {
           did: userDID,
@@ -716,7 +836,8 @@ class BaekyaProtocol {
         tokens: {
           bToken: this.components.blockchain?.getBalance(userDID, 'B-Token') || 0,
           pToken: this.components.ptoken?.getPTokenBalance(userDID) || 0
-        }
+        },
+        daos: userDAOs // 소속 DAO 정보 추가
       };
     } catch (error) {
       return { success: false, error: error.message };

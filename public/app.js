@@ -457,6 +457,14 @@ class BaekyaProtocolDApp {
     modal.classList.add('active');
     
     try {
+      // 로그인/회원가입 선택 화면 표시
+      const authMode = await this.showAuthModeSelection();
+      
+      if (authMode === 'login') {
+        // 로그인 모드
+        await this.showLoginForm();
+      } else if (authMode === 'register') {
+        // 회원가입 모드
       // 기기 체크 - 이미 등록된 기기인지 확인
       const deviceCheck = await this.checkDeviceRegistration();
       
@@ -469,7 +477,9 @@ class BaekyaProtocolDApp {
       
       if (deviceCheck.hasAccount && !deviceCheck.isLoggedIn) {
         // 이미 계정이 있는 기기 - 로그인 필요
-        await this.loginExistingUser(deviceCheck.userData);
+          this.showErrorMessage('이 기기에는 이미 계정이 있습니다. 로그인해주세요.');
+          this.closeBiometricModal();
+          return;
       } else if (deviceCheck.hasAccount && deviceCheck.isLoggedIn) {
         // 이미 로그인된 상태
         this.closeBiometricModal();
@@ -478,6 +488,7 @@ class BaekyaProtocolDApp {
       } else {
         // 신규 기기 - 아이디 생성
         await this.createNewUser();
+        }
       }
     } catch (error) {
       console.error('❌ 아이디 인증 프로세스 오류:', error);
@@ -491,7 +502,7 @@ class BaekyaProtocolDApp {
     const modalBody = document.querySelector('#biometricModal .modal-body');
     
     // 동적으로 추가된 모든 요소 제거
-    const dynamicElements = modalBody.querySelectorAll('.password-setup, .invite-code-setup, .personal-info-setup, .user-id-setup');
+    const dynamicElements = modalBody.querySelectorAll('.password-setup, .invite-code-setup, .personal-info-setup, .user-id-setup, .auth-mode-selection');
     dynamicElements.forEach(element => element.remove());
     
     // 모든 step 초기화
@@ -505,6 +516,226 @@ class BaekyaProtocolDApp {
     // 진행 메시지 초기화
     const progressMessage = document.getElementById('progressMessage');
     if (progressMessage) progressMessage.textContent = '아이디 인증을 시작합니다...';
+  }
+
+  // 로그인/회원가입 선택 화면
+  async showAuthModeSelection() {
+    return new Promise((resolve) => {
+      const progressMessage = document.getElementById('progressMessage');
+      const modalBody = document.querySelector('#biometricModal .modal-body');
+      
+      progressMessage.textContent = '백야 프로토콜에 오신 것을 환영합니다!';
+      
+      // 선택 UI 추가
+      const authSelection = document.createElement('div');
+      authSelection.className = 'auth-mode-selection';
+      authSelection.innerHTML = `
+        <div class="auth-selection-form" style="color: var(--text-primary); background: var(--bg-secondary); padding: 1.5rem; border-radius: 8px;">
+          <h4 style="color: var(--text-primary); text-align: center; margin-bottom: 1.5rem;">
+            <i class="fas fa-shield-alt"></i> 시작하기
+          </h4>
+          
+          <div class="auth-mode-buttons" style="display: flex; flex-direction: column; gap: 1rem;">
+            <button class="btn-primary" id="selectLoginBtn" style="padding: 1rem;">
+              <i class="fas fa-sign-in-alt"></i> 로그인
+              <small style="display: block; font-weight: normal; opacity: 0.8;">기존 계정으로 로그인</small>
+            </button>
+            
+            <button class="btn-secondary" id="selectRegisterBtn" style="padding: 1rem;">
+              <i class="fas fa-user-plus"></i> 회원가입
+              <small style="display: block; font-weight: normal; opacity: 0.8;">새 계정 만들기</small>
+            </button>
+          </div>
+          
+          <div style="text-align: center; margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+            <i class="fas fa-info-circle"></i> 1기기 1계정 정책이 적용됩니다
+          </div>
+        </div>
+      `;
+      
+      modalBody.appendChild(authSelection);
+      
+      const loginBtn = document.getElementById('selectLoginBtn');
+      const registerBtn = document.getElementById('selectRegisterBtn');
+      
+      loginBtn.addEventListener('click', () => {
+        authSelection.remove();
+        resolve('login');
+      });
+      
+      registerBtn.addEventListener('click', () => {
+        authSelection.remove();
+        resolve('register');
+      });
+    });
+  }
+
+  // 로그인 폼 표시
+  async showLoginForm() {
+    return new Promise((resolve) => {
+      const progressMessage = document.getElementById('progressMessage');
+      const modalBody = document.querySelector('#biometricModal .modal-body');
+      
+      progressMessage.textContent = '로그인 정보를 입력해주세요...';
+      
+      // 로그인 UI 추가
+      const loginSetup = document.createElement('div');
+      loginSetup.className = 'password-setup';
+      loginSetup.innerHTML = `
+        <div class="password-form" style="color: var(--text-primary); background: var(--bg-secondary); padding: 1.5rem; border-radius: 8px;">
+          <h4 style="color: var(--text-primary);"><i class="fas fa-sign-in-alt"></i> 로그인</h4>
+          
+          <div class="form-group">
+            <label for="loginUserId" style="color: var(--text-primary);">아이디</label>
+            <input type="text" id="loginUserId" placeholder="아이디를 입력하세요" style="background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 0.75rem; font-size: 1rem;">
+          </div>
+          
+          <div class="form-group">
+            <label for="loginPassword" style="color: var(--text-primary);">비밀번호</label>
+            <input type="password" id="loginPassword" placeholder="비밀번호를 입력하세요" style="background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 0.75rem; font-size: 1rem;">
+          </div>
+          
+          <button class="btn-primary" id="loginBtn">로그인</button>
+        </div>
+      `;
+      
+      modalBody.appendChild(loginSetup);
+      
+      const loginBtn = document.getElementById('loginBtn');
+      const userIdInput = document.getElementById('loginUserId');
+      const passwordInput = document.getElementById('loginPassword');
+      
+      // 엔터키 이벤트
+      [userIdInput, passwordInput].forEach(input => {
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            loginBtn.click();
+          }
+        });
+      });
+      
+      loginBtn.addEventListener('click', async () => {
+        const userId = userIdInput.value.trim();
+        const password = passwordInput.value;
+        
+        if (!userId) {
+          alert('아이디를 입력해주세요.');
+          return;
+        }
+        
+        if (!password) {
+          alert('비밀번호를 입력해주세요.');
+          return;
+        }
+        
+        try {
+          // 서버 API로 로그인 요청
+          const response = await fetch(`${this.apiBase}/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username: userId,
+              password: password
+            })
+          });
+
+          const result = await response.json();
+          
+          if (result.success) {
+            console.log('🔐 서버 로그인 성공:', result);
+            
+            // 사용자 데이터 설정
+            this.currentUser = {
+              userId: result.username,
+              username: result.username,
+              did: result.didHash,
+              communicationAddress: result.communicationAddress,
+              name: result.name,
+              isFounder: result.isFounder,
+              bTokenBalance: result.isFounder ? 30 : 0,
+              pTokenBalance: result.isFounder ? 120 : 0,
+              passwordHash: this.hashPassword(password),
+              deviceId: this.getDeviceId(),
+              createdAt: Date.now()
+            };
+            
+            this.isAuthenticated = true;
+            
+            // authData도 업데이트
+            this.authData = {
+              userId: result.username,
+              password: this.hashPassword(password),
+              did: result.didHash,
+              communicationAddress: result.communicationAddress,
+              deviceId: this.getDeviceId(),
+              createdAt: Date.now(),
+              hasSetCommunicationAddress: !!result.communicationAddress
+            };
+            
+            // 로컬 스토리지에 저장
+            localStorage.setItem('baekya_auth', JSON.stringify(this.currentUser));
+            
+            // baekya_users에도 추가
+            const storedUsers = JSON.parse(localStorage.getItem('baekya_users') || '[]');
+            const deviceId = this.getDeviceId();
+            const userIndex = storedUsers.findIndex(user => user.deviceId === deviceId);
+            
+            if (userIndex === -1) {
+              storedUsers.push(this.currentUser);
+              localStorage.setItem('baekya_users', JSON.stringify(storedUsers));
+            }
+            
+            // founder 계정인 경우 DAO 정보 가져오기
+            if (result.isFounder) {
+              try {
+                const dashboardResponse = await fetch(`${this.apiBase}/dashboard/${result.didHash}`);
+                if (dashboardResponse.ok) {
+                  const dashboard = await dashboardResponse.json();
+                  if (dashboard.daos && dashboard.daos.length > 0) {
+                    // DAO 정보를 localStorage에 저장
+                    const userDAOs = dashboard.daos.map(dao => ({
+                      id: dao.id,
+                      name: dao.name,
+                      icon: dao.name.includes('Operations') ? 'fa-cogs' :
+                            dao.name.includes('Development') ? 'fa-code' :
+                            dao.name.includes('Community') ? 'fa-users' :
+                            dao.name.includes('Political') ? 'fa-landmark' : 'fa-building',
+                      role: dao.role,
+                      joinedAt: dao.joinedAt || Date.now()
+                    }));
+                    localStorage.setItem('userDAOs', JSON.stringify(userDAOs));
+                    console.log('🏛️ Founder DAO 정보 로드:', userDAOs);
+                  }
+                }
+              } catch (error) {
+                console.error('DAO 정보 로드 실패:', error);
+              }
+            }
+            
+            // UI 정리
+            loginSetup.remove();
+            
+            const stepComplete = document.getElementById('stepComplete');
+            stepComplete.classList.add('active');
+            progressMessage.textContent = '로그인 성공!';
+            
+            this.completeBiometricAuth();
+            resolve();
+            
+          } else {
+            throw new Error(result.error || '로그인에 실패했습니다');
+          }
+          
+        } catch (error) {
+          console.error('❌ 로그인 실패:', error);
+          alert(error.message || '로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.');
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      });
+    });
   }
 
   // 기기 등록 확인
@@ -1680,6 +1911,31 @@ class BaekyaProtocolDApp {
         if (result.isInitialOP) {
           console.log('👑 이니셜 OP 설정:', result.initialOPResult);
         }
+        
+        // 소속 DAO 정보 저장
+        if (result.daos && result.daos.length > 0) {
+          // 기본 DAO 목록을 localStorage에 저장
+          const existingDAOs = JSON.parse(localStorage.getItem('userDAOs') || '[]');
+          
+          // 중복 제거하면서 새로운 DAO 추가
+          result.daos.forEach(dao => {
+            if (!existingDAOs.find(d => d.id === dao.id)) {
+              existingDAOs.push({
+                id: dao.id,
+                name: dao.name,
+                icon: dao.name.includes('Operations') ? 'fa-cogs' :
+                      dao.name.includes('Development') ? 'fa-code' :
+                      dao.name.includes('Community') ? 'fa-users' :
+                      dao.name.includes('Political') ? 'fa-landmark' : 'fa-building',
+                role: dao.role,
+                joinedAt: dao.joinedAt || Date.now()
+              });
+            }
+          });
+          
+          localStorage.setItem('userDAOs', JSON.stringify(existingDAOs));
+          console.log('🏛️ 소속 DAO 정보 저장:', existingDAOs);
+        }
       } else {
         throw new Error(result.error || '사용자 등록에 실패했습니다');
       }
@@ -1791,6 +2047,13 @@ class BaekyaProtocolDApp {
     this.updateTokenBalances();
     this.updateNetworkStatus(); // 네트워크 상태 업데이트
     this.updateProfileStatus('online'); // 로그인 시 온라인 상태로 변경
+    
+    // 현재 탭에 따라 콘텐츠 새로고침
+    if (this.currentTab === 'dao') {
+      this.loadDAOs();
+    } else if (this.currentTab === 'governance') {
+      this.loadGovernance();
+    }
   }
 
   updateUserProfile() {
@@ -2080,21 +2343,21 @@ class BaekyaProtocolDApp {
         console.error('서버에서 지갑 정보를 가져올 수 없습니다:', error);
         // 오프라인 시 localStorage 사용
         const savedBalance = localStorage.getItem('currentBalance');
-        if (savedBalance) {
-          bTokenAmount = parseFloat(savedBalance).toFixed(6);
-          if (!this.userTokens) {
+      if (savedBalance) {
+        bTokenAmount = parseFloat(savedBalance).toFixed(6);
+        if (!this.userTokens) {
             this.userTokens = { B: 0, P: 0 };
-          }
-          this.userTokens.B = parseFloat(savedBalance);
+        }
+        this.userTokens.B = parseFloat(savedBalance);
         }
         
         // Founder 계정인 경우 기본값 설정
         if (this.currentUser.isFounder && (!savedBalance || savedBalance === '0.000000')) {
           bTokenAmount = '30.000000';
           pTokenAmount = 120;
-          if (!this.userTokens) {
+        if (!this.userTokens) {
             this.userTokens = { B: 30, P: 120 };
-          } else {
+        } else {
             this.userTokens.B = 30;
             this.userTokens.P = 120;
           }
@@ -2105,8 +2368,12 @@ class BaekyaProtocolDApp {
       // BMR 그래프에서 계산된 시간당 발행량 사용
       let hourlyBMR = '0.003505';
       
+      // Founder 계정은 BMR이 없음
+      if (this.currentUser.isFounder) {
+        hourlyBMR = '0.000000';
+      }
       // BMR 데이터가 있다면 실제 계산된 값 사용
-      if (this.currentUser.birthDate && this.currentUser.gender) {
+      else if (this.currentUser.birthDate && this.currentUser.gender) {
         const currentAge = this.calculateAge(this.currentUser.birthDate);
         const gender = this.currentUser.gender;
         const lifeExpectancy = gender === 'female' ? 86.6 : 80.6;
@@ -2150,12 +2417,22 @@ class BaekyaProtocolDApp {
       return {};
     }
     
+    // Founder 계정은 각 DAO에 30P씩 보유
+    if (this.currentUser && this.currentUser.isFounder) {
     return {
-      'community-dao': 1,
-      'dev-dao': 1,
-      'ops-dao': 1,
-      'marketing': 8,
-      'research': 1
+        'community-dao': 30,
+        'dev-dao': 30,
+        'ops-dao': 30,
+        'political-dao': 30
+      };
+    }
+    
+    // 일반 사용자의 경우 실제 보유량 반환
+    return {
+      'community-dao': 0,
+      'dev-dao': 0,
+      'ops-dao': 0,
+      'political-dao': 0
     };
   }
 
@@ -3446,7 +3723,7 @@ class BaekyaProtocolDApp {
   // 사용자의 OP 역할 정보 반환 (실제 로그인 상태 확인)
   getUserOPRole() {
     // 생체인증이 완료되어야 OP 권한 확인 가능
-    if (!this.isLoggedIn || !this.currentUser) {
+    if (!this.isAuthenticated || !this.currentUser) {
       return {
         isOP: false,
         isTopOP: false,
@@ -3455,8 +3732,8 @@ class BaekyaProtocolDApp {
       };
     }
 
-    // 첫 번째 사용자(Initial OP)인 경우에만 모든 DAO의 OP
-    if (this.currentUser.isInitialOP) {
+    // 첫 번째 사용자(Initial OP) 또는 Founder인 경우 모든 DAO의 OP
+    if (this.currentUser.isInitialOP || this.currentUser.isFounder) {
     return {
       isOP: true,
       isTopOP: true,
@@ -3570,14 +3847,53 @@ class BaekyaProtocolDApp {
       return [];
     }
     
-    // 로컬 스토리지에서 동적으로 생성된 DAO 목록 가져오기
+    // Founder 계정은 4개 기본 DAO의 OP
+    if (this.currentUser && this.currentUser.isFounder) {
+      return [
+        {
+          id: 'ops-dao',
+          name: 'Operations DAO',
+          icon: 'fa-cogs',
+          role: 'OP',
+          contributions: 0,
+          lastActivity: '방금',
+          joinedAt: Date.now()
+        },
+        {
+          id: 'dev-dao',
+          name: 'Development DAO',
+          icon: 'fa-code',
+          role: 'OP',
+          contributions: 0,
+          lastActivity: '방금',
+          joinedAt: Date.now()
+        },
+        {
+          id: 'community-dao',
+          name: 'Community DAO',
+          icon: 'fa-users',
+          role: 'OP',
+          contributions: 0,
+          lastActivity: '방금',
+          joinedAt: Date.now()
+        },
+        {
+          id: 'political-dao',
+          name: 'Political DAO',
+          icon: 'fa-landmark',
+          role: 'OP',
+          contributions: 0,
+          lastActivity: '방금',
+          joinedAt: Date.now()
+        }
+      ];
+    }
+    
+    // 로컬 스토리지에서 동적으로 생성된 DAO 목록만 가져오기
     const dynamicDAOs = JSON.parse(localStorage.getItem('userDAOs') || '[]');
     
-    // 기본 DAO 목록 (초기에는 비어있음)
-    const defaultDAOs = [];
-    
-    // 기본 DAO와 동적 DAO 합치기
-    return [...defaultDAOs, ...dynamicDAOs];
+    // 동적으로 생성된 DAO만 반환 (예시 데이터 제거)
+    return dynamicDAOs;
   }
 
   // DAO 필터용으로 변환된 데이터
@@ -3730,8 +4046,11 @@ class BaekyaProtocolDApp {
     this.dynamicProposals[daoId].push(proposal);
   }
 
-  // 데모 데이터 제거를 위한 빈 함수
+  // 데모 데이터 제거됨 - 빈 객체 반환 (예시 데이터 제거)
   getDAOProposalsDemo(daoId) {
+    return []; // 모든 예시 데이터 제거
+    
+    /* 예시 데이터 주석 처리
     const proposalData = {
       'dev-dao': [
         {
@@ -7146,12 +7465,28 @@ class BaekyaProtocolDApp {
         </div>
       `;
     } else {
-      operatorInfo.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-user-slash"></i>
-          <p>OP가 아직 선출되지 않았습니다</p>
-        </div>
-      `;
+      // founder 계정이 로그인된 경우 founder를 OP로 표시
+      if (this.currentUser && this.currentUser.isFounder) {
+        operatorInfo.innerHTML = `
+          <div class="operator-card">
+            <div class="operator-avatar" style="background: linear-gradient(135deg, var(--primary-light) 0%, var(--secondary-color) 100%); color: white; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; font-weight: 600; font-size: 1.2rem;">
+              ${this.currentUser.name ? this.currentUser.name.charAt(0).toUpperCase() : 'P'}
+            </div>
+            <div class="operator-details">
+              <div class="operator-name">${this.currentUser.name || 'Protocol Founder'}</div>
+              <div class="operator-did">${this.formatDID(this.currentUser.did)}</div>
+              <div class="operator-tokens">30 P-Token</div>
+            </div>
+          </div>
+        `;
+      } else {
+        operatorInfo.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-user-slash"></i>
+            <p>OP가 아직 선출되지 않았습니다</p>
+          </div>
+        `;
+      }
     }
   }
   
@@ -7162,6 +7497,21 @@ class BaekyaProtocolDApp {
     
     if (storedDAOData) {
       return JSON.parse(storedDAOData);
+    }
+    
+    // founder 계정이면 각 DAO의 OP로 표시
+    if (this.currentUser && this.currentUser.isFounder) {
+      return {
+        memberCount: 1,
+        activeMembers: 1,
+        totalContributions: 0,
+        monthlyContributions: 0,
+        operator: {
+          name: this.currentUser.name || 'Protocol Founder',
+          did: this.formatDID(this.currentUser.did),
+          pTokens: 30
+        }
+      };
     }
     
     // 초기 상태 반환
@@ -7275,10 +7625,15 @@ class BaekyaProtocolDApp {
   checkDAOMembership(daoId) {
     if (!this.isAuthenticated) return false;
     
+    // OP 권한 확인
+    const userRole = this.getUserDAORole(daoId);
+    if (userRole === 'OP' || userRole === 'TOP-OP') {
+      return true; // OP는 모든 DAO 컨소시엄 접근 가능
+    }
+    
     // Operations DAO는 OP만 접근 가능
     if (daoId === 'ops-dao') {
-      const userRole = this.getUserDAORole(daoId);
-      return userRole === 'OP' || userRole === 'TOP-OP';
+      return false; // 이미 위에서 OP 체크를 했으므로 여기까지 왔다면 OP가 아님
     }
     
     // 다른 DAO는 DCA 1회 이상 진행한 구성원만 접근 가능
@@ -11534,78 +11889,16 @@ class BaekyaProtocolDApp {
 
   // OP 검토 대상 제안들 가져오기
   getProposalsForOPReview(opDAOs) {
-    // 사용자가 OP인 DAO들의 투표 통과 제안들만 반환
-    const allOPReviewProposals = {
-      'ops-dao': [
-        {
-          id: 'ops-prop-1',
-          title: '프로토콜 보안 감사',
-          description: '외부 보안 업체를 통한 전체 프로토콜 보안 감사를 진행하여 취약점을 점검하고 보안을 강화하는 제안입니다.',
-          proposer: '최보안',
-          daoName: 'Operations DAO',
-          daoId: 'ops-dao',
-          votesFor: 28,
-          votesAgainst: 4,
-          abstentions: 2,
-          votingEndDate: '2024-01-16',
-          status: 'op-review-pending',
-          passedDate: '2024-01-17'
-        },
-        {
-          id: 'ops-prop-2',
-          title: '네트워크 인프라 업그레이드',
-          description: '증가하는 트랜잭션 처리량에 대비하여 네트워크 인프라를 확장하고 성능을 최적화하는 제안입니다.',
-          proposer: '이인프라',
-          daoName: 'Operations DAO',
-          daoId: 'ops-dao',
-          votesFor: 32,
-          votesAgainst: 3,
-          abstentions: 1,
-          votingEndDate: '2024-01-15',
-          status: 'op-review-pending',
-          passedDate: '2024-01-16'
-        }
-      ],
-      'dev-dao': [
-        {
-          id: 'dev-prop-3',
-          title: 'API 성능 최적화',
-          description: '시스템 응답속도 개선을 위한 API 성능 최적화 작업을 제안합니다.',
-          proposer: '박성능',
-          daoName: 'Development DAO',
-          daoId: 'dev-dao',
-          votesFor: 42,
-          votesAgainst: 8,
-          abstentions: 3,
-          votingEndDate: '2024-01-15',
-          status: 'op-review-pending',
-          passedDate: '2024-01-16'
-        }
-      ],
-      'community-dao': [
-        {
-          id: 'comm-prop-3',
-          title: '다국어 지원 확장',
-          description: '프로토콜 UI를 한국어, 일본어, 중국어로 번역하여 아시아 사용자 접근성을 높이는 제안입니다.',
-          proposer: '김번역',
-          daoName: 'Community DAO',
-          daoId: 'community-dao',
-          votesFor: 38,
-          votesAgainst: 6,
-          abstentions: 4,
-          votingEndDate: '2024-01-14',
-          status: 'op-review-pending',
-          passedDate: '2024-01-15'
-        }
-      ]
-    };
-
-    // 사용자가 OP인 DAO들의 제안들만 반환
+    // 실제 제안들을 블록체인/서버에서 가져와야 함
     const result = [];
+    
+    // 각 DAO에서 dao-review 상태인 제안들 가져오기
     opDAOs.forEach(daoId => {
-      if (allOPReviewProposals[daoId]) {
-        result.push(...allOPReviewProposals[daoId]);
-      }
+      const daoProposals = this.getDAOProposals(daoId);
+      const reviewProposals = daoProposals.filter(proposal => 
+        proposal.status === 'dao-review' && proposal.reviewStage === 'dao-op'
+      );
+      result.push(...reviewProposals);
     });
     
     return result;

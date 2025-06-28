@@ -44,7 +44,8 @@ class SimpleAuth {
 
       // 5. 파운더 계정인지 확인 (아이디가 'founder'인 경우)
       const isFirstUser = this.didRegistry.size === 0;
-      const isFounder = username === 'founder'; // 아이디가 'founder'인 계정만 파운더
+      const isFounder = username === 'founder';
+      const isInitialOP = isFounder;  // founder는 자동으로 이니셜 OP가 됨
 
       // 6. 비밀번호 해시 생성
       const passwordHash = this.hashPassword(password);
@@ -59,7 +60,7 @@ class SimpleAuth {
         createdAt: Date.now(),
         status: 'active',
         isFirstUser: isFirstUser,
-        isInitialOP: isFirstUser,
+        isInitialOP: isInitialOP,
         isFounder: isFounder,
         lastAuthTime: null,
         authAttempts: 0,
@@ -90,7 +91,7 @@ class SimpleAuth {
         name: didData.name,
         communicationAddress,
         isFirstUser,
-        isInitialOP: isFirstUser,
+        isInitialOP: isInitialOP,
         isFounder: isFounder,
         message: isFounder ? 
           '🎉 축하합니다! 백야 프로토콜의 Founder로 등록되어 특별 혜택(모든 DAO P-토큰 30개씩, B-토큰 30B)을 받았습니다!' :
@@ -583,6 +584,36 @@ class SimpleAuth {
     this.userCredentials.clear();
     this.rateLimiter.clear();
     console.log('🧪 SimpleAuth 테스트용 초기화 완료');
+  }
+
+  /**
+   * 아이디로 DID 조회
+   * @param {string} username - 찾을 아이디
+   * @returns {Object} { success: boolean, didHash?: string, user?: Object, error?: string }
+   */
+  getDIDByUsername(username) {
+    try {
+      // 모든 사용자 중에서 해당 아이디 찾기
+      for (const [didHash, user] of this.didRegistry.entries()) {
+        if (user.username === username) {
+          return {
+            success: true,
+            didHash: didHash,
+            user: user
+          };
+        }
+      }
+      
+      return {
+        success: false,
+        error: '해당 아이디의 사용자를 찾을 수 없습니다'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 }
 

@@ -96,6 +96,13 @@ app.post('/api/register', async (req, res) => {
         console.log(`👑 첫 번째 사용자 이니셜 OP 설정 완료: ${result.initialOPResult.totalPTokensGranted}P 지급`);
       }
       
+      // 사용자가 소속된 DAO 정보 가져오기
+      let userDAOs = [];
+      if (result.success && (result.isFounder || result.isInitialOP)) {
+        const dashboard = await protocol.getUserDashboard(result.didHash);
+        userDAOs = dashboard.daos || [];
+      }
+      
       res.json({
         success: true,
         didHash: result.didHash,
@@ -107,6 +114,7 @@ app.post('/api/register', async (req, res) => {
         isInitialOP: result.isInitialOP,
         initialOPResult: result.initialOPResult,
         founderBenefits: result.founderBenefits,
+        daos: userDAOs, // 소속 DAO 정보 추가
         message: result.message
       });
     } else {
