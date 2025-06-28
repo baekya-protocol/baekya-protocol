@@ -2050,27 +2050,55 @@ class BaekyaProtocolDApp {
     // 지갑 페이지 토큰 표시 요소들
     const bTokenMain = document.getElementById('bTokenMain');
     const currentMiningRate = document.getElementById('currentMiningRate');
+    const pTokenMain = document.getElementById('pTokenMain');
 
     if (this.isAuthenticated && this.currentUser) {
-      // 저장된 토큰 잔액 불러오기 또는 초기값 설정
-      const savedBalance = localStorage.getItem('currentBalance');
       let bTokenAmount = '0.000000';
+      let pTokenAmount = 0;
       
-      if (savedBalance) {
-        bTokenAmount = parseFloat(savedBalance).toFixed(6);
-        // userTokens 객체도 업데이트
-        if (!this.userTokens) {
-          this.userTokens = { B: 0 };
+      try {
+        // 서버에서 토큰 잔액 가져오기
+        const response = await fetch(`${this.apiBase}/wallet/${this.currentUser.did}`);
+        if (response.ok) {
+          const walletData = await response.json();
+          if (walletData.success) {
+            bTokenAmount = walletData.balances.bToken.toFixed(6);
+            pTokenAmount = walletData.balances.pToken || 0;
+            
+            // userTokens 객체 업데이트
+            if (!this.userTokens) {
+              this.userTokens = { B: 0, P: 0 };
+            }
+            this.userTokens.B = walletData.balances.bToken;
+            this.userTokens.P = pTokenAmount;
+            
+            // localStorage에도 저장 (오프라인 캐시용)
+            localStorage.setItem('currentBalance', bTokenAmount);
+          }
         }
-        this.userTokens.B = parseFloat(savedBalance);
-      } else {
-        // 초기 토큰 설정 (0으로 시작)
-        bTokenAmount = '0.000000';
-        localStorage.setItem('currentBalance', '0.000000');
-        if (!this.userTokens) {
-          this.userTokens = { B: 0 };
-        } else {
-          this.userTokens.B = 0;
+      } catch (error) {
+        console.error('서버에서 지갑 정보를 가져올 수 없습니다:', error);
+        // 오프라인 시 localStorage 사용
+        const savedBalance = localStorage.getItem('currentBalance');
+        if (savedBalance) {
+          bTokenAmount = parseFloat(savedBalance).toFixed(6);
+          if (!this.userTokens) {
+            this.userTokens = { B: 0, P: 0 };
+          }
+          this.userTokens.B = parseFloat(savedBalance);
+        }
+        
+        // Founder 계정인 경우 기본값 설정
+        if (this.currentUser.isFounder && (!savedBalance || savedBalance === '0.000000')) {
+          bTokenAmount = '30.000000';
+          pTokenAmount = 120;
+          if (!this.userTokens) {
+            this.userTokens = { B: 30, P: 120 };
+          } else {
+            this.userTokens.B = 30;
+            this.userTokens.P = 120;
+          }
+          localStorage.setItem('currentBalance', '30.000000');
         }
       }
       
@@ -2096,6 +2124,7 @@ class BaekyaProtocolDApp {
       // 지갑 페이지 업데이트
       if (bTokenMain) bTokenMain.textContent = `${bTokenAmount} B`;
       if (currentMiningRate) currentMiningRate.textContent = `${hourlyBMR} B/시간`;
+      if (pTokenMain) pTokenMain.textContent = `${pTokenAmount} P`;
       
       // 토큰 발행 시스템 시작
       this.startMiningSystem(parseFloat(hourlyBMR));
@@ -2107,6 +2136,7 @@ class BaekyaProtocolDApp {
       // 지갑 페이지 리셋
       if (bTokenMain) bTokenMain.textContent = '0 B';
       if (currentMiningRate) currentMiningRate.textContent = '0 B/시간';
+      if (pTokenMain) pTokenMain.textContent = '0 P';
       
       // 토큰 발행 시스템 중지
       this.stopMiningSystem();
@@ -2137,6 +2167,12 @@ class BaekyaProtocolDApp {
 
   // 전체 P토큰 보유량 계산
   getTotalPTokenBalance() {
+    // userTokens에서 P 토큰 잔액 가져오기
+    if (this.userTokens && typeof this.userTokens.P === 'number') {
+      return this.userTokens.P;
+    }
+    
+    // 폴백: 기본값 반환
     const balances = this.getDAOPTokenBalances();
     return Object.values(balances).reduce((total, balance) => total + balance, 0);
   }

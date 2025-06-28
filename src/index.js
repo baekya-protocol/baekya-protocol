@@ -562,6 +562,10 @@ class BaekyaProtocol {
       bTokenTx.signature = 'founder-system-grant';
       this.components.blockchain.addTransaction(bTokenTx);
       
+      // 즉시 블록 생성하여 토큰 반영
+      const bTokenBlock = this.components.blockchain.mineBlock([bTokenTx], founderDID);
+      console.log(`💎 Founder B-토큰 블록 생성: #${bTokenBlock.index}`);
+      
       // 모든 기본 DAO에서 P-토큰 30개씩 부여
       const basicDAOs = [
         'Operations DAO',
@@ -571,20 +575,45 @@ class BaekyaProtocol {
       ];
       
       let totalPTokens = 0;
-      basicDAOs.forEach(daoName => {
+      const pTokenTransactions = [];
+      
+      basicDAOs.forEach((daoName, index) => {
         // DAO 찾기
         const dao = Array.from(this.components.dao.daos.values())
           .find(d => d.name === daoName);
         
         if (dao) {
-          // P-토큰 직접 발행
-          this.components.ptoken.setPTokenBalance(founderDID, 30);
+          // P-토큰 트랜잭션 생성
+          const pTokenTx = new Transaction(
+            'did:baekya:system000000000000000000000000000000000',
+            founderDID,
+            30,
+            'P-Token',
+            { type: 'founder_benefit', reason: `founder_p_token_grant_${daoName}`, dao: daoName }
+          );
+          pTokenTx.signature = 'founder-system-grant';
+          this.components.blockchain.addTransaction(pTokenTx);
+          pTokenTransactions.push(pTokenTx);
+          
+          // P-토큰 직접 발행도 함께 수행 (즉시 반영용)
+          const currentBalance = this.components.ptoken.getPTokenBalance(founderDID) || 0;
+          this.components.ptoken.setPTokenBalance(founderDID, currentBalance + 30);
           totalPTokens += 30;
           console.log(`💎 ${daoName}에서 P-토큰 30개 부여`);
         }
       });
       
+      // P-토큰 트랜잭션들을 블록에 포함
+      if (pTokenTransactions.length > 0) {
+        const pTokenBlock = this.components.blockchain.mineBlock(pTokenTransactions, founderDID);
+        console.log(`💎 Founder P-토큰 블록 생성: #${pTokenBlock.index} (${pTokenTransactions.length}개 트랜잭션)`);
+      }
+      
       console.log(`✅ Founder 혜택 완료: B-토큰 30B, P-토큰 총 ${totalPTokens}개 부여`);
+      
+      // 테스트 잔액 설정 (즉시 반영용)
+      this.components.blockchain.setBalance(founderDID, 30, 'B-Token');
+      this.components.blockchain.setBalance(founderDID, totalPTokens, 'P-Token');
       
       return {
         success: true,
@@ -676,7 +705,7 @@ class BaekyaProtocol {
         contributions: [],
         tokens: {
           bToken: this.components.blockchain?.getBalance(userDID, 'B-Token') || 0,
-          pToken: this.components.blockchain?.getBalance(userDID, 'P-Token') || 0
+          pToken: this.components.ptoken?.getPTokenBalance(userDID) || 0
         }
       };
     } catch (error) {
@@ -774,9 +803,10 @@ class BaekyaProtocol {
   // 사용자 지갑 정보 조회
   async getUserWallet(userDID) {
     try {
-      const bTokenBalance = this.components.didSystem.getBTokenBalance(userDID);
-      const pTokenBalance = this.components.didSystem.getPTokenBalance(userDID);
-      const miningData = this.components.cvcmSystem.getMiningDashboard(userDID);
+      const bTokenBalance = this.components.blockchain?.getBalance(userDID, 'B-Token') || 0;
+      const pTokenBalance = this.components.ptoken.getPTokenBalance(userDID) || 0;
+      const miningData = this.components.cvcm?.getMiningDashboard ? 
+        this.components.cvcm.getMiningDashboard(userDID) : null;
       
       return {
         success: true,
