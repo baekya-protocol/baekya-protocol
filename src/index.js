@@ -146,36 +146,54 @@ class BaekyaProtocol {
       console.log('🔐 인증 시스템 초기화...');
       this.components.authSystem = new SimpleAuth();
 
-      // 2. 통신주소 입력 받기
-      console.log('📞 통신주소 설정 중...');
-      if (this.config.isWebTest) {
-        // 웹 UI 테스트 모드에서는 기본 통신주소 사용
-        console.log('🌐 웹 UI 테스트 모드: 기본 통신주소 사용');
-        this.config.communicationAddress = this.config.communicationAddress || '010-0000-0000';
-      } else {
+      // 2. 통신주소 설정 (검증자만 필수, 풀노드는 선택사항)
+      if (this.config.isValidator) {
+        console.log('📞 검증자 통신주소 설정 중...');
         this.config.communicationAddress = await this.getCommunicationAddress();
+      } else {
+        console.log('📞 풀노드 통신주소 설정 중...');
+        if (!providedAddress) {
+          console.log('💡 풀노드는 통신주소 없이도 운영 가능합니다.');
+          console.log('   검증자 풀 B토큰 보상을 받으려면 --address 010-XXXX-XXXX 옵션을 사용하세요.');
+          this.config.communicationAddress = null;
+        } else {
+          if (this.validateCommunicationAddress(providedAddress)) {
+            console.log(`✅ 통신주소 확인: ${providedAddress} (검증자 풀 보상용)`);
+            this.config.communicationAddress = providedAddress;
+          } else {
+            console.log(`❌ 잘못된 통신주소 형식: ${providedAddress}`);
+            console.log('   올바른 형식: 010-XXXX-XXXX');
+            this.config.communicationAddress = null;
+          }
+        }
       }
       
-      // 3. 통신주소로부터 DID 생성/조회
-      if (this.config.isWebTest) {
-        // 웹 UI 테스트 모드에서는 기본 DID 사용
-        console.log('🌐 웹 UI 테스트 모드: 기본 DID 사용');
-        this.config.validatorDID = 'test-did-' + Date.now();
-      } else {
+      // 3. 검증자 모드인 경우에만 DID 생성/조회
+      if (this.config.isValidator) {
+        console.log('👤 검증자 모드: DID 생성/조회 중...');
         const didResult = await this.getOrCreateDIDFromAddress(this.config.communicationAddress);
         if (!didResult.success) {
-          throw new Error(`DID 생성/조회 실패: ${didResult.error}`);
+          throw new Error(`검증자 DID 생성/조회 실패: ${didResult.error}`);
         }
         
         this.config.validatorDID = didResult.didHash;
         
         if (!didResult.isExisting && didResult.credentials) {
-          console.log(`🔑 노드 운영자 계정 생성됨:`);
+          console.log(`🔑 검증자 계정 생성됨:`);
           console.log(`   - 아이디: ${didResult.credentials.username}`);
           console.log(`   - 비밀번호: ${didResult.credentials.password}`);
           console.log(`   - 통신주소: ${this.config.communicationAddress}`);
           console.log(`   - DID: ${this.config.validatorDID.substring(0, 16)}...`);
         }
+      } else {
+        // 풀노드는 DID 없이 블록체인 네트워크만 운영
+        console.log('⚡ 풀노드 모드: 블록체인 네트워크만 시작');
+        if (this.config.communicationAddress) {
+          console.log(`📞 통신주소 (${this.config.communicationAddress})는 검증자 풀 보상용으로 기록됨`);
+        } else {
+          console.log('📞 통신주소 없음 - 검증자 풀 보상에서 제외됨');
+        }
+        this.config.validatorDID = null;
       }
 
       // 4. DID 관리 시스템  
@@ -294,7 +312,7 @@ class BaekyaProtocol {
    • P2P 포트: ${this.config.port}
    • API 포트: ${this.config.port + 1000} (로컬 전용)
    • 역할: ${this.config.isValidator ? 'VALIDATOR' : 'FULL NODE'}
-   • 통신주소: ${this.config.communicationAddress}
+   • 통신주소: ${this.config.communicationAddress || '없음 (검증자 풀 보상 제외)'}
    • DID: ${this.config.validatorDID ? this.config.validatorDID.substring(0, 16) + '...' : 'N/A'}
 
 🌟 "기여한 만큼 보장받는" 새로운 사회가 시작되었습니다!

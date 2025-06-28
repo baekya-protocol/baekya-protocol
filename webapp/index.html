@@ -60,6 +60,14 @@
     <!-- 헤더 -->
     <header class="header">
         <div class="container">
+            <!-- 탈중앙화 상태바 -->
+            <div class="decentralized-status-bar">
+                <div class="status-content">
+                    <div class="pulse-dot"></div>
+                    <span id="nodeStatus">노드 연결 확인 중...</span>
+                </div>
+            </div>
+            
             <div class="mobile-header-content">
                 <!-- 대시보드 탭 헤더 -->
                 <div class="mobile-header-tab active" id="mobile-header-dashboard">
@@ -382,7 +390,7 @@
                                     </div>
                                 </div>
                                 <div class="validator-actions">
-                                    <button class="btn-primary validator-join-btn" onclick="window.dapp.openValidatorGuide()">
+                                    <button class="btn-primary validator-join-btn" onclick="window.open('https://github.com/baekya-protocol/baekya-protocol/blob/main/docs/validator-guide.md', '_blank')">
                                         <i class="fas fa-external-link-alt"></i> 검증자 참여 가이드
                                     </button>
                                     <button class="btn-support validator-sponsor-btn" onclick="window.dapp.showValidatorSponsorModal()">

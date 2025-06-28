@@ -80,19 +80,94 @@ body {
   padding: 0 1.5rem;
 }
 
-/* 헤더 - 완전히 숨김 처리 */
+/* 헤더 - PC에서도 표시 */
 .header {
-  display: none;
-  height: 0;
-  padding: 0;
+  display: block;
+  height: auto;
+  background: var(--bg-dark);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.75rem 0;
   margin: 0;
-  overflow: hidden;
+  overflow: visible;
+}
+
+/* 탈중앙화 상태바 */
+.decentralized-status-bar {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  padding: 0.5rem 0;
+  text-align: center;
+  transition: background 0.3s ease;
+}
+
+.status-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* PC에서 모바일 헤더 콘텐츠 표시 */
+@media (min-width: 769px) {
+  .mobile-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 50px;
+  }
+  
+  .mobile-header-tab {
+    display: none;
+    width: 100%;
+  }
+  
+  .mobile-header-tab.active {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  
+  /* PC에서 헤더 타이틀과 액션 버튼 스타일 */
+  .mobile-dashboard-title,
+  .mobile-wallet-title,
+  .mobile-dao-title,
+  .mobile-governance-title,
+  .mobile-p2p-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+  }
+  
+  .mobile-wallet-actions,
+  .mobile-dao-actions,
+  .mobile-governance-actions,
+  .mobile-p2p-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
 }
 
 .logo-section {
