@@ -562,8 +562,8 @@ class BaekyaProtocol {
       bTokenTx.signature = 'founder-system-grant';
       this.components.blockchain.addTransaction(bTokenTx);
       
-      // 즉시 블록 생성하여 토큰 반영
-      const bTokenBlock = this.components.blockchain.mineBlock([bTokenTx], founderDID);
+      // 즉시 블록 생성하여 토큰 반영 (시스템 검증자 사용)
+      const bTokenBlock = this.components.blockchain.mineBlock([bTokenTx]);
       console.log(`💎 Founder B-토큰 블록 생성: #${bTokenBlock.index}`);
       
       // 모든 기본 DAO에서 P-토큰 30개씩 부여
@@ -603,9 +603,9 @@ class BaekyaProtocol {
         }
       });
       
-      // P-토큰 트랜잭션들을 블록에 포함
+      // P-토큰 트랜잭션들을 블록에 포함 (시스템 검증자 사용)
       if (pTokenTransactions.length > 0) {
-        const pTokenBlock = this.components.blockchain.mineBlock(pTokenTransactions, founderDID);
+        const pTokenBlock = this.components.blockchain.mineBlock(pTokenTransactions);
         console.log(`💎 Founder P-토큰 블록 생성: #${pTokenBlock.index} (${pTokenTransactions.length}개 트랜잭션)`);
       }
       

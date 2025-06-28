@@ -611,7 +611,8 @@ class BlockchainCore {
       /^did:baekya:[a-f0-9]{40,64}$/, // 표준 DID
       /^did:baekya:(system|genesis)[0-9a-f]{32,64}$/, // 시스템 DID
       /^did:baekya:test[a-f0-9]{40,48}$/, // 테스트 DID
-      /^did:baekya:validator[0-9a-f]{40,64}$/ // 검증자 DID
+      /^did:baekya:validator[0-9a-f]{40,64}$/, // 검증자 DID
+      /^[a-f0-9]{64}$/ // SimpleAuth에서 생성하는 DID 형식 (접두사 없는 64자리 hex)
     ];
     
     return patterns.some(pattern => pattern.test(did));
