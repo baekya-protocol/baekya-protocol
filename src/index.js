@@ -315,6 +315,10 @@ class BaekyaProtocol {
    • 통신주소: ${this.config.communicationAddress || '없음 (검증자 풀 보상 제외)'}
    • DID: ${this.config.validatorDID ? this.config.validatorDID.substring(0, 16) + '...' : 'N/A'}
 
+🌐 웹 인터페이스 접속:
+   • URL: http://localhost:${this.config.port + 1000}
+   • 브라우저에서 위 주소로 접속하여 백야 프로토콜을 사용하세요!
+
 🌟 "기여한 만큼 보장받는" 새로운 사회가 시작되었습니다!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
@@ -910,6 +914,11 @@ class BaekyaProtocol {
 
     app.use(express.json());
     app.use(express.static('public'));
+    
+    // 루트 경로에서 index.html 제공
+    app.get('/', (req, res) => {
+      res.sendFile(path.join(__dirname, '../public', 'index.html'));
+    });
 
     // CORS 설정 (로컬 노드용)
     app.use((req, res, next) => {
@@ -944,6 +953,31 @@ class BaekyaProtocol {
         res.status(500).json({ 
           success: false, 
           error: '사용자 등록 실패', 
+          details: error.message 
+        });
+      }
+    });
+
+    app.post('/api/login', async (req, res) => {
+      try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+          return res.status(400).json({ 
+            success: false, 
+            error: '아이디와 비밀번호가 필요합니다' 
+          });
+        }
+
+        const result = this.loginUser(username, password);
+        if (result.success) {
+          res.json(result);
+        } else {
+          res.status(401).json(result);
+        }
+      } catch (error) {
+        res.status(500).json({ 
+          success: false, 
+          error: '사용자 로그인 실패', 
           details: error.message 
         });
       }

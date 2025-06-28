@@ -9,7 +9,7 @@ class BaekyaProtocolDApp {
     
     // 프로토콜 API 설정
     // 탈중앙화 노드 API 설정 - 각 사용자가 자신의 노드와 통신
-    this.apiBase = 'http://localhost:4000/api';
+    this.apiBase = 'http://localhost:9080/api';  // 메인넷 API 포트로 변경 (8080 + 1000)
     this.isDecentralized = true;
     
     // 데이터 캐싱으로 성능 향상
