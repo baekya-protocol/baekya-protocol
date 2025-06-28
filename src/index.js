@@ -524,6 +524,16 @@ class BaekyaProtocol {
           }
         }
         
+        // Founder 계정인 경우에도 이니셜 OP로 설정
+        if (result.isFounder && !result.isFirstUser) {
+          const opResult = this.components.dao.setInitialOperator(result.didHash);
+          if (opResult.success) {
+            result.initialOPResult = opResult;
+            result.message += `\n🎉 Founder로서 ${opResult.totalDAOs}개 DAO의 이니셜 OP가 되었습니다! (총 ${opResult.totalPTokensGranted}P 지급)`;
+            console.log(`👑 Founder 이니셜 OP 설정 완료: ${result.didHash}`);
+          }
+        }
+        
         return result;
       }
       return result;
