@@ -1,0 +1,45 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3730a3;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f1f5f9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 배경 -->
+  <rect width="512" height="512" rx="80" fill="url(#bgGradient)"/>
+  
+  <!-- 메인 심볼 - 연결된 노드들 (블록체인을 상징) -->
+  <g fill="url(#iconGradient)" stroke="#ffffff" stroke-width="3">
+    <!-- 중앙 노드 -->
+    <circle cx="256" cy="256" r="40" fill="url(#iconGradient)"/>
+    
+    <!-- 외곽 노드들 -->
+    <circle cx="160" cy="160" r="25"/>
+    <circle cx="352" cy="160" r="25"/>
+    <circle cx="160" cy="352" r="25"/>
+    <circle cx="352" cy="352" r="25"/>
+    <circle cx="256" cy="120" r="20"/>
+    <circle cx="256" cy="392" r="20"/>
+    <circle cx="120" cy="256" r="20"/>
+    <circle cx="392" cy="256" r="20"/>
+    
+    <!-- 연결선들 -->
+    <line x1="256" y1="216" x2="256" y2="120" stroke-width="4" opacity="0.8"/>
+    <line x1="256" y1="296" x2="256" y2="392" stroke-width="4" opacity="0.8"/>
+    <line x1="216" y1="256" x2="120" y2="256" stroke-width="4" opacity="0.8"/>
+    <line x1="296" y1="256" x2="392" y2="256" stroke-width="4" opacity="0.8"/>
+    
+    <line x1="225" y1="225" x2="185" y2="185" stroke-width="3" opacity="0.6"/>
+    <line x1="287" y1="225" x2="327" y2="185" stroke-width="3" opacity="0.6"/>
+    <line x1="225" y1="287" x2="185" y2="327" stroke-width="3" opacity="0.6"/>
+    <line x1="287" y1="287" x2="327" y2="327" stroke-width="3" opacity="0.6"/>
+  </g>
+  
+  <!-- 중앙 아이콘 - 'B' for Baekya -->
+  <text x="256" y="280" text-anchor="middle" font-family="Inter, sans-serif" font-size="60" font-weight="bold" fill="#1e40af">B</text>
+</svg> 

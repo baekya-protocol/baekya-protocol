@@ -1,0 +1,54 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 테스트 커버리지 (자동 생성)
+coverage/
+*.lcov
+
+# 빌드 결과물
+dist/
+build/
+
+# 환경 변수
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 로그 파일
+logs/
+*.log
+
+# OS 관련
+.DS_Store
+Thumbs.db
+
+# IDE/에디터
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 임시 파일
+*.tmp
+*.temp
+.cache/
+
+# 백업 파일
+*.backup
+*.bak
+
+# 테스트 관련
+test-web-connection.js
+
+# 개발용 파일들
+*.temp.js
+*_temp.*
+debug.html
+
+# 패키지 잠금 파일 (선택적)
+package-lock.json
