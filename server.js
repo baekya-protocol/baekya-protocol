@@ -19,6 +19,11 @@ const wss = new WebSocket.Server({ server });
 // 메인 프로토콜 인스턴스
 let protocol = null;
 
+// 자동검증 시스템들
+let githubIntegration = null;
+let communityIntegration = null;
+let automationSystem = null;
+
 // WebSocket 연결 관리
 const clients = new Map(); // DID -> WebSocket connections
 
@@ -154,11 +159,38 @@ async function initializeServer() {
       communicationAddress: '010-0000-0000' // 테스트용 기본 통신주소
     });
   
-  const initialized = await protocol.initialize();
-  if (!initialized) {
+    const initialized = await protocol.initialize();
+    if (!initialized) {
       throw new Error('프로토콜 초기화 실패');
-  }
-  
+    }
+    
+    // 자동검증 시스템 초기화
+    console.log('🤖 자동검증 시스템 초기화 중...');
+    
+    // GitHubIntegration 초기화
+    const GitHubIntegration = require('./src/automation/GitHubIntegration');
+    githubIntegration = new GitHubIntegration(
+      protocol.components.daoSystem,
+      null // CVCM 시스템은 제거되었으므로 null
+    );
+    
+    // CommunityDAOIntegration 초기화
+    const CommunityDAOIntegration = require('./src/automation/CommunityDAOIntegration');
+    communityIntegration = new CommunityDAOIntegration(
+      protocol.components.daoSystem,
+      null, // CVCM 시스템은 제거되었으므로 null
+      null  // 자동화 시스템
+    );
+    
+    // AutomationSystem 초기화
+    const AutomationSystem = require('./src/automation/AutomationSystem');
+    automationSystem = new AutomationSystem(protocol);
+    
+    // 자동화 시스템 시작
+    automationSystem.start();
+    
+    console.log('✅ 자동검증 시스템 초기화 완료');
+    
     // 서버 시작 시 검증자 풀 초기화
     console.log('🔄 검증자 풀을 초기화합니다.');
     if (protocol.components && protocol.components.storage && typeof protocol.components.storage.resetValidatorPool === 'function') {
@@ -748,18 +780,18 @@ app.post('/api/invite-code', async (req, res) => {
       console.log(`🎫 초대코드 트랜잭션 추가됨 (대기 중), 코드: ${inviteCode}`);
       
       // 저장소에 초대코드 저장 (트랜잭션은 이미 추가됨)
-      protocol.components.storage.saveUserInviteCode(userDID, inviteCode);
-      
+        protocol.components.storage.saveUserInviteCode(userDID, inviteCode);
+        
       // 블록체인 등록 상태는 대기 중으로 표시
       // protocol.components.storage.markInviteCodeRegistered(userDID); // 블록 생성 후 처리
-      
-      res.json({
-        success: true,
-        inviteCode: inviteCode,
+        
+        res.json({
+          success: true,
+          inviteCode: inviteCode,
         message: '초대코드가 생성되었습니다. 검증자가 블록을 생성하면 영구 저장됩니다.',
-        transactionId: inviteCodeTx.hash,
+          transactionId: inviteCodeTx.hash,
         status: 'pending'
-      });
+        });
     } catch (error) {
       console.error('초대코드 블록체인 등록 실패:', error);
       
@@ -884,14 +916,7 @@ async function processInviteCode(inviteCode, newUserDID) {
       
       // 커뮤니티 DAO에 기여 내역 추가
       try {
-        const CommunityDAOIntegration = require('./src/automation/CommunityDAOIntegration');
-        
-        // 더미 객체로 CommunityDAOIntegration 인스턴스 생성
-        const communityIntegration = new CommunityDAOIntegration(
-          protocol.components.daoSystem,
-          null, // CVCM 시스템은 제거되었으므로 null
-          null  // 자동화 시스템
-        );
+        // 전역 communityIntegration 사용 (이미 초기화됨)
         
         // 초대 활동을 커뮤니티 DAO 기여 내역에 추가
         const contributionResult = await communityIntegration.handleInviteSuccess(inviteCode, inviterDID, newUserDID);
@@ -1856,6 +1881,263 @@ app.get('/api/blockchain/status', (req, res) => {
   } catch (error) {
     console.error('블록체인 상태 조회 실패:', error);
     res.status(500).json({ error: '블록체인 상태 조회 실패', details: error.message });
+  }
+});
+
+// GitHub 웹훅 엔드포인트 
+app.post('/api/webhook/github/:integrationId', async (req, res) => {
+  try {
+    const { integrationId } = req.params;
+    const payload = req.body;
+    
+    console.log(`🔔 GitHub 웹훅 수신: ${integrationId}, 이벤트: ${payload.action}`);
+    
+    if (!githubIntegration) {
+      return res.status(503).json({
+        success: false,
+        error: 'GitHub 통합 시스템이 초기화되지 않았습니다'
+      });
+    }
+    
+    // 웹훅 이벤트 처리
+    const result = await githubIntegration.handleWebhookEvent(integrationId, payload);
+    
+    if (result.success) {
+      console.log(`✅ GitHub 웹훅 처리 완료: ${result.message}`);
+      
+      // 기여 내역이 있으면 저장소에 기록
+      if (result.contribution) {
+        const contrib = result.contribution;
+        protocol.components.storage.saveContribution(contrib.userDID, 'dev-dao', {
+          id: contrib.id,
+          type: contrib.type,
+          title: contrib.title,
+          dcaId: contrib.type === 'pull_request' ? 'pull-request' : 
+                 contrib.type === 'pull_request_review' ? 'pull-request-review' : 
+                 'issue-report',
+          evidence: contrib.url,
+          description: contrib.title,
+          bValue: contrib.bValue,
+          verified: true,
+          verifiedAt: contrib.verifiedAt,
+          metadata: contrib.githubData
+        });
+        
+        // 개발DAO 기여자 WebSocket 업데이트
+        const updatedWallet = await protocol.getUserWallet(contrib.userDID);
+        broadcastStateUpdate(contrib.userDID, {
+          wallet: updatedWallet,
+          newContribution: {
+            dao: 'dev-dao',
+            type: contrib.type,
+            title: contrib.title,
+            bTokens: contrib.bValue,
+            description: contrib.title,
+            date: new Date().toISOString().split('T')[0]
+          }
+        });
+      }
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('GitHub 웹훅 처리 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'GitHub 웹훅 처리 실패',
+      details: error.message
+    });
+  }
+});
+
+// GitHub 통합 설정
+app.post('/api/github/setup', async (req, res) => {
+  try {
+    const { userDID, repoOwner, repoName, accessToken } = req.body;
+    
+    if (!userDID || !repoOwner || !repoName) {
+      return res.status(400).json({
+        success: false,
+        error: 'userDID, repoOwner, repoName이 필요합니다'
+      });
+    }
+    
+    if (!githubIntegration) {
+      return res.status(503).json({
+        success: false,
+        error: 'GitHub 통합 시스템이 초기화되지 않았습니다'
+      });
+    }
+    
+    const result = githubIntegration.setupUserIntegration(userDID, repoOwner, repoName, accessToken);
+    
+    console.log(`🔗 GitHub 통합 설정: ${userDID} -> ${repoOwner}/${repoName}`);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('GitHub 통합 설정 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'GitHub 통합 설정 실패',
+      details: error.message
+    });
+  }
+});
+
+// 개발DAO DCA 상태 조회
+app.get('/api/dev-dao/contributions/:userDID', async (req, res) => {
+  try {
+    const { userDID } = req.params;
+    
+    if (!githubIntegration) {
+      return res.status(503).json({
+        success: false,
+        error: 'GitHub 통합 시스템이 초기화되지 않았습니다'
+      });
+    }
+    
+    const contributions = githubIntegration.getUserContributions(userDID);
+    const integrationStatus = githubIntegration.getIntegrationStatus(userDID);
+    
+    res.json({
+      success: true,
+      contributions: contributions,
+      integrationStatus: integrationStatus
+    });
+  } catch (error) {
+    console.error('개발DAO 기여 내역 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '개발DAO 기여 내역 조회 실패',
+      details: error.message
+    });
+  }
+});
+
+// 커뮤니티DAO DCA 상태 조회
+app.get('/api/community-dao/contributions/:userDID', async (req, res) => {
+  try {
+    const { userDID } = req.params;
+    
+    if (!communityIntegration) {
+      return res.status(503).json({
+        success: false,
+        error: '커뮤니티 통합 시스템이 초기화되지 않았습니다'
+      });
+    }
+    
+    const contributions = communityIntegration.getUserContributions(userDID);
+    
+    res.json({
+      success: true,
+      contributions: contributions
+    });
+  } catch (error) {
+    console.error('커뮤니티DAO 기여 내역 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '커뮤니티DAO 기여 내역 조회 실패',
+      details: error.message
+    });
+  }
+});
+
+// 초대 링크 생성
+app.post('/api/invite/create', async (req, res) => {
+  try {
+    const { inviterDID } = req.body;
+    
+    if (!inviterDID) {
+      return res.status(400).json({
+        success: false,
+        error: 'inviterDID가 필요합니다'
+      });
+    }
+    
+    if (!automationSystem) {
+      return res.status(503).json({
+        success: false,
+        error: '자동화 시스템이 초기화되지 않았습니다'
+      });
+    }
+    
+    const result = automationSystem.createInviteLink(inviterDID);
+    
+    console.log(`🔗 초대 링크 생성: ${inviterDID} -> ${result.inviteLink}`);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('초대 링크 생성 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '초대 링크 생성 실패',
+      details: error.message
+    });
+  }
+});
+
+// 자동화 시스템 상태 조회
+app.get('/api/automation/status', async (req, res) => {
+  try {
+    if (!automationSystem) {
+      return res.status(503).json({
+        success: false,
+        error: '자동화 시스템이 초기화되지 않았습니다'
+      });
+    }
+    
+    const status = automationSystem.getAutomationStatus();
+    
+    res.json({
+      success: true,
+      status: status
+    });
+  } catch (error) {
+    console.error('자동화 시스템 상태 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '자동화 시스템 상태 조회 실패',
+      details: error.message
+    });
+  }
+});
+
+// 자동검증 시스템 통계 조회
+app.get('/api/automation/stats', async (req, res) => {
+  try {
+    let stats = {
+      github: { totalContributions: 0, totalBTokensIssued: 0, contributionsByType: {} },
+      community: { totalContributions: 0, totalBTokensIssued: 0, contributionsByType: {} },
+      automation: { totalInvites: 0, successfulInvites: 0 }
+    };
+    
+    if (githubIntegration) {
+      stats.github = githubIntegration.getStatistics();
+    }
+    
+    if (communityIntegration) {
+      stats.community = communityIntegration.getStatistics();
+    }
+    
+    if (automationSystem) {
+      const automationStatus = automationSystem.getAutomationStatus();
+      stats.automation = {
+        totalInvites: automationStatus.totalInvites,
+        activeInvites: automationStatus.activeInvites
+      };
+    }
+    
+    res.json({
+      success: true,
+      stats: stats
+    });
+  } catch (error) {
+    console.error('자동검증 시스템 통계 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '자동검증 시스템 통계 조회 실패',
+      details: error.message
+    });
   }
 });
 

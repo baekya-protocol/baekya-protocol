@@ -2,7 +2,7 @@ const crypto = require('crypto');
 
 /**
  * 자동화 시스템
- * 운영 DAO DCA 자동 반영, GitHub 통합, 초대 시스템 등을 관리
+ * GitHub 통합, 초대 시스템 등을 관리
  */
 class AutomationSystem {
   constructor(protocol) {
@@ -16,120 +16,13 @@ class AutomationSystem {
   start() {
     console.log('🤖 자동화 시스템이 시작되었습니다.');
     
-    // PoliticalDAO DCA 자동 처리 시스템 시작
-    this.startPoliticalDAOMonitoring();
-    
     console.log(`📊 현재 상태: ${JSON.stringify(this.getAutomationStatus())}`);
     return { success: true, message: '자동화 시스템 시작 완료' };
-  }
-
-  // PoliticalDAO 모금 통과 자동 모니터링
-  startPoliticalDAOMonitoring() {
-    // 1분마다 PoliticalDAO 제안 상태 체크
-    this.politicalDAOMonitor = setInterval(() => {
-      this.checkPoliticalDAOProposals();
-    }, 60000);
-    
-    console.log('🏛️ PoliticalDAO 자동 모니터링 시작');
-  }
-
-  // PoliticalDAO 제안 모금 통과 체크
-  async checkPoliticalDAOProposals() {
-    try {
-      const daoSystem = this.protocol.getDAOSystem();
-      const cvcmSystem = this.protocol.getCVCMSystem();
-      
-      // PoliticalDAO 제안들 확인
-      const politicalDAOId = this.getPoliticalDAOId();
-      if (!politicalDAOId) return;
-      
-      const daoProposals = daoSystem.proposals.get(politicalDAOId);
-      if (!daoProposals) return;
-      
-      for (const [proposalId, proposal] of daoProposals) {
-        // 모금 통과하여 투표 단계로 진입한 제안 체크
-        if (proposal.status === 'voting' && !proposal.dcaProcessed) {
-          await this.processPoliticalDAOContribution(proposal, cvcmSystem);
-          proposal.dcaProcessed = true; // 중복 처리 방지
-        }
-      }
-    } catch (error) {
-      console.error('❌ PoliticalDAO 모니터링 실패:', error.message);
-    }
-  }
-
-  // PoliticalDAO 기여 처리 (모금 통과 → 20B DCA 자동 누적)
-  async processPoliticalDAOContribution(proposal, cvcmSystem) {
-    try {
-      const contributorDID = proposal.proposerDID;
-      const contributorAge = this.getContributorAge(contributorDID);
-      
-      // PoliticalDAO DCA 자동 기여 제출
-      const contributionData = {
-        daoId: 'political-dao',
-        dcaId: 'proposal-funding-success',
-        contributorDID: contributorDID,
-        contributorAge: contributorAge,
-        gender: 'default',
-        description: `제안 "${proposal.title}" 모금 통과`,
-        evidence: `제안 ID: ${proposal.id}, 모금 성공 시점: ${Date.now()}`
-      };
-      
-      // 기여 제출
-      const submitResult = cvcmSystem.submitContribution(contributionData);
-      if (submitResult.success) {
-        // 자동 검증 (PoliticalDAO는 자동 검증)
-        const verifyResult = await cvcmSystem.verifyContribution(
-          submitResult.contributionId,
-          'did:baekya:system-auto-verifier',
-          true,
-          'PoliticalDAO 모금 통과 자동 검증'
-        );
-        
-        console.log(`🏛️ PoliticalDAO DCA 자동 처리 완료: ${contributorDID} → 20B 누적, BMR: ${verifyResult.bmrAdded}`);
-        
-        return {
-          success: true,
-          contributionId: submitResult.contributionId,
-          bmrAdded: verifyResult.bmrAdded,
-          totalBMR: verifyResult.totalBMR
-        };
-      }
-    } catch (error) {
-      console.error('❌ PoliticalDAO 기여 처리 실패:', error.message);
-    }
-  }
-
-  // PoliticalDAO ID 조회
-  getPoliticalDAOId() {
-    const daoSystem = this.protocol.getDAOSystem();
-    for (const [daoId, dao] of daoSystem.daos) {
-      if (dao.name === 'Political DAO' || dao.purpose === 'Political Governance') {
-        return daoId;
-      }
-    }
-    return null;
-  }
-
-  // 기여자 나이 조회 (DID 시스템 연동)
-  getContributorAge(contributorDID) {
-    try {
-      const didSystem = this.protocol.getDIDSystem();
-      return didSystem.getDIDAge(contributorDID);
-    } catch (error) {
-      return 30; // 기본값
-    }
   }
 
   // 자동화 시스템 중지
   stop() {
     console.log('🤖 자동화 시스템을 중지합니다.');
-    
-    // PoliticalDAO 모니터링 중지
-    if (this.politicalDAOMonitor) {
-      clearInterval(this.politicalDAOMonitor);
-      this.politicalDAOMonitor = null;
-    }
     
     return { success: true, message: '자동화 시스템 중지 완료' };
   }
