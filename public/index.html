@@ -14,6 +14,110 @@
     <!-- jsQR 라이브러리 - QR 코드 스캔용 -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     
+    <!-- Transaction 클래스 정의 (app.js 로드 전에 필요) -->
+    <script>
+        // 브라우저용 Transaction 클래스
+        class Transaction {
+            constructor(fromDID, toDID, amount, tokenType, data = {}) {
+                this.fromDID = fromDID;
+                this.toDID = toDID;
+                this.amount = amount;
+                this.tokenType = tokenType; // 'B-Token' 또는 'P-Token'
+                this.data = data; // 추가 데이터 (기여도 정보, 메모 등)
+                this.timestamp = Date.now();
+                this.nonce = this.generateNonce(); // 리플레이 공격 방어
+                this.signature = null;
+                this.hash = this.calculateHash();
+            }
+
+            // Nonce 생성 (브라우저용)
+            generateNonce() {
+                const array = new Uint8Array(16);
+                crypto.getRandomValues(array);
+                return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+            }
+
+            // 해시 계산 (브라우저용 - 동기적)
+            calculateHash() {
+                const data = this.fromDID + this.toDID + this.amount + this.tokenType + 
+                           JSON.stringify(this.data) + this.timestamp + this.nonce;
+                
+                // 간단한 해시 생성 (개발용)
+                let hash = 0;
+                for (let i = 0; i < data.length; i++) {
+                    const char = data.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // 32bit 정수로 변환
+                }
+                return Math.abs(hash).toString(16);
+            }
+
+            // 서명 (간단한 서명)
+            sign(privateKey) {
+                this.signature = privateKey + '-signature-' + this.timestamp;
+            }
+
+            // 유효성 검증
+            isValid() {
+                // 기본 유효성 검사
+                if (!this.fromDID || !this.toDID || !this.amount || !this.tokenType) {
+                    return false;
+                }
+
+                if (this.amount <= 0) {
+                    return false;
+                }
+
+                if (!this.signature) {
+                    return false;
+                }
+
+                return true;
+            }
+
+            // 무결성 검증
+            verifyIntegrity() {
+                const recalculatedHash = this.recalculateHash();
+                return this.hash === recalculatedHash;
+            }
+
+            // 해시 재계산
+            recalculateHash() {
+                const data = this.fromDID + this.toDID + this.amount + this.tokenType + 
+                           JSON.stringify(this.data) + this.timestamp + this.nonce;
+                
+                // 간단한 해시 생성 (개발용)
+                let hash = 0;
+                for (let i = 0; i < data.length; i++) {
+                    const char = data.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // 32bit 정수로 변환
+                }
+                return Math.abs(hash).toString(16);
+            }
+
+            // 고유 식별자
+            getUniqueIdentifier() {
+                return `${this.fromDID}-${this.toDID}-${this.amount}-${this.tokenType}-${this.timestamp}-${this.nonce}`;
+            }
+
+            // JSON 변환
+            toJSON() {
+                return {
+                    fromDID: this.fromDID,
+                    toDID: this.toDID,
+                    amount: this.amount,
+                    tokenType: this.tokenType,
+                    data: this.data,
+                    timestamp: this.timestamp,
+                    nonce: this.nonce,
+                    signature: this.signature,
+                    hash: this.hash
+                };
+            }
+        }
+    </script>
+    
     <!-- 프로필 사진 스크립트 (app.js 로드 후에 로드되어야 함) -->
     <script src="profile-photo.js" defer></script>
     
@@ -82,28 +186,10 @@
                             <i class="fas fa-users"></i>
                             <span>DAO</span>
                         </div>
-                        <div class="mobile-dao-actions">
-                            <button class="mobile-dao-create-btn" onclick="createDAO()">
-                                <i class="fas fa-plus"></i> 생성
-                            </button>
-                        </div>
                     </div>
                 </div>
 
-                <!-- 거버넌스 탭 헤더 -->
-                <div class="mobile-header-tab" id="mobile-header-governance">
-                    <div class="mobile-header-governance">
-                        <div class="mobile-governance-title">
-                            <i class="fas fa-vote-yea"></i>
-                            <span>거버넌스</span>
-                        </div>
-                        <div class="mobile-governance-actions">
-                            <button class="mobile-proposal-btn" onclick="showCreateProposal()">
-                                <i class="fas fa-plus"></i> 제안
-                            </button>
-                        </div>
-                    </div>
-                </div>
+
 
                 <!-- P2P 탭 헤더 -->
                 <div class="mobile-header-tab" id="mobile-header-p2p">
@@ -144,10 +230,6 @@
                     <i class="fas fa-users"></i>
                     <span>DAO</span>
                 </button>
-                <button class="tab-btn" data-tab="governance">
-                    <i class="fas fa-vote-yea"></i>
-                    <span>거버넌스</span>
-                </button>
                 <button class="tab-btn" data-tab="p2p">
                     <i class="fas fa-comments"></i>
                     <span>P2P</span>
@@ -173,15 +255,8 @@
                             토큰 잔액
                         </button>
 
-                        <button class="dashboard-filter-btn" data-card="dao" onclick="window.dapp.switchDashboardFilter('dao')">
-                            <i class="fas fa-users"></i>
-                            소속 DAO
-                            <div class="notification-badge" id="daoFilterNotificationBadge" style="display: none;"></div>
-                        </button>
-                        <button class="dashboard-filter-btn" data-card="network" onclick="window.dapp.switchDashboardFilter('network')">
-                            <i class="fas fa-network-wired"></i>
-                            네트워크 현황
-                        </button>
+                        <!-- 소속 DAO 메뉴 제거됨 - 토큰 보유량 카드에 통합 -->
+
                         <button class="dashboard-filter-btn" data-card="validator" onclick="window.dapp.switchDashboardFilter('validator')">
                             <i class="fas fa-shield-alt"></i>
                             검증자 참여
@@ -220,10 +295,7 @@
                                         <label>이름</label>
                                         <span id="userName">미설정</span>
                                     </div>
-                                    <div class="info-row">
-                                        <label>생년월일</label>
-                                        <span id="userBirthDate">미설정</span>
-                                    </div>
+                                    <!-- 생년월일 항목 제거됨 -->
                                     <div class="info-row">
                                         <label>상태메시지</label>
                                         <span id="userStatusMessage" style="color: var(--text-secondary); font-style: italic;">상태메시지를 설정해보세요</span>
@@ -249,10 +321,10 @@
                         </div>
                     </div>
 
-                    <!-- 통합 토큰 보유량 & BMR 카드 -->
+                    <!-- 토큰 보유량 카드 -->
                     <div class="balance-card" data-card="balance">
                         <div class="card-header">
-                            <h3><i class="fas fa-coins"></i> 토큰 보유량 & BMR 발행 예측</h3>
+                            <h3><i class="fas fa-coins"></i> 토큰 보유량</h3>
                         </div>
                         <div class="card-content">
                             <div class="balance-section">
@@ -260,7 +332,7 @@
                                     <div class="balance-item">
                                         <div class="balance-label">B-Token (화폐)</div>
                                         <div class="balance-value" id="bTokenBalance">0 B</div>
-                                        <div class="balance-rate">시간당 +<span id="hourlyRate">0</span> B</div>
+                                        <!-- 기여 관련 메시지 제거됨 -->
                                         <button class="token-action-btn transfer-btn" onclick="window.dapp.goToTokenTransfer()" id="bTokenTransferButton" style="display: none;">
                                             <i class="fas fa-paper-plane"></i>
                                             전송하기
@@ -269,48 +341,12 @@
                                 </div>
                             </div>
                             
-                            <div class="bmr-divider"></div>
-                            
-                            <div class="bmr-section">
-                                <div class="bmr-stats-grid">
-                                    <div class="bmr-stat-item">
-                                        <div class="bmr-stat-label">누적 기여가치 (B)</div>
-                                        <div class="bmr-stat-value" id="totalContributionValue">0 B</div>
-                                    </div>
-                                    <div class="bmr-stat-item">
-                                        <div class="bmr-stat-label">남은 기여가치 (B)</div>
-                                        <div class="bmr-stat-value" id="remainingContributionValue">0 B</div>
-                                    </div>
-                                    <div class="bmr-stat-item">
-                                        <div class="bmr-stat-label">현재 BMR</div>
-                                        <div class="bmr-stat-value" id="currentBMR">0 B/년</div>
-                                    </div>
-                                    <div class="bmr-stat-item">
-                                        <div class="bmr-stat-label">남은 기대수명</div>
-                                        <div class="bmr-stat-value" id="remainingLifeExpectancy">- 년</div>
-                                    </div>
-                                </div>
-                                <div class="bmr-graph-container">
-                                    <canvas id="bmrChart" width="400" height="200"></canvas>
-                                </div>
-                                <div class="bmr-timeline">
-                                    <div class="timeline-labels">
-                                        <span>현재</span>
-                                        <span id="midLifeLabel">25년 후</span>
-                                        <span id="endLifeLabel">50년 후</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-
-                    <!-- 나의 DAO 카드 -->
-                    <div class="my-dao-card" data-card="dao">
+                            <!-- 소속 DAO 토글 섹션 -->
+                            <div class="dao-toggle-section">
                         <div class="dao-toggle-header" onclick="window.dapp.toggleMyDAOCard()">
                             <div class="dao-toggle-content">
-                                <i class="fas fa-users"></i>
-                                <span>소속 DAO 확인하기</span>
+                                <i class="fas fa-history"></i>
+                                <span>기여내역 확인하기</span>
                                 <div class="notification-badge" id="daoToggleNotificationBadge" style="display: none;"></div>
                         </div>
                             <i class="fas fa-chevron-down dao-toggle-icon" id="daoToggleIcon"></i>
@@ -318,36 +354,16 @@
                         <div class="dao-card-content" id="daoCardContent" style="display: none;">
                             <div class="my-dao-list" id="myDAOList">
                                 <!-- 소속 DAO 목록이 동적으로 생성됩니다 -->
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 네트워크 상태 카드 -->
-                    <div class="network-card" data-card="network">
-                        <div class="card-header">
-                            <h3><i class="fas fa-network-wired"></i> 네트워크 현황</h3>
-                        </div>
-                        <div class="card-content">
-                            <div class="network-stats">
-                                <div class="network-item">
-                                    <span class="network-label">총 DAO 수</span>
-                                    <span class="network-value" id="totalDAOs">-</span>
-                                </div>
-                                <div class="network-item">
-                                    <span class="network-label">총 구성원</span>
-                                    <span class="network-value" id="totalMembers">-</span>
-                                </div>
-                                <div class="network-item">
-                                    <span class="network-label">검증자 풀</span>
-                                    <span class="network-value" id="validatorPool">- B</span>
-                                </div>
-                                <div class="network-item">
-                                    <span class="network-label">활성 마이너</span>
-                                    <span class="network-value" id="totalMiners">-</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
+                    <!-- 나의 DAO 카드 제거됨 - 토큰 보유량 카드에 통합 -->
+
+
 
                     <!-- 검증자 참여 카드 -->
                     <div class="validator-card" data-card="validator">
@@ -364,14 +380,14 @@
                                         <span class="stat-label">검증자 수수료 풀</span>
                                         <span class="stat-value" id="validatorPoolMain">- B</span>
                                     </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">수수료 배분률</span>
-                                        <span class="stat-value">60%</span>
-                                    </div>
+                                                            <div class="stat-item">
+                            <span class="stat-label">수수료 배분률</span>
+                            <span class="stat-value">100%</span>
+                        </div>
                                 </div>
                                 <div class="validator-actions">
-                                    <button class="btn-primary validator-join-btn" onclick="window.dapp.openValidatorGuide()">
-                                        <i class="fas fa-external-link-alt"></i> 검증자 참여 가이드
+                                    <button class="btn-primary validator-join-btn" onclick="window.dapp.navigateToValidatorDAO()">
+                                        <i class="fas fa-users"></i> 검증자 참여하기
                                     </button>
                                     <button class="btn-support validator-sponsor-btn" onclick="window.dapp.showValidatorSponsorModal()">
                                         <i class="fas fa-heart"></i> 검증자 풀 후원하기
@@ -446,62 +462,10 @@
                                     <div class="balance-main" id="bTokenMain">0 B</div>
                                 </div>
                                 <div class="mining-info">
-                                    <div class="mining-rate">
-                                        <span>실시간 발행률</span>
-                                        <span id="currentMiningRate">0 B/시간</span>
-                                    </div>
-                                    <div class="next-mining">
-                                        <span>다음 발행</span>
-                                        <span id="nextMiningTime">00:00:00</span>
-                                </div>
+                                    <!-- 기여 관련 메시지 제거됨 -->
                             </div>
                             
-                            <div class="bmr-divider"></div>
-                            
-                            <div class="bmr-section">
-                                <div class="bmr-stats-grid">
-                                    <div class="bmr-stat-item">
-                                        <div class="bmr-stat-label">누적 기여가치 (B)</div>
-                                        <div class="bmr-stat-value" id="walletTotalContributionValue">0 B</div>
-                                    </div>
-                                    <div class="bmr-stat-item">
-                                        <div class="bmr-stat-label">남은 기여가치 (B)</div>
-                                        <div class="bmr-stat-value" id="walletRemainingContributionValue">0 B</div>
-                                    </div>
-                                    <div class="bmr-stat-item">
-                                        <div class="bmr-stat-label">현재 BMR</div>
-                                        <div class="bmr-stat-value" id="walletCurrentBMR">0 B/년</div>
-                                    </div>
-                                    <div class="bmr-stat-item">
-                                        <div class="bmr-stat-label">남은 기대수명</div>
-                                        <div class="bmr-stat-value" id="walletRemainingLifeExpectancy">- 년</div>
-                                    </div>
-                                </div>
-                                <div class="bmr-graph-container">
-                                    <canvas id="walletBmrChart" width="400" height="200"></canvas>
-                                </div>
-                                <div class="bmr-timeline">
-                                    <div class="timeline-labels">
-                                        <span>현재</span>
-                                        <span id="walletMidLifeLabel">25년 후</span>
-                                        <span id="walletEndLifeLabel">50년 후</span>
-                                    </div>
-                                </div>
-                            </div>
 
-                                <!-- P토큰 토글 섹션 -->
-                                <div class="ptoken-toggle-section">
-                                    <div class="ptoken-toggle-header" onclick="window.dapp.togglePTokenDetails()">
-                                        <div class="ptoken-toggle-content">
-                                            <i class="fas fa-vote-yea"></i>
-                                            <span>DAO별 P토큰 확인하기</span>
-                                </div>
-                                        <i class="fas fa-chevron-down ptoken-toggle-icon" id="ptokenToggleIcon"></i>
-                                    </div>
-                                    <div class="ptoken-card-content" id="ptokenDetails" style="display: none;">
-                                        <!-- DAO별 P토큰 보유량이 동적으로 생성됩니다 -->
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -552,9 +516,7 @@
                                             <i class="fas fa-info-circle"></i>
                                             <span>트랜잭션 수수료: <strong>0.1%</strong></span>
                                         </div>
-                                        <div class="fee-breakdown">
-                                            <small>검증자 풀 60% · DAO 금고 40%</small>
-                                        </div>
+
                                     </div>
                                     <form id="transferForm">
                                         <div class="form-group">
@@ -645,50 +607,15 @@
                         <h2><i class="fas fa-users"></i> DAO 컨소시엄</h2>
                     </div>
 
-                    <!-- TOP-OP 전용 DAO 생성 섹션 -->
-                    <div class="dao-top-op-section" id="daoTopOPSection" style="display: none;">
-                        <button class="btn-op-access" onclick="window.dapp.showCreateDAOModal()">
-                            <i class="fas fa-plus"></i>
-                            <div class="text-content">
-                                <span>DAO 생성</span>
-                                <small>최상위 OP 전용 DAO 생성 시스템</small>
-                            </div>
-                        </button>
-                    </div>
+
 
                     <!-- DAO 검색창 -->
                     <div class="dao-search-section">
                         <div class="search-input-wrapper">
-                            <i class="fas fa-search"></i>
                             <input type="text" id="daoSearchInput" placeholder="DAO 이름으로 검색..." onkeyup="window.dapp.searchDAOs(this.value)">
                             <button class="clear-search-btn" onclick="window.dapp.clearDAOSearch()" style="display: none;">
                                 <i class="fas fa-times"></i>
                             </button>
-                        </div>
-                    </div>
-
-                    <!-- DAO 필터 메뉴바 -->
-                    <div class="dao-filter-nav dao-nav-filter">
-                        <div class="dao-filter-scroll">
-                            <button class="dao-filter-btn active" data-dao="all" onclick="window.dapp.switchDAOListFilter('all')">
-                                <i class="fas fa-globe"></i>
-                                <span>전체</span>
-                            </button>
-                            <button class="dao-filter-btn" data-dao="my" onclick="window.dapp.switchDAOListFilter('my')">
-                                <i class="fas fa-user"></i>
-                                <span>내가 속한 DAO</span>
-                            </button>
-                            <button class="dao-filter-btn" data-dao="popular" onclick="window.dapp.switchDAOListFilter('popular')">
-                                <i class="fas fa-fire"></i>
-                                <span>인기 DAO</span>
-                            </button>
-                            <button class="dao-filter-btn" data-dao="recent" onclick="window.dapp.switchDAOListFilter('recent')">
-                                <i class="fas fa-clock"></i>
-                                <span>최근 생성</span>
-                            </button>
-                            <div id="daoListButtons">
-                                <!-- 개별 DAO 버튼들이 동적으로 생성됩니다 -->
-                            </div>
                         </div>
                     </div>
 
@@ -698,96 +625,6 @@
                 </div>
             </div>
 
-            <!-- 거버넌스 탭 -->
-            <div id="governance" class="tab-content">
-                <div class="governance-container">
-                    <div class="governance-header">
-                        <h2><i class="fas fa-vote-yea"></i> 거버넌스</h2>
-                        <div class="governance-actions">
-                            <button class="btn-primary" onclick="showCreateProposal()">
-                                <i class="fas fa-plus"></i> 제안하기
-                            </button>
-                            <button class="btn-secondary" onclick="showProposalGuide()">
-                                <i class="fas fa-info-circle"></i> 제안 가이드
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- OP 전용 섹션 -->
-                    <div class="op-access-section" id="opAccessSection" style="display: none;">
-                        <button class="btn-op-access" onclick="window.dapp.openOPReviewModal()">
-                            <i class="fas fa-shield-alt"></i>
-                            <div class="text-content">
-                                <span>OP 검토</span>
-                                <small>운영자 전용 검토 시스템</small>
-                            </div>
-                        </button>
-                    </div>
-
-                    <!-- 거버넌스 과정 메뉴바 -->
-                    <div class="governance-process-nav">
-                        <button class="process-nav-btn active" data-process="proposal" onclick="window.dapp.switchGovernanceProcess('proposal')">
-                            <i class="fas fa-lightbulb"></i>
-                            <span>제안과정</span>
-                            <small>아이디어 제시</small>
-                        </button>
-                        <button class="process-nav-btn" data-process="voting" onclick="window.dapp.switchGovernanceProcess('voting')">
-                            <i class="fas fa-vote-yea"></i>
-                            <span>투표과정</span>
-                            <small>지지 모집 · 의견 수렴</small>
-                        </button>
-                        <button class="process-nav-btn" data-process="review" onclick="window.dapp.switchGovernanceProcess('review')">
-                            <i class="fas fa-clipboard-check"></i>
-                            <span>검토과정</span>
-                            <small>결과 확인 · 실행 준비</small>
-                        </button>
-                    </div>
-
-                    <!-- 거버넌스 과정별 제목 -->
-                    <div class="governance-section-header">
-                        <h3 id="governance-section-title">모금 진행 중인 제안</h3>
-                    </div>
-
-                    <!-- 제안 검색창 -->
-                    <div class="proposal-search-section">
-                        <div class="search-input-wrapper">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="proposalSearchInput" placeholder="제안 제목이나 내용으로 검색..." onkeyup="window.dapp.searchProposals(this.value)">
-                            <button class="clear-search-btn" onclick="window.dapp.clearProposalSearch()" style="display: none;">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- DAO 필터 메뉴바 -->
-                    <div class="dao-filter-nav">
-                        <div class="dao-filter-scroll">
-                            <button class="dao-filter-btn active" data-dao="all" onclick="window.dapp.switchDAOFilter('all')">
-                                <i class="fas fa-globe"></i>
-                                <span>전체</span>
-                            </button>
-                            <div id="daoFilterButtons">
-                                <!-- 사용자 소속 DAO 버튼들이 동적으로 생성됩니다 -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 활성 제안들 -->
-                    <div class="proposals-section">
-                        <div class="proposals-grid" id="activeProposals">
-                            <!-- 제안들이 동적으로 생성됩니다 -->
-                        </div>
-                    </div>
-
-                    <!-- 투표 내역 -->
-                    <div class="voting-history">
-    
-                        <div class="history-list" id="votingHistory">
-                            <!-- 투표 내역이 동적으로 생성됩니다 -->
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- P2P 통신 탭 -->
             <div id="p2p" class="tab-content">
@@ -826,7 +663,6 @@
                     <!-- 연락처 검색창 -->
                     <div class="p2p-search-section">
                         <div class="search-input-wrapper">
-                            <i class="fas fa-search"></i>
                             <input type="text" id="contactSearchInput" placeholder="연락처 검색..." oninput="window.dapp.searchContacts(this.value)">
                             <button class="clear-search-btn" onclick="window.dapp.clearContactSearch()" style="display: none;" title="검색 초기화">
                                 <i class="fas fa-times"></i>
@@ -847,7 +683,6 @@
                     <!-- 채팅방 검색창 -->
                     <div class="p2p-search-section">
                         <div class="search-input-wrapper">
-                            <i class="fas fa-search"></i>
                             <input type="text" id="chatSearchInput" placeholder="채팅방 검색..." oninput="window.dapp.searchChats(this.value)">
                             <button class="clear-search-btn" onclick="window.dapp.clearChatSearch()" style="display: none;" title="검색 초기화">
                                 <i class="fas fa-times"></i>
@@ -888,7 +723,6 @@
                         <div class="public-chat-header">
                             <div class="public-search-section">
                                 <div class="search-input-wrapper">
-                                    <i class="fas fa-search"></i>
                                     <input type="text" id="publicChatSearchInput" placeholder="공개 채팅방 검색..." oninput="window.dapp.searchPublicChats(this.value)">
                                     <button class="clear-search-btn" onclick="window.dapp.clearPublicChatSearch()" style="display: none;" title="검색 초기화">
                                         <i class="fas fa-times"></i>
@@ -1158,31 +992,12 @@
                 <button class="modal-close" onclick="window.dapp.closeDAODetailModal()">&times;</button>
             </div>
             
-            <!-- DAO 상세 정보 탭 네비게이션 -->
-            <div class="dao-detail-nav">
-                <button class="dao-detail-tab-btn active" data-tab="contribution" onclick="window.dapp.switchDAODetailTab('contribution')">
-                    <i class="fas fa-history"></i> 기여내역
-                    <div class="dao-tab-notification" id="contributionTabNotification" style="display: none;"></div>
-                </button>
-                <button class="dao-detail-tab-btn" data-tab="participation" onclick="window.dapp.switchDAODetailTab('participation')">
-                    <i class="fas fa-vote-yea"></i> 참정내역
-                    <div class="dao-tab-notification" id="participationTabNotification" style="display: none;"></div>
-                </button>
-            </div>
-            
             <!-- DAO 상세 정보 콘텐츠 -->
             <div class="dao-detail-body">
                 <!-- 기여내역 탭 -->
                 <div id="daoDetailContribution" class="dao-detail-tab-content active">
                     <div class="contribution-list" id="daoContributionList">
                         <!-- 기여내역이 동적으로 생성됩니다 -->
-                    </div>
-                </div>
-                
-                <!-- 참정내역 탭 -->
-                <div id="daoDetailParticipation" class="dao-detail-tab-content">
-                    <div class="participation-list" id="daoParticipationList">
-                        <!-- 참정내역이 동적으로 생성됩니다 -->
                     </div>
                 </div>
             </div>
@@ -1262,6 +1077,23 @@
             </div>
             <div class="modal-body">
                 <form id="createProposalForm">
+                    <!-- 제안 유형 선택 -->
+                    <div class="form-group">
+                        <label>제안 유형</label>
+                        <div class="proposal-type-selector">
+                            <div class="proposal-type-option">
+                                <input type="radio" id="generalProposal" name="proposalType" value="general" checked onchange="window.dapp.handleProposalTypeChange()">
+                                <label for="generalProposal">일반제안</label>
+                            </div>
+                            <div class="proposal-type-option">
+                                <input type="radio" id="daoCreationProposal" name="proposalType" value="dao_creation" onchange="window.dapp.handleProposalTypeChange()">
+                                <label for="daoCreationProposal">DAO생성제안</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 일반제안 양식 -->
+                    <div id="generalProposalForm" class="proposal-form-section">
                     <div class="form-group">
                         <label for="proposalDAO">대상 DAO</label>
                         <select id="proposalDAO" required onchange="window.dapp.handleDAOSelection()">
@@ -1286,10 +1118,44 @@
                         <label for="proposalDescription">제안 내용</label>
                         <textarea id="proposalDescription" rows="6" placeholder="제안 내용을 상세히 작성하세요" required></textarea>
                     </div>
+                        
+                        <!-- 모금기간 설정 -->
                     <div class="form-group">
-                        <label for="proposalStake">담보 P-Token</label>
-                        <input type="number" id="proposalStake" min="1" step="0.1" placeholder="최소 1P" required>
-                        <small>제안을 위해 최소 1P를 담보로 제공해야 합니다</small>
+                            <label for="proposalFundingEndDate">모금 종료일</label>
+                            <input type="date" id="proposalFundingEndDate" required>
+                            <small>당일부터 14일 후까지 선택 가능합니다</small>
+                        </div>
+                        
+                                                 <script>
+                             // 모금 종료일 날짜 제한 설정 및 초기 수수료 설정
+                             document.addEventListener('DOMContentLoaded', function() {
+                                 const today = new Date();
+                                 const maxDate = new Date(today);
+                                 maxDate.setDate(today.getDate() + 14);
+                                 
+                                 const fundingEndDateInput = document.getElementById('proposalFundingEndDate');
+                                 if (fundingEndDateInput) {
+                                     fundingEndDateInput.min = today.toISOString().split('T')[0];
+                                     fundingEndDateInput.max = maxDate.toISOString().split('T')[0];
+                                     
+                                     // 기본값을 7일 후로 설정
+                                     const defaultDate = new Date(today);
+                                     defaultDate.setDate(today.getDate() + 7);
+                                     fundingEndDateInput.value = defaultDate.toISOString().split('T')[0];
+                                 }
+                                 
+                                 // 초기 수수료 표시 (50B의 1% = 0.5B)
+                                 const feeDisplay = document.getElementById('proposalFeeAmount');
+                                 if (feeDisplay) {
+                                     feeDisplay.textContent = '0.50 B (1%)';
+                                 }
+                             });
+                         </script>
+                        
+                        <div class="form-group">
+                            <label for="proposalStake">제안자 모금액 B-Token</label>
+                            <input type="number" id="proposalStake" min="50" step="0.1" placeholder="최소 50B" required oninput="window.dapp.updateProposalFee()">
+                            <small>제안을 위해 최소 50B 이상의 모금액을 설정해야 합니다</small>
                     </div>
                     <!-- 첨부파일 섹션 -->
                     <div class="form-group">
@@ -1307,27 +1173,130 @@
                     <div class="proposal-fee-info">
                         <div class="fee-notice">
                             <i class="fas fa-info-circle"></i>
-                            <span>제안 수수료: <strong>0.01 B</strong></span>
+                                <span>제안 수수료: <strong id="proposalFeeAmount">0.50 B (1%)</strong></span>
                         </div>
-                        <div class="fee-breakdown">
-                            <small>검증자 풀 60% · DAO 금고 40%</small>
-                        </div>
+
                     </div>
                     <div class="proposal-requirements">
                         <h4 id="requirementsTitle">제안 요구사항</h4>
                         <ul id="requirementsList">
-                            <li>DAO 내 전체 구성원의 1%만큼의 P-token이 모이면 투표 진입</li>
-                            <li>2주 내 투표 진입 실패시 제안 및 담보 소각</li>
-                            <li>투표 통과시 담보 반환, 실패시 담보 소각</li>
+                                <li>모금된 금액은 투표통과시 실행과정에 쓰이며, 남은 금액은 시스템에 분배됩니다.</li>
                         </ul>
                         <!-- 탄핵안 특별 요구사항 (탄핵안 선택 시 표시) -->
                         <ul id="impeachmentRequirementsList" style="display: none;">
-                            <li class="impeachment-special">DAO 내 전체 구성원의 <strong>10%</strong> 또는 <strong>최소 30P</strong> 중 더 큰 값의 P-token이 모이면 투표 진입 (일반제안: 1%)</li>
+                                <li class="impeachment-special">DAO 내 전체 구성원의 <strong>10%</strong> 또는 <strong>최소 30B</strong> 중 더 큰 값의 B-token이 모이면 투표 진입 (일반제안: 1%)</li>
                             <li>2주 내 투표 진입 실패시 제안 및 담보 소각</li>
                             <li class="impeachment-special">투표 시 정족수 <strong>60%</strong> 필요 (일반제안: 40%)</li>
                             <li class="impeachment-special">찬성 비율 <strong>60%</strong> 이상 필요 (일반제안: 50%)</li>
                             <li>투표 통과시 담보 반환, 실패시 담보 소각</li>
                         </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- DAO생성제안 양식 -->
+                    <div id="daoCreationProposalForm" class="proposal-form-section" style="display: none;">
+                        <!-- 기본 정보 섹션 -->
+                        <div class="dao-form-section">
+                            <h4><i class="fas fa-info-circle"></i> 기본 정보</h4>
+                            <div class="form-group">
+                                <label for="daoTitle">DAO 이름</label>
+                                <input type="text" id="daoTitle" placeholder="예: Innovation DAO" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="daoDescription">DAO 설명</label>
+                                <textarea id="daoDescription" placeholder="DAO의 목적과 역할을 설명해주세요..." rows="3" required></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 참여 안내 섹션 -->
+                        <div class="dao-form-section">
+                            <h4><i class="fas fa-users"></i> 참여 안내</h4>
+                            <div class="form-group">
+                                <label for="daoParticipationGuide">참여하기 안내 내용</label>
+                                <textarea id="daoParticipationGuide" placeholder="사용자가 '참여하기' 버튼을 눌렀을 때 보여질 안내 내용을 작성해주세요..." rows="4" required></textarea>
+                            </div>
+                        </div>
+
+                        <!-- DCA 설정 섹션 -->
+                        <div class="dao-form-section">
+                            <h4><i class="fas fa-tasks"></i> 지정기여활동 (DCA) 설정</h4>
+                            <div class="dca-setup-area">
+                                <div class="dca-list" id="newDAODCAList">
+                                    <!-- DCA 항목들이 동적으로 추가됩니다 -->
+                                </div>
+                                <button type="button" class="btn-secondary add-dca-btn" onclick="window.dapp.addNewDAODCA()">
+                                    <i class="fas fa-plus"></i> DCA 추가
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 기여하러가기 설정 섹션 -->
+                        <div class="dao-form-section">
+                            <h4><i class="fas fa-rocket"></i> 기여하러가기 설정</h4>
+                            <div class="contribution-setup">
+                                <div class="contribution-options-list" id="contributionOptionsList">
+                                    <!-- 기여 옵션들이 동적으로 추가됩니다 -->
+                                </div>
+                                <button type="button" class="btn-secondary add-contribution-btn" onclick="window.dapp.addContributionOption()">
+                                    <i class="fas fa-plus"></i> 기여하러가기 옵션 추가
+                                </button>
+                                <div class="form-help">
+                                    <i class="fas fa-info-circle"></i>
+                                    DevDAO처럼 여러 개의 기여하러가기 버튼을 설정할 수 있습니다. (예: GitHub 연동, 기여 가이드 등)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 이니셜 OP 설정 섹션 -->
+                        <div class="dao-form-section">
+                            <h4><i class="fas fa-crown"></i> 이니셜 OP 설정</h4>
+                            <div class="form-group">
+                                <label for="initialOPAddress">이니셜 OP 통신주소</label>
+                                <input type="text" id="initialOPAddress" placeholder="OP가 될 사용자의 통신주소 (DID)를 입력하세요" required>
+                                <small class="form-help">
+                                    <i class="fas fa-info-circle"></i>
+                                    이니셜 OP에게는 DAO 생성과 동시에 해당 DAO의 관리 권한이 부여됩니다.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- 첨부파일 섹션 -->
+                        <div class="dao-form-section">
+                            <h4><i class="fas fa-paperclip"></i> 첨부파일</h4>
+                            <div class="form-group">
+                                <label for="daoAttachments">첨부파일</label>
+                                <div class="file-upload-area" onclick="document.getElementById('daoFileInput').click()">
+                                    <div class="file-upload-content">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>클릭하여 파일을 선택하거나 드래그하여 업로드하세요</p>
+                                        <small>지원 형식: PDF, DOC, DOCX, TXT, JPG, PNG (최대 10MB)</small>
+                                    </div>
+                                    <input type="file" id="daoFileInput" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" style="display: none;" onchange="window.dapp.handleDAOFileUpload(this)">
+                                </div>
+                                <div class="uploaded-files-list" id="daoUploadedFiles"></div>
+                            </div>
+                        </div>
+
+                        <!-- DAO생성제안 수수료 정보 -->
+                        <div class="proposal-fee-info">
+                            <div class="fee-notice">
+                                <i class="fas fa-info-circle"></i>
+                                <span>제안 수수료: <strong>0.05 B</strong> (DAO생성제안)</span>
+                            </div>
+
+                        </div>
+
+                        <!-- DAO생성제안 요구사항 -->
+                        <div class="proposal-requirements">
+                            <h4>DAO생성제안 요구사항</h4>
+                            <ul>
+                                <li>전체 백야 프로토콜 구성원의 <strong>5%</strong>만큼의 B-token이 모이면 투표 진입</li>
+                                <li>1달 내 투표 진입 실패시 제안 및 담보 소각</li>
+                                <li>투표 시 정족수 <strong>50%</strong> 필요</li>
+                                <li>찬성 비율 <strong>60%</strong> 이상 필요</li>
+                                <li>투표 통과시 담보 반환 및 DAO 생성, 실패시 담보 소각</li>
+                            </ul>
+                        </div>
                     </div>
                     <div class="modal-actions">
                         <button type="button" class="btn-secondary" onclick="window.dapp.closeCreateProposalModal()">취소</button>
@@ -1349,17 +1318,11 @@
                 <div class="consortium-container">
                     <!-- 컨소시엄 네비게이션 -->
                     <div class="consortium-nav">
-                        <button class="consortium-tab active" data-consortium-tab="overview">
-                            <i class="fas fa-chart-pie"></i> 개요
-                        </button>
-                        <button class="consortium-tab" data-consortium-tab="treasury">
+                        <button class="consortium-tab active" data-consortium-tab="treasury">
                             <i class="fas fa-vault"></i> DAO 금고
                         </button>
                         <button class="consortium-tab" data-consortium-tab="announcements">
                             <i class="fas fa-bullhorn"></i> 공지
-                        </button>
-                        <button class="consortium-tab" data-consortium-tab="rankings">
-                            <i class="fas fa-trophy"></i> 랭킹
                         </button>
                         <button class="consortium-tab" data-consortium-tab="community">
                             <i class="fas fa-comments"></i> 커뮤니티
@@ -1368,46 +1331,8 @@
 
                     <!-- 컨소시엄 콘텐츠 -->
                     <div class="consortium-content">
-                        <!-- 개요 탭 -->
-                        <div id="consortium-overview" class="consortium-tab-content active">
-                            <div class="dao-overview-grid">
-                                <div class="overview-card">
-                                    <h4><i class="fas fa-users"></i> 구성원 현황</h4>
-                                    <div class="overview-stats">
-                                        <div class="stat">
-                                            <span class="stat-number" id="daoMemberCount">0</span>
-                                            <span class="stat-label">총 구성원</span>
-                                        </div>
-                                        <div class="stat">
-                                            <span class="stat-number" id="daoActiveMembers">0</span>
-                                            <span class="stat-label">활성 구성원</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="overview-card">
-                                    <h4><i class="fas fa-chart-line"></i> 기여 현황</h4>
-                                    <div class="overview-stats">
-                                        <div class="stat">
-                                            <span class="stat-number" id="daoTotalContributions">0</span>
-                                            <span class="stat-label">총 기여</span>
-                                        </div>
-                                        <div class="stat">
-                                            <span class="stat-number" id="daoMonthlyContributions">0</span>
-                                            <span class="stat-label">이번 달</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="overview-card">
-                                    <h4><i class="fas fa-crown"></i> 운영진</h4>
-                                    <div class="operator-info" id="daoOperatorInfo">
-                                        <!-- 운영진 정보가 동적으로 생성됩니다 -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- DAO 금고 탭 -->
-                        <div id="consortium-treasury" class="consortium-tab-content">
+                        <div id="consortium-treasury" class="consortium-tab-content active">
                             <div class="treasury-overview">
                                 <div class="treasury-card">
                                     <h4><i class="fas fa-vault"></i> 금고 현황</h4>
@@ -1452,10 +1377,7 @@
                                                 <i class="fas fa-plus"></i>
                                                 공지 작성
                                             </button>
-                                            <button class="governance-nav-btn protocol-overview-btn" onclick="goToGovernanceTab()">
-                                                <i class="fas fa-vote-yea"></i>
-                                                거버넌스
-                                    </button>
+                                            
                                 </div>
                                     </div>
                                 </div>
@@ -1465,23 +1387,7 @@
                             </div>
                         </div>
 
-                        <!-- 랭킹 탭 -->
-                        <div id="consortium-rankings" class="consortium-tab-content">
-                            <div class="rankings-section">
-                                <div class="ranking-tabs">
-                                    <button class="ranking-tab active" data-ranking="contributors">기여자 랭킹</button>
-                                    <button class="ranking-tab" data-ranking="ptoken">P-Token 랭킹</button>
-                                </div>
-                                <div class="ranking-content">
-                                    <div id="contributors-ranking" class="ranking-list active">
-                                        <!-- 기여자 랭킹이 동적으로 생성됩니다 -->
-                                    </div>
-                                    <div id="ptoken-ranking" class="ranking-list">
-                                        <!-- P-Token 랭킹이 동적으로 생성됩니다 -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+
 
                         <!-- 커뮤니티 탭 -->
                         <div id="consortium-community" class="consortium-tab-content">
@@ -2025,50 +1931,19 @@
                     }, 300);
                 };
 
-                // 거버넌스 페이지로 이동
-                window.dapp.goToGovernance = function() {
-                    // 거버넌스 탭으로 전환
-                    const governanceTab = document.querySelector('[data-tab="governance"]');
-                    if (governanceTab) {
-                        governanceTab.click();
-                    }
-                    
-                    // 잠시 후 제안 섹션으로 스크롤
-                    setTimeout(function() {
-                        const proposalsSection = document.querySelector('.proposals-section');
-                        if (proposalsSection) {
-                            proposalsSection.scrollIntoView({ 
-                                behavior: 'smooth',
-                                block: 'start'
-                            });
-                            
-                            // 제안 섹션을 강조하는 애니메이션
-                            proposalsSection.classList.add('highlight-animation');
-                            setTimeout(function() {
-                                proposalsSection.classList.remove('highlight-animation');
-                            }, 2000);
-                        }
-                    }, 300);
-                };
+
 
                 // 토큰 액션 버튼 표시 업데이트
                 window.dapp.updateTokenActionButtons = function() {
                     const bTokenTransferButton = document.getElementById('bTokenTransferButton');
-                    const pTokenGovernanceButton = document.getElementById('pTokenGovernanceButton');
                     
                     if (this.isAuthenticated && this.currentUser) {
                         if (bTokenTransferButton) {
                             bTokenTransferButton.style.display = 'inline-flex';
                         }
-                        if (pTokenGovernanceButton) {
-                            pTokenGovernanceButton.style.display = 'inline-flex';
-                        }
                     } else {
                         if (bTokenTransferButton) {
                             bTokenTransferButton.style.display = 'none';
-                        }
-                        if (pTokenGovernanceButton) {
-                            pTokenGovernanceButton.style.display = 'none';
                         }
                     }
                 };
@@ -2148,6 +2023,15 @@
                             </button>
                         </div>
                     </div>
+                    <div class="profile-view-address" id="profileViewUsernameContainer" style="display: none;">
+                        <label>아이디</label>
+                        <div class="profile-address-container">
+                            <span id="profileViewUsername" class="profile-address"></span>
+                            <button class="profile-copy-btn" onclick="window.dapp.copyProfileUsername()" title="아이디 복사">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
                     
                     <!-- 연락처 액션 버튼들 -->
                     <div class="profile-actions">
@@ -2182,7 +2066,7 @@
     </div>
 
     <script src="app.js"></script>
-
+    <script src="app-additions.js"></script>
     <script src="ime-fix.js"></script>
     
     <!-- 서비스 워커 등록 -->

@@ -11,6 +11,16 @@ class SimpleAuth {
     this.communicationRegistry = new Map(); // 통신주소 레지스트리
     this.userCredentials = new Map(); // 사용자 인증 정보 저장소
     this.rateLimiter = new Map(); // Rate limiting for security
+    this.dataStorage = null; // DataStorage 참조
+  }
+
+  /**
+   * DataStorage 설정
+   * @param {DataStorage} storage - DataStorage 인스턴스
+   */
+  setDataStorage(storage) {
+    this.dataStorage = storage;
+    console.log('💾 SimpleAuth: DataStorage 연결됨');
   }
 
   /**
@@ -18,10 +28,9 @@ class SimpleAuth {
    * @param {string} username - 사용자 아이디
    * @param {string} password - 비밀번호
    * @param {string} name - 실제 이름 (선택사항)
-   * @param {string} birthDate - 생년월일 (선택사항)
    * @returns {Object} DID 생성 결과
    */
-  generateDID(username, password, name = '', birthDate = '') {
+  generateDID(username, password, name = '') {
     try {
       // Rate limiting 체크
       if (!this.checkRateLimit('generateDID')) {
@@ -55,7 +64,6 @@ class SimpleAuth {
         didHash,
         username,
         name: name || username,
-        birthDate,
         communicationAddress,
         createdAt: Date.now(),
         status: 'active',
@@ -167,6 +175,24 @@ class SimpleAuth {
           error: `비밀번호가 올바르지 않습니다 (남은 시도: ${5 - didData.authAttempts}회)`
         };
       }
+      
+      // DataStorage에서 저장된 정보 확인
+      if (this.dataStorage) {
+        const savedInfo = this.dataStorage.getUserInfo(didData.didHash);
+        if (savedInfo && savedInfo.communicationAddress) {
+          // 저장된 통신주소가 현재와 다르면 업데이트
+          if (savedInfo.communicationAddress !== didData.communicationAddress) {
+            console.log(`📱 저장된 통신주소로 업데이트: ${savedInfo.communicationAddress}`);
+            // 기존 통신주소 제거
+            if (didData.communicationAddress) {
+              this.communicationRegistry.delete(didData.communicationAddress);
+            }
+            // 새 통신주소 설정
+            didData.communicationAddress = savedInfo.communicationAddress;
+            this.communicationRegistry.set(savedInfo.communicationAddress, didData.didHash);
+          }
+        }
+      }
 
       return { 
         success: true, 
@@ -219,6 +245,15 @@ class SimpleAuth {
     if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
       throw new Error('비밀번호는 영문 대소문자와 숫자를 모두 포함해야 합니다');
     }
+  }
+
+  /**
+   * 아이디 중복 확인
+   * @param {string} username - 확인할 아이디
+   * @returns {boolean} 중복 여부
+   */
+  checkUserIdExists(username) {
+    return this.userCredentials.has(username);
   }
 
   /**
@@ -439,8 +474,7 @@ class SimpleAuth {
       const result = this.generateDID(
         username,
         tempPassword,
-        additionalInfo.name || `Node Operator ${communicationAddress}`,
-        additionalInfo.birthDate || null
+        additionalInfo.name || `Node Operator ${communicationAddress}`
       );
 
       if (result.success) {
@@ -609,6 +643,94 @@ class SimpleAuth {
         error: '해당 아이디의 사용자를 찾을 수 없습니다'
       };
     } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 모든 사용자 정보 조회 (디버그용)
+   */
+  getAllUsers() {
+    const users = [];
+    this.didRegistry.forEach((didData, didHash) => {
+      users.push({
+        didHash: didHash,
+        username: didData.username,
+        name: didData.name,
+        communicationAddress: didData.communicationAddress,
+        createdAt: didData.createdAt,
+        isFounder: didData.isFounder
+      });
+    });
+    return users;
+  }
+
+  /**
+   * 통신주소 업데이트
+   * @param {string} didHash - 사용자 DID
+   * @param {string} newAddress - 새로운 통신주소
+   * @returns {Object} 업데이트 결과
+   */
+  updateCommunicationAddress(didHash, newAddress) {
+    try {
+      // DID 확인
+      const didData = this.didRegistry.get(didHash);
+      if (!didData) {
+        return { success: false, error: 'DID를 찾을 수 없습니다' };
+      }
+
+      // 통신주소 형식 검증
+      const phoneRegex = /^010-\d{4}-\d{4}$/;
+      if (!phoneRegex.test(newAddress)) {
+        return {
+          success: false,
+          error: '유효하지 않은 통신주소 형식입니다 (010-XXXX-XXXX)'
+        };
+      }
+
+      // 중복 확인
+      if (this.communicationRegistry.has(newAddress)) {
+        const existingDID = this.communicationRegistry.get(newAddress);
+        if (existingDID !== didHash) {
+          return {
+            success: false,
+            error: '이미 사용 중인 통신주소입니다'
+          };
+        }
+      }
+
+      // 기존 통신주소 제거
+      const oldAddress = didData.communicationAddress;
+      if (oldAddress) {
+        this.communicationRegistry.delete(oldAddress);
+      }
+
+      // 새 통신주소 설정
+      didData.communicationAddress = newAddress;
+      didData.communicationAddressSetAt = Date.now();
+      this.communicationRegistry.set(newAddress, didHash);
+
+      console.log(`📱 통신주소 업데이트: ${oldAddress} → ${newAddress}`);
+      
+      // DataStorage에 저장
+      if (this.dataStorage) {
+        this.dataStorage.saveUserInfo(didHash, {
+          communicationAddress: newAddress,
+          communicationAddressSetAt: Date.now()
+        });
+      }
+
+      return {
+        success: true,
+        oldAddress,
+        newAddress,
+        message: '통신주소가 성공적으로 변경되었습니다'
+      };
+    } catch (error) {
+      console.error('❌ 통신주소 업데이트 실패:', error.message);
       return {
         success: false,
         error: error.message

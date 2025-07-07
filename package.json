@@ -14,6 +14,7 @@
     "demo": "node demo.js",
     "interactive": "node interactive-demo.js",
     "server": "node server.js",
+    "mobile": "node mobile-api-server.js",
     "build": "webpack --mode production",
     "dev": "webpack serve --mode development",
     "chain:start": "node src/blockchain/node.js",

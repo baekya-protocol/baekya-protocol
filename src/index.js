@@ -1,12 +1,11 @@
 const DID = require('./did/DID');
-const CVCM = require('./cvcm/CVCM');
 const DAO = require('./dao/DAO');
-const PToken = require('./ptoken/PToken');
 const MiningSystem = require('./mining/MiningSystem');
 const AutomationSystem = require('./automation/AutomationSystem');
 const TransactionFeeSystem = require('./tfs/TransactionFeeSystem');
 const SimpleAuth = require('./auth/SimpleAuth');
 const BlockchainCore = require('./blockchain/BlockchainCore');
+const DataStorage = require('./storage/DataStorage');
 const readline = require('readline');
 
 /**
@@ -142,12 +141,45 @@ class BaekyaProtocol {
     try {
       console.log('⚡ 프로토콜 구성요소 초기화 중...');
 
+      // 0. 데이터 영구 저장소 초기화
+      console.log('💾 데이터 영구 저장소 초기화...');
+      this.components.storage = new DataStorage();
+
+      // 서버 시작 시 검증자 풀과 DAO 금고 초기화
+      console.log('🔄 검증자 풀 및 DAO 금고 초기화...');
+      this.components.storage.resetValidatorPool();
+      this.components.storage.resetDAOTreasuries();
+
       // 1. 간단한 인증 시스템
       console.log('🔐 인증 시스템 초기화...');
       this.components.authSystem = new SimpleAuth();
+      
+      // SimpleAuth에 DataStorage 연결
+      this.components.authSystem.setDataStorage(this.components.storage);
+      
+      // 저장된 사용자 정보 로드
+      const storedUsers = this.components.storage.data.users || {};
+      for (const [didHash, userInfo] of Object.entries(storedUsers)) {
+        if (userInfo.communicationAddress) {
+          const didInfo = this.components.authSystem.getDIDInfo(didHash);
+          if (didInfo.success) {
+            // 저장된 통신주소로 업데이트
+            const updateResult = this.components.authSystem.updateCommunicationAddress(
+              didHash, 
+              userInfo.communicationAddress
+            );
+            if (updateResult.success) {
+              console.log(`📱 사용자 통신주소 복원: ${didHash.substring(0, 16)}... → ${userInfo.communicationAddress}`);
+            }
+          }
+        }
+      }
 
-      // 2. 통신주소 설정 (검증자만 필수, 풀노드는 선택사항)
-      if (this.config.isValidator) {
+      // 2. 통신주소 설정 (웹 테스트 모드에서는 건너뛰기)
+      if (this.config.isWebTest) {
+        console.log('🌐 웹 테스트 모드: 통신주소 입력 건너뛰기');
+        this.config.communicationAddress = this.config.communicationAddress || '010-0000-0000';
+      } else if (this.config.isValidator) {
         console.log('📞 검증자 통신주소 설정 중...');
         this.config.communicationAddress = await this.getCommunicationAddress();
       } else {
@@ -168,22 +200,27 @@ class BaekyaProtocol {
         }
       }
       
-      // 3. 검증자 모드인 경우에만 DID 생성/조회
-      if (this.config.isValidator) {
-        console.log('👤 검증자 모드: DID 생성/조회 중...');
-        const didResult = await this.getOrCreateDIDFromAddress(this.config.communicationAddress);
-        if (!didResult.success) {
-          throw new Error(`검증자 DID 생성/조회 실패: ${didResult.error}`);
-        }
-        
-        this.config.validatorDID = didResult.didHash;
-        
-        if (!didResult.isExisting && didResult.credentials) {
-          console.log(`🔑 검증자 계정 생성됨:`);
-          console.log(`   - 아이디: ${didResult.credentials.username}`);
-          console.log(`   - 비밀번호: ${didResult.credentials.password}`);
-          console.log(`   - 통신주소: ${this.config.communicationAddress}`);
-          console.log(`   - DID: ${this.config.validatorDID.substring(0, 16)}...`);
+      // 3. 검증자 모드이거나 웹 테스트 모드인 경우에만 DID 생성/조회
+      if (this.config.isValidator || this.config.isWebTest) {
+        if (this.config.isWebTest) {
+          console.log('🌐 웹 테스트 모드: 기본 DID 생성 건너뛰기');
+          this.config.validatorDID = null;
+        } else {
+          console.log('👤 검증자 모드: DID 생성/조회 중...');
+          const didResult = await this.getOrCreateDIDFromAddress(this.config.communicationAddress);
+          if (!didResult.success) {
+            throw new Error(`검증자 DID 생성/조회 실패: ${didResult.error}`);
+          }
+          
+          this.config.validatorDID = didResult.didHash;
+          
+          if (!didResult.isExisting && didResult.credentials) {
+            console.log(`🔑 검증자 계정 생성됨:`);
+            console.log(`   - 아이디: ${didResult.credentials.username}`);
+            console.log(`   - 비밀번호: ${didResult.credentials.password}`);
+            console.log(`   - 통신주소: ${this.config.communicationAddress}`);
+            console.log(`   - DID: ${this.config.validatorDID.substring(0, 16)}...`);
+          }
         }
       } else {
         // 풀노드는 DID 없이 블록체인 네트워크만 운영
@@ -203,35 +240,27 @@ class BaekyaProtocol {
       // 5. 블록체인 코어
       console.log('⛓️  블록체인 코어 초기화...');
       this.components.blockchain = new BlockchainCore();
+      
+      // 블록체인에 영구 저장소 연결
+      this.components.blockchain.setDataStorage(this.components.storage);
 
-      // 6. CVCM 기여증명 시스템
-      console.log('🏗️  CVCM 기여증명 시스템 초기화...');
-      this.components.cvcm = new CVCM(this.components.didSystem);
-
-      // 7. P-Token 참정권 시스템
-      console.log('🗳️  P-Token 참정권 시스템 초기화...');
-      this.components.ptoken = new PToken(
-        this.components.didSystem,
-        this.components.cvcm,
-        null // DAO는 나중에 설정
-      );
-
-      // 8. DAO 거버넌스 시스템
+      // 6. DAO 거버넌스 시스템
       console.log('🏛️  DAO 거버넌스 시스템 초기화...');
       this.components.dao = new DAO(
         this.components.didSystem,
-        this.components.ptoken
+        null, // P-Token 시스템 제거됨
+        this.components.storage
       );
 
-      // 9. 트랜잭션 수수료 시스템
+      // 7. 트랜잭션 수수료 시스템
       console.log('💰 트랜잭션 수수료 시스템 초기화...');
       this.components.txFeeSystem = new TransactionFeeSystem();
 
-      // 10. 마이닝 시스템
+      // 8. 마이닝 시스템
       console.log('⛏️  마이닝 시스템 초기화...');
       this.components.miningSystem = new MiningSystem();
 
-      // 11. 자동화 시스템
+      // 9. 자동화 시스템
       console.log('🤖 자동화 시스템 초기화...');
       this.components.automationSystem = new AutomationSystem(this);
 
@@ -252,25 +281,13 @@ class BaekyaProtocol {
   }
 
   setupInterconnections() {
-    // P-Token에 DAO 시스템 연결
-    this.components.ptoken.daoSystem = this.components.dao;
-    
-    // CVCM에 DAO 시스템 연결
-    this.components.cvcm.daoSystem = this.components.dao;
-    
-    // DAO에 CVCM 시스템 연결 (기본 DCA 등록을 위해)
-    this.components.dao.cvcmSystem = this.components.cvcm;
-    
-    // DAO에 P-Token 시스템 연결 (이니셜 OP 30P 지급용)
-    this.components.dao.setPTokenSystem(this.components.ptoken);
-    
     // DAO 시스템 초기화 (기본 DAO들 생성)
     this.components.dao.initialize();
     
     // 블록체인에 DID 레지스트리 연결
     this.components.blockchain.setDIDRegistry(this.components.didSystem);
     
-    console.log('🔗 시스템 간 상호연결 설정 완료');
+    console.log('🔗 시스템 간 상호연결 설정 완료 (P-Token 제거됨)');
   }
 
   /**
@@ -294,15 +311,13 @@ class BaekyaProtocol {
       const founderData = {
         username: 'founder',
         password: 'Founder123!', // 영문 대소문자와 숫자, 특수문자 포함
-        name: 'Protocol Founder',
-        birthDate: '1990-01-01'
+        name: 'Protocol Founder'
       };
       
       const result = this.components.authSystem.generateDID(
         founderData.username,
         founderData.password,
-        founderData.name,
-        founderData.birthDate
+        founderData.name
       );
       
       if (!result.success) {
@@ -318,7 +333,6 @@ class BaekyaProtocol {
       
       // 4개 기본 DAO의 OP로 설정
       const defaultDAOs = ['Operations DAO', 'Development DAO', 'Community DAO', 'Political DAO'];
-      let totalPTokens = 0;
       
       for (const daoName of defaultDAOs) {
         const dao = Array.from(this.components.dao.daos.values())
@@ -333,16 +347,20 @@ class BaekyaProtocol {
           const members = this.components.dao.daoMembers.get(dao.id);
           members.add(founderDID);
           
-          // P-Token 30개 부여
-          const currentBalance = this.components.ptoken.getPTokenBalance(founderDID) || 0;
-          this.components.ptoken.setPTokenBalance(founderDID, currentBalance + 30);
-          totalPTokens += 30;
-          
-          console.log(`  ✅ ${daoName} OP 설정 완료 (+30P)`);
+          console.log(`  ✅ ${daoName} OP 설정 완료`);
         }
       }
       
-      // B-Token 30개 부여
+      // 시스템 검증자 등록 (초기 블록 마이닝용)
+      const systemValidatorDID = 'did:baekya:system_validator_000000000000000000000000';
+      this.components.blockchain.registerValidator(systemValidatorDID, 1000);
+      
+      // B-토큰 잔액 확인 (중복 지급 방지)
+      const currentBTokenBalance = this.components.blockchain.getBalance(founderDID, 'B-Token');
+      
+      if (currentBTokenBalance === 0) {
+        // B-Token 30개 부여 (서버 시작 시 한 번만)
+        console.log('💰 Founder 계정에 초기 B-토큰 30B 지급 중...');
       const Transaction = require('./blockchain/Transaction');
       const bTokenTx = new Transaction(
         'did:baekya:system000000000000000000000000000000000',
@@ -354,9 +372,16 @@ class BaekyaProtocol {
       bTokenTx.signature = 'founder-initial-grant';
       this.components.blockchain.addTransaction(bTokenTx);
       
-      // 즉시 블록 생성하여 토큰 반영
-      const bTokenBlock = this.components.blockchain.mineBlock([bTokenTx]);
-      this.components.blockchain.setBalance(founderDID, 30, 'B-Token');
+        // 즉시 블록 생성하여 토큰 반영 (시스템 검증자 사용)
+        const bTokenBlock = this.components.blockchain.mineBlock([bTokenTx], systemValidatorDID);
+        if (bTokenBlock && !bTokenBlock.error) {
+          console.log(`💎 Founder B-토큰 블록 생성: #${bTokenBlock.index || '?'}`);
+        } else {
+          console.error('❌ Founder B-토큰 블록 생성 실패:', bTokenBlock?.error || '알 수 없는 오류');
+        }
+      } else {
+        console.log(`⚠️  Founder 계정은 이미 B-토큰을 보유하고 있습니다 (${currentBTokenBalance}B).`);
+      }
       
       console.log(`
 👑 Founder 계정 초기 설정 완료!
@@ -364,7 +389,6 @@ class BaekyaProtocol {
    • 비밀번호: Founder123!
    • DID: ${founderDID.substring(0, 16)}...
    • B-Token: 30B
-   • P-Token: ${totalPTokens}P (각 DAO별 30P)
    • 역할: 4개 기본 DAO의 Operator
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
@@ -414,14 +438,18 @@ class BaekyaProtocol {
    • 환경: ${this.config.isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}
    • 네트워크: ${this.config.isMainnet ? 'MAINNET' : this.config.isTestnet ? 'TESTNET' : 'LOCAL'}
    • P2P 포트: ${this.config.port}
-   • API 포트: ${this.config.port + 1000} (로컬 전용)
+   • 메인 API 포트: ${this.config.port + 1000}
+   • 경량 클라이언트 포트: 3000 (통합)
    • 역할: ${this.config.isValidator ? 'VALIDATOR' : 'FULL NODE'}
    • 통신주소: ${this.config.communicationAddress || '없음 (검증자 풀 보상 제외)'}
    • DID: ${this.config.validatorDID ? this.config.validatorDID.substring(0, 16) + '...' : 'N/A'}
 
 🌐 웹 인터페이스 접속:
-   • URL: http://localhost:${this.config.port + 1000}
-   • 브라우저에서 위 주소로 접속하여 백야 프로토콜을 사용하세요!
+   • 직접 연결: http://localhost:${this.config.port + 1000}
+   • 경량 클라이언트: http://localhost:3000 (폰 접속용)
+   • 폰에서 접속: http://[PC의 IP주소]:3000
+   
+💡 이제 하나의 메인넷 서버로 모든 기능을 제공합니다!
 
 🌟 "기여한 만큼 보장받는" 새로운 사회가 시작되었습니다!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -527,6 +555,13 @@ class BaekyaProtocol {
       // HTTP 서버 종료
       if (this.httpServer) {
         this.httpServer.close();
+        console.log('🔗 메인 API 서버 종료됨');
+      }
+      
+      // 모바일 서버 종료
+      if (this.mobileServer) {
+        this.mobileServer.close();
+        console.log('📱 경량 클라이언트 서버 종료됨');
       }
       
       // 자동화 시스템 정지
@@ -534,17 +569,28 @@ class BaekyaProtocol {
         this.components.automationSystem.stop();
       }
       
-      // P2P 네트워크 정리
+      // P2P 네트워크 종료
       if (this.components.blockchain && this.components.blockchain.p2pNetwork) {
-        this.components.blockchain.p2pNetwork.cleanup();
+        this.components.blockchain.p2pNetwork.stop();
       }
       
-      console.log('✅ 백야 프로토콜이 안전하게 종료되었습니다.');
+      console.log('✅ 모든 서비스가 안전하게 종료되었습니다');
       process.exit(0);
     };
 
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', gracefulShutdown);
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGQUIT', gracefulShutdown);
+
+    // Windows용 CTRL+C 처리
+    if (process.platform === 'win32') {
+      require('readline').createInterface({
+        input: process.stdin,
+        output: process.stdout
+      }).on('SIGINT', () => {
+        gracefulShutdown('SIGINT');
+      });
+    }
   }
 
   // API 접근 메소드들
@@ -560,13 +606,8 @@ class BaekyaProtocol {
     return this.components.dao;
   }
 
-  getCVCMSystem() {
-    return this.components.cvcm;
-  }
-
-  getPTokenSystem() {
-    return this.components.ptoken;
-  }
+  // CVCM 시스템 제거됨
+  // P-Token 시스템 제거됨
 
   getTxFeeSystem() {
     return this.components.txFeeSystem;
@@ -596,25 +637,27 @@ class BaekyaProtocol {
       const result = this.components.authSystem.generateDID(
         userData.username,    // 아이디
         userData.password,    // 비밀번호 
-        userData.name,        // 실제 이름 (선택사항)
-        userData.birthDate    // 생년월일 (선택사항)
+        userData.name         // 실제 이름 (선택사항)
       );
       
       if (result.success) {
         // DID 시스템에 등록
         this.components.didSystem.registerDID(result.didHash, result);
         
+        // 영구 저장소에 사용자 데이터 저장
+        this.components.storage.saveUser(result.didHash, {
+          didHash: result.didHash,
+          username: result.username,
+          name: result.name,
+          communicationAddress: result.communicationAddress,
+          createdAt: Date.now()
+        });
+        
         // Founder 계정 특별 혜택 부여
         if (result.isFounder) {
           this.grantFounderBenefits(result.didHash);
           result.founderBenefits = {
-            bTokenGranted: 30,
-            pTokensGranted: {
-              'Operations DAO': 30,
-              'Development DAO': 30, 
-              'Community DAO': 30,
-              'Political DAO': 30
-            }
+            bTokenGranted: 30
           };
         }
         
@@ -623,7 +666,7 @@ class BaekyaProtocol {
           const opResult = this.components.dao.setInitialOperator(result.didHash);
           if (opResult.success) {
             result.initialOPResult = opResult;
-            result.message += `\n🎉 ${opResult.totalDAOs}개 DAO의 이니셜 OP가 되었습니다! (총 ${opResult.totalPTokensGranted}P 지급)`;
+            result.message += `\n🎉 ${opResult.totalDAOs}개 DAO의 이니셜 OP가 되었습니다!`;
             console.log(`👑 첫 번째 사용자 이니셜 OP 설정 완료: ${result.didHash}`);
           }
         }
@@ -633,7 +676,7 @@ class BaekyaProtocol {
           const opResult = this.components.dao.setInitialOperator(result.didHash);
           if (opResult.success) {
             result.initialOPResult = opResult;
-            result.message += `\n🎉 Founder로서 ${opResult.totalDAOs}개 DAO의 이니셜 OP가 되었습니다! (총 ${opResult.totalPTokensGranted}P 지급)`;
+            result.message += `\n🎉 Founder로서 ${opResult.totalDAOs}개 DAO의 이니셜 OP가 되었습니다!`;
             console.log(`👑 Founder 이니셜 OP 설정 완료: ${result.didHash}`);
           }
         }
@@ -646,10 +689,53 @@ class BaekyaProtocol {
     }
   }
 
+  /**
+   * 아이디 중복 확인
+   * @param {string} userId - 확인할 아이디
+   * @returns {boolean} 중복 여부
+   */
+  checkUserIdExists(userId) {
+    try {
+      return this.components.authSystem.checkUserIdExists(userId);
+    } catch (error) {
+      console.error('아이디 중복 확인 실패:', error);
+      return false;
+    }
+  }
+
   // 사용자 로그인 메서드 추가
-  loginUser(username, password) {
+  loginUser(username, password, deviceId = null) {
     try {
       const result = this.components.authSystem.login(username, password);
+      
+      if (result.success) {
+        // 세션 생성 (기존 세션은 자동 종료됨)
+        if (deviceId) {
+          const sessionId = this.components.storage.createSession(result.didHash, deviceId);
+          result.sessionId = sessionId;
+          
+          // 다른 기기에서 로그인 중이었다면 알림
+          const existingSessions = this.components.storage.getActiveSessions?.(result.didHash) || [];
+          if (existingSessions.length > 0) {
+            result.otherSessionsTerminated = true;
+            result.terminatedDevices = existingSessions.map(s => s.deviceId);
+          }
+        }
+        
+        // 블록체인에서 최신 토큰 잔액 가져오기 (진실의 원천)
+        const bTokenBalance = this.components.blockchain.getBalance(result.didHash, 'B-Token');
+        
+        // 영구 저장소와 동기화
+        this.components.storage.setTokenBalance(result.didHash, bTokenBalance, 'B');
+        
+        result.tokenBalances = {
+          bToken: bTokenBalance
+        };
+        
+        // 검증자 풀 상태도 함께 전송
+        result.validatorPoolStatus = this.components.storage.getValidatorPoolStatus();
+      }
+      
       return result;
     } catch (error) {
       return { success: false, error: error.message };
@@ -664,76 +750,20 @@ class BaekyaProtocol {
     try {
       console.log(`🎁 Founder 특별 혜택 부여 시작: ${founderDID.substring(0, 16)}...`);
       
-      // B-토큰 30B 부여
-      const Transaction = require('./blockchain/Transaction');
-      const bTokenTx = new Transaction(
-        'did:baekya:system000000000000000000000000000000000',
-        founderDID,
-        30,
-        'B-Token',
-        { type: 'founder_benefit', reason: 'founder_b_token_grant' }
-      );
-      bTokenTx.signature = 'founder-system-grant';
-      this.components.blockchain.addTransaction(bTokenTx);
-      
-      // 즉시 블록 생성하여 토큰 반영 (시스템 검증자 사용)
-      const bTokenBlock = this.components.blockchain.mineBlock([bTokenTx]);
-      console.log(`💎 Founder B-토큰 블록 생성: #${bTokenBlock.index}`);
-      
-      // 모든 기본 DAO에서 P-토큰 30개씩 부여
-      const basicDAOs = [
-        'Operations DAO',
-        'Development DAO', 
-        'Community DAO',
-        'Political DAO'
-      ];
-      
-      let totalPTokens = 0;
-      const pTokenTransactions = [];
-      
-      basicDAOs.forEach((daoName, index) => {
-        // DAO 찾기
-        const dao = Array.from(this.components.dao.daos.values())
-          .find(d => d.name === daoName);
-        
-        if (dao) {
-          // P-토큰 트랜잭션 생성
-          const pTokenTx = new Transaction(
-            'did:baekya:system000000000000000000000000000000000',
-            founderDID,
-            30,
-            'P-Token',
-            { type: 'founder_benefit', reason: `founder_p_token_grant_${daoName}`, dao: daoName }
-          );
-          pTokenTx.signature = 'founder-system-grant';
-          this.components.blockchain.addTransaction(pTokenTx);
-          pTokenTransactions.push(pTokenTx);
-          
-          // P-토큰 직접 발행도 함께 수행 (즉시 반영용)
-          const currentBalance = this.components.ptoken.getPTokenBalance(founderDID) || 0;
-          this.components.ptoken.setPTokenBalance(founderDID, currentBalance + 30);
-          totalPTokens += 30;
-          console.log(`💎 ${daoName}에서 P-토큰 30개 부여`);
-        }
-      });
-      
-      // P-토큰 트랜잭션들을 블록에 포함 (시스템 검증자 사용)
-      if (pTokenTransactions.length > 0) {
-        const pTokenBlock = this.components.blockchain.mineBlock(pTokenTransactions);
-        console.log(`💎 Founder P-토큰 블록 생성: #${pTokenBlock.index} (${pTokenTransactions.length}개 트랜잭션)`);
+      // 시스템 검증자 등록 (아직 없는 경우)
+      const systemValidatorDID = 'did:baekya:system_validator_000000000000000000000000';
+      if (!this.components.blockchain.validators.has(systemValidatorDID)) {
+        this.components.blockchain.registerValidator(systemValidatorDID, 1000);
       }
       
-      console.log(`✅ Founder 혜택 완료: B-토큰 30B, P-토큰 총 ${totalPTokens}개 부여`);
+      // B-토큰은 서버 시작 시에만 지급되므로 여기서는 지급하지 않음
+      console.log(`⚠️  B-토큰은 서버 시작 시에만 지급됩니다.`);
       
-      // 테스트 잔액 설정 (즉시 반영용)
-      this.components.blockchain.setBalance(founderDID, 30, 'B-Token');
-      this.components.blockchain.setBalance(founderDID, totalPTokens, 'P-Token');
+      console.log(`✅ Founder 혜택 완료: B-토큰만 보유`);
       
       return {
         success: true,
-        bTokensGranted: 30,
-        pTokensGranted: totalPTokens,
-        daosGranted: basicDAOs.length
+        bTokensGranted: 0 // B-토큰은 서버 시작 시에만 지급
       };
       
     } catch (error) {
@@ -742,28 +772,7 @@ class BaekyaProtocol {
     }
   }
 
-  submitContribution(contributionData) {
-    try {
-      const result = this.components.cvcm.submitContribution(contributionData);
-      return result;
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  async verifyContribution(contributionId, verifierDID, approved, reason) {
-    try {
-      const result = await this.components.cvcm.verifyContribution(
-        contributionId, 
-        verifierDID, 
-        approved, 
-        reason
-      );
-      return result;
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
+  // CVCM 시스템 제거로 해당 메서드들 폐지됨
 
   handleOperatorActivity(operatorDID, action, targetId, details = {}) {
     try {
@@ -789,8 +798,6 @@ class BaekyaProtocol {
         blockchain: !!this.components.blockchain,
         didSystem: !!this.components.didSystem,
         dao: !!this.components.dao,
-        cvcm: !!this.components.cvcm,
-        ptoken: !!this.components.ptoken,
         automationSystem: !!this.components.automationSystem
       },
       network: this.components.blockchain?.p2pNetwork?.getNetworkStatus() || {},
@@ -834,8 +841,7 @@ class BaekyaProtocol {
         },
         contributions: [],
         tokens: {
-          bToken: this.components.blockchain?.getBalance(userDID, 'B-Token') || 0,
-          pToken: this.components.ptoken?.getPTokenBalance(userDID) || 0
+          bToken: this.components.blockchain?.getBalance(userDID, 'B-Token') || 0
         },
         daos: userDAOs // 소속 DAO 정보 추가
       };
@@ -894,34 +900,45 @@ class BaekyaProtocol {
   // 통합 토큰 전송 (생체인증 포함)
   async transferTokens(fromDID, toDID, amount, tokenType = 'B') {
     try {
-      if (tokenType === 'B') {
-        // B-Token 전송
-        this.components.didSystem.transferBToken(fromDID, toDID, amount);
-      } else if (tokenType === 'P') {
-        // P-Token 전송
-        this.components.ptoken.transferPToken(fromDID, toDID, amount);
-      } else {
-        throw new Error('지원하지 않는 토큰 타입입니다');
-      }
-
-      // 블록체인에 거래 기록
-      const transaction = this.components.blockchain.createTransaction(
+      const Transaction = require('./blockchain/Transaction');
+      
+      // 블록체인 트랜잭션 생성
+      const tx = new Transaction(
         fromDID, 
         toDID, 
         amount, 
-        tokenType, 
-        'transfer'
+        tokenType + '-Token',
+        { type: 'transfer', purpose: '토큰 전송' }
       );
+      tx.signature = `${fromDID}-signature-${Date.now()}`;
+      
+      // 트랜잭션을 블록체인에 추가
+      const addResult = this.components.blockchain.addTransaction(tx);
+      if (!addResult.success) {
+        throw new Error(addResult.error);
+      }
+      
+      // 즉시 블록 생성 (실제로는 주기적으로 하거나 일정 트랜잭션 수가 쌓이면 해야 함)
+      const blockResult = this.components.blockchain.mineBlock([tx], fromDID);
+      
+      // mineBlock은 성공시 블록 객체를, 실패시 {success: false, error: ...}를 반환
+      if (blockResult && blockResult.success === false) {
+        throw new Error(blockResult.error || '블록 생성 실패');
+      }
+      
+      const block = blockResult;
+      console.log(`⛓️ 블록 #${block.index}에 토큰 전송 기록됨`);
       
       return {
         success: true,
-        transactionId: transaction.id,
+        transactionId: tx.hash,
+        blockNumber: block.index,
         fromDID,
         toDID,
         amount,
         tokenType,
         timestamp: Date.now(),
-        message: `${amount} ${tokenType}-Token이 성공적으로 전송되었습니다`
+        message: `${amount} ${tokenType}-Token이 성공적으로 전송되었습니다 (블록 #${block.index})`
       };
     } catch (error) {
       return {
@@ -934,17 +951,27 @@ class BaekyaProtocol {
   // 사용자 지갑 정보 조회
   async getUserWallet(userDID) {
     try {
+      // 블록체인에서 실제 잔액 계산
       const bTokenBalance = this.components.blockchain?.getBalance(userDID, 'B-Token') || 0;
-      const pTokenBalance = this.components.ptoken.getPTokenBalance(userDID) || 0;
-      const miningData = this.components.cvcm?.getMiningDashboard ? 
-        this.components.cvcm.getMiningDashboard(userDID) : null;
+      
+      // 영구 저장소와 동기화
+      if (this.components.storage) {
+        const storedBToken = this.components.storage.getTokenBalance(userDID, 'B');
+        
+        // 블록체인이 진실의 원천 - 저장소와 다르면 업데이트
+        if (storedBToken !== bTokenBalance) {
+          this.components.storage.setTokenBalance(userDID, bTokenBalance, 'B');
+        }
+      }
+      
+      // CVCM 제거로 miningData는 null
+      const miningData = null;
       
       return {
         success: true,
         userDID,
         balances: {
-          bToken: bTokenBalance,
-          pToken: pTokenBalance
+          bToken: bTokenBalance
         },
         mining: miningData,
         communicationAddress: this.components.didSystem.generateCommunicationAddress(userDID)
@@ -963,7 +990,8 @@ class BaekyaProtocol {
       const daos = [];
       for (const [daoId, dao] of this.components.dao.daos) {
         const members = this.components.dao.getDAOMembers(daoId);
-        const stats = this.components.cvcm.getDAOContributionStats(daoId);
+        // CVCM 제거로 stats는 기본값
+        const stats = { totalContributions: 0, totalValue: 0 };
         
         daos.push({
           id: daoId,
@@ -973,7 +1001,8 @@ class BaekyaProtocol {
           memberCount: members.length,
           contributionStats: stats,
           createdAt: dao.createdAt,
-          status: dao.status
+          status: dao.status,
+          treasury: dao.treasury || 0
         });
       }
       
@@ -995,7 +1024,8 @@ class BaekyaProtocol {
     try {
       const dao = this.components.dao.getDAO(daoId);
       const members = this.components.dao.getDAOMembers(daoId);
-      const stats = this.components.cvcm.getDAOContributionStats(daoId);
+      // CVCM 제거로 stats는 기본값
+      const stats = { totalContributions: 0, totalValue: 0 };
       
       return {
         success: true,
@@ -1049,8 +1079,9 @@ class BaekyaProtocol {
   // 기여 이력 조회
   async getContributionHistory(userDID) {
     try {
-      const contributions = this.components.cvcm.getContributionHistory(userDID);
-      const miningData = this.components.cvcm.getMiningDashboard(userDID);
+      // CVCM 제거로 기본값 반환
+      const contributions = [];
+      const miningData = null;
       
       return {
         success: true,
@@ -1239,10 +1270,35 @@ class BaekyaProtocol {
       }
     });
 
-    // API 서버 시작
-    return new Promise((resolve, reject) => {
-      this.httpServer = app.listen(apiPort, '127.0.0.1', () => {
-        console.log(`🔗 탈중앙화 API 서버 시작됨 - http://localhost:${apiPort}`);
+    // 경량 클라이언트용 노드 상태 API
+    app.get('/api/node-status', (req, res) => {
+      try {
+        res.json({
+          connected: true,
+          activeNode: `http://localhost:${apiPort}`,
+          knownNodes: [`http://localhost:${apiPort}`]
+        });
+      } catch (error) {
+        res.status(500).json({ error: '노드 상태 조회 실패', details: error.message });
+      }
+    });
+
+    // 경량 클라이언트용 노드 추가 API (자기 자신이므로 실질적으로 무시)
+    app.post('/api/add-node', (req, res) => {
+      res.json({ 
+        success: true, 
+        message: '통합 노드에서는 노드 추가가 필요하지 않습니다',
+        knownNodes: [`http://localhost:${apiPort}`]
+      });
+    });
+
+    // API 서버 시작 - 모든 네트워크 인터페이스에서 접속 가능하도록 0.0.0.0으로 바인딩
+    const apiServerPromise = new Promise((resolve, reject) => {
+      this.httpServer = app.listen(apiPort, '0.0.0.0', () => {
+        console.log(`🔗 탈중앙화 API 서버 시작됨:`);
+        console.log(`  🌐 PC: http://localhost:${apiPort}`);
+        console.log(`  📱 폰: http://[PC의 IP주소]:${apiPort}`);
+        console.log(`  💡 PC IP 확인: Windows - ipconfig | Linux/Mac - ifconfig`);
         console.log(`📝 이 API는 오직 이 노드의 로컬 데이터만 제공합니다`);
         resolve();
       });
@@ -1252,6 +1308,164 @@ class BaekyaProtocol {
         reject(error);
       });
     });
+
+    // 동시에 경량 클라이언트 프록시 서버 시작 (3000 포트)
+    const mobileServerPromise = this.startMobileClientServer(apiPort);
+
+    // 두 서버 모두 시작 대기
+    return Promise.all([apiServerPromise, mobileServerPromise]);
+  }
+
+  // 경량 클라이언트 프록시 서버 시작
+  async startMobileClientServer(mainApiPort) {
+    const express = require('express');
+    const path = require('path');
+    const app = express();
+    const mobilePort = 3000;
+
+    app.use(express.static('public'));
+    app.use(express.json());
+
+    // CORS 설정
+    app.use((req, res, next) => {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+      if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+      } else {
+        next();
+      }
+    });
+
+    // 기본 라우트
+    app.get('/', (req, res) => {
+      res.sendFile(path.join(__dirname, '../public', 'index.html'));
+    });
+
+    // 노드 상태 확인 (항상 연결됨으로 응답)
+    app.get('/api/node-status', (req, res) => {
+      res.json({
+        connected: true,
+        activeNode: `http://localhost:${mainApiPort}`,
+        knownNodes: [`http://localhost:${mainApiPort}`]
+      });
+    });
+
+    // 노드 추가 (통합 서버에서는 불필요)
+    app.post('/api/add-node', (req, res) => {
+      res.json({ 
+        success: true, 
+        message: '통합 서버에서는 노드 추가가 불필요합니다',
+        knownNodes: [`http://localhost:${mainApiPort}`]
+      });
+    });
+
+    // 모든 API 요청을 메인 API 서버로 프록시
+    app.all('/api/*', (req, res) => {
+      const apiPath = req.originalUrl;
+      const targetUrl = `http://localhost:${mainApiPort}${apiPath}`;
+      
+      // 같은 프로세스 내에서 직접 호출
+      this.handleInternalAPICall(req, res, apiPath);
+    });
+
+    return new Promise((resolve, reject) => {
+      this.mobileServer = app.listen(mobilePort, '0.0.0.0', () => {
+        console.log(`📱 경량 클라이언트 서버 통합 시작됨:`);
+        console.log(`  🌐 PC: http://localhost:${mobilePort}`);
+        console.log(`  📱 폰: http://[PC의 IP주소]:${mobilePort}`);
+        console.log(`  🔗 메인 API와 통합되어 실행됩니다`);
+        resolve();
+      });
+
+      this.mobileServer.on('error', (error) => {
+        console.error('❌ 경량 클라이언트 서버 시작 실패:', error.message);
+        reject(error);
+      });
+    });
+  }
+
+  // 내부 API 호출 처리
+  async handleInternalAPICall(req, res, apiPath) {
+    try {
+      // 같은 프로세스 내에서 직접 메서드 호출
+      const method = req.method.toLowerCase();
+      const path = apiPath.replace('/api/', '');
+      
+      let result;
+      
+      switch (path) {
+        case 'status':
+          result = this.getProtocolStatus();
+          break;
+          
+        case 'register':
+          if (method === 'post') {
+            const { userData } = req.body;
+            if (!userData || !userData.username || !userData.password) {
+              return res.status(400).json({ 
+                success: false, 
+                error: '아이디와 비밀번호가 필요합니다' 
+              });
+            }
+            result = this.registerUser(userData);
+          }
+          break;
+          
+        case 'login':
+          if (method === 'post') {
+            const { username, password } = req.body;
+            if (!username || !password) {
+              return res.status(400).json({ 
+                success: false, 
+                error: '아이디와 비밀번호가 필요합니다' 
+              });
+            }
+            result = this.loginUser(username, password);
+            if (!result.success) {
+              return res.status(401).json(result);
+            }
+          }
+          break;
+          
+        default:
+          if (path.startsWith('dashboard/')) {
+            const did = path.split('/')[1];
+            result = this.getUserDashboard(did);
+          } else if (path.startsWith('wallet/')) {
+            const did = path.split('/')[1];
+            result = await this.getUserWallet(did);
+          } else if (path === 'daos') {
+            result = this.getDAOs();
+          } else if (path.startsWith('daos/')) {
+            const daoId = path.split('/')[1];
+            result = this.getDAO(daoId);
+          } else if (path === 'proposals') {
+            result = await this.getProposals();
+          } else if (path.startsWith('contributions/')) {
+            const did = path.split('/')[1];
+            result = await this.getContributionHistory(did);
+          } else if (path === 'blockchain/status') {
+            result = this.components.blockchain.getBlockchainStatus();
+          } else if (path === 'transfer' && method === 'post') {
+            const { fromDID, toDID, amount, tokenType } = req.body;
+            result = await this.transferTokens(fromDID, toDID, amount, tokenType);
+          } else {
+            return res.status(404).json({ error: '요청한 API를 찾을 수 없습니다' });
+          }
+          break;
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('내부 API 호출 오류:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'API 처리 실패', 
+        details: error.message 
+      });
+    }
   }
 }
 

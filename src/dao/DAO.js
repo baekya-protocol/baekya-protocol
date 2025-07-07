@@ -5,9 +5,10 @@ const { v4: uuidv4 } = require('uuid');
  * DAO 생성, 구성원 관리, 거버넌스, DCA 관리 기능 제공
  */
 class DAO {
-  constructor(didSystem, cvcmSystem) {
+  constructor(didSystem, pTokenSystem, storage = null) {
     this.didSystem = didSystem;
-    this.cvcmSystem = cvcmSystem;
+    this.pTokenSystem = pTokenSystem;
+    this.storage = storage;
     
     // DAO 관리
     this.daos = new Map(); // daoId -> dao
@@ -24,13 +25,28 @@ class DAO {
   }
 
   /**
-   * DAO 시스템 초기화 (CVCM 시스템이 설정된 후 호출)
+   * DAO 시스템 초기화
    */
   initialize() {
-    if (!this.cvcmSystem) {
-      throw new Error('CVCM 시스템이 설정되지 않았습니다');
+    // CVCM 시스템 제거됨
+    
+    // 기존 DAO 데이터 로드
+    if (this.storage) {
+      const savedDAOs = this.storage.getAllDAOs();
+      savedDAOs.forEach(dao => {
+        this.daos.set(dao.id, dao);
+        // 구성원 정보는 따로 복원 필요 (현재는 빈 Set으로 초기화)
+        this.daoMembers.set(dao.id, new Set());
+        this.proposals.set(dao.id, new Map());
+        this.operatorSurveys.set(dao.id, new Map());
+      });
+      console.log(`💾 ${savedDAOs.length}개의 기존 DAO 데이터 로드 완료`);
     }
-    this.initializeDefaultDAOs();
+    
+    // 기본 DAO가 없으면 초기화
+    if (this.daos.size === 0) {
+      this.initializeDefaultDAOs();
+    }
   }
 
   /**
@@ -38,19 +54,12 @@ class DAO {
    * @private
    */
   initializeDefaultDAOs() {
-    const systemDID = 'did:baekya:system000000000000000000000000000000000';
-    
-    // Operations DAO
-    const operationsDAO = this.createDAO(systemDID, {
-      name: 'Operations DAO',
-      purpose: 'Protocol Operations Management',
-      description: '백야 프로토콜 운영 관리를 담당하는 DAO'
-    });
+    const systemDID = 'did:baekya:system0000000000000000000000000000000001';
 
     // Development DAO  
     const developmentDAO = this.createDAO(systemDID, {
       name: 'Development DAO',
-      purpose: 'Protocol Development',
+      purpose: 'Development',
       description: '백야 프로토콜 개발을 담당하는 DAO'
     });
 
@@ -61,87 +70,18 @@ class DAO {
       description: '백야 프로토콜 커뮤니티 관리를 담당하는 DAO'
     });
 
-    // Political DAO 추가
-    const politicalDAO = this.createDAO(systemDID, {
-      name: 'Political DAO',
-      purpose: 'Political Governance',
-      description: '백야 프로토콜 정치적 거버넌스와 정책 결정을 담당하는 DAO'
-    });
-
-    // 기본 DCA들 등록
-    this.registerDefaultDCAs(operationsDAO, developmentDAO, communityDAO);
+    // CVCM 제거로 DCA 등록 시스템 폐지됨
 
     // 기본 DAO ID들 저장 (이니셜 OP 설정용)
     this.defaultDAOs = {
-      operations: operationsDAO,
       development: developmentDAO,
-      community: communityDAO,
-      political: politicalDAO
+      community: communityDAO
     };
 
-    console.log(`🏛️ 기본 DAO 초기화 완료: Operations, Development, Community, Political`);
+    console.log(`🏛️ 기본 DAO 초기화 완료: Development, Community`);
   }
 
-  /**
-   * 기본 DCA들 등록
-   * @private
-   */
-  registerDefaultDCAs(operationsDAO, developmentDAO, communityDAO) {
-    // Development DAO DCA들
-    this.cvcmSystem.registerDCA(developmentDAO, {
-      id: 'pull-request',
-      name: 'Pull Request',
-      description: 'GitHub Pull Request 기여',
-      value: 100,
-      verificationCriteria: 'GitHub API 연동으로 자동 검증',
-      requiredFields: ['evidence', 'description']
-    });
-
-    this.cvcmSystem.registerDCA(developmentDAO, {
-      id: 'bug-fix',
-      name: 'Bug Fix',  
-      description: '버그 수정 기여',
-      value: 80,
-      verificationCriteria: 'GitHub commit history 검증',
-      requiredFields: ['evidence', 'description']
-    });
-
-    // Operations DAO DCA들
-    this.cvcmSystem.registerDCA(operationsDAO, {
-      id: 'system-maintenance',
-      name: 'System Maintenance',
-      description: '시스템 유지보수 기여',
-      value: 120,
-      verificationCriteria: '시스템 로그 및 작업 증빙 검증',
-      requiredFields: ['evidence', 'description']
-    });
-
-    // Community DAO DCA들
-    this.cvcmSystem.registerDCA(communityDAO, {
-      id: 'content-creation',
-      name: 'Content Creation',
-      description: '콘텐츠 제작 기여',
-      value: 60,
-      verificationCriteria: '콘텐츠 품질 및 참여도 검증',
-      requiredFields: ['evidence', 'description']
-    });
-
-    // Political DAO DCA 추가
-    const politicalDAOId = this.findDAOByName('Political DAO');
-    if (politicalDAOId) {
-      this.cvcmSystem.registerDCA(politicalDAOId, {
-        id: 'proposal-funding-success',
-        name: 'Proposal Funding Success',
-        description: '제안 모금 통과 기여',
-        value: 20,
-        verificationCriteria: '제안이 모금 단계를 통과하여 투표 단계로 진입 시 자동 검증',
-        requiredFields: ['evidence', 'description'],
-        autoVerified: true // 자동 검증 DCA
-      });
-
-      console.log('🏛️ Political DAO DCA 등록 완료: proposal-funding-success (20B)');
-    }
-  }
+  // CVCM 시스템 제거로 DCA 등록 메서드 폐지됨
 
   // DAO 이름으로 ID 찾기
   findDAOByName(name) {
@@ -177,6 +117,11 @@ class DAO {
     };
 
     this.daos.set(daoId, dao);
+    
+    // DataStorage에도 저장
+    if (this.storage) {
+      this.storage.saveDAO(daoId, dao);
+    }
     
     // 창립자를 첫 번째 구성원으로 추가
     this.daoMembers.set(daoId, new Set([founderDID]));
@@ -230,31 +175,7 @@ class DAO {
     return Array.from(members);
   }
 
-  /**
-   * DCA 등록 (운영자만 가능)
-   * @param {string} daoId 
-   * @param {string} operatorDID 
-   * @param {Object} dca 
-   */
-  registerDCA(daoId, operatorDID, dca) {
-    const dao = this.getDAO(daoId);
-    
-    if (dao.operatorDID !== operatorDID) {
-      throw new Error('DCA 등록 권한이 없습니다');
-    }
-
-    this.cvcmSystem.registerDCA(daoId, dca);
-  }
-
-  /**
-   * DCA 조회
-   * @param {string} daoId 
-   * @param {string} dcaId 
-   * @returns {Object}
-   */
-  getDCA(daoId, dcaId) {
-    return this.cvcmSystem.getDCA(daoId, dcaId);
-  }
+  // CVCM 시스템 제거로 DCA 관련 메서드 폐지됨
 
   /**
    * 제안 생성
@@ -600,7 +521,8 @@ class DAO {
   getDAOStats(daoId) {
     const dao = this.getDAO(daoId);
     const members = this.getDAOMembers(daoId);
-    const contributionStats = this.cvcmSystem.getDAOContributionStats(daoId);
+    // CVCM 제거로 기본값 반환
+    const contributionStats = { totalContributions: 0, totalValue: 0 };
     
     return {
       ...dao,
@@ -621,7 +543,7 @@ class DAO {
 
     const results = [];
 
-    // 4개 기본 DAO의 OP로 설정
+    // 2개 기본 DAO의 OP로 설정
     Object.entries(this.defaultDAOs).forEach(([daoType, daoId]) => {
       try {
         const dao = this.daos.get(daoId);
@@ -635,7 +557,7 @@ class DAO {
           members.add(userDID);
           
           // P-Token 30개 지급 (각 DAO별)
-          const pTokenSystem = this.cvcmSystem?.pTokenSystem || this.pTokenSystem;
+          const pTokenSystem = this.pTokenSystem;
           if (pTokenSystem) {
             const currentBalance = pTokenSystem.getPTokenBalance(userDID);
             pTokenSystem.setPTokenBalance(userDID, currentBalance + 30);
@@ -668,7 +590,7 @@ class DAO {
     const successCount = results.filter(r => r.success).length;
     const totalPTokens = successCount * 30;
 
-    console.log(`🎉 이니셜 OP 설정 완료: ${successCount}/4개 DAO, 총 ${totalPTokens}P 지급`);
+    console.log(`🎉 이니셜 OP 설정 완료: ${successCount}/2개 DAO, 총 ${totalPTokens}P 지급`);
 
     return {
       success: successCount > 0,
@@ -686,6 +608,14 @@ class DAO {
    */
   setPTokenSystem(pTokenSystem) {
     this.pTokenSystem = pTokenSystem;
+  }
+  
+  /**
+   * DataStorage 설정
+   * @param {DataStorage} storage 
+   */
+  setStorage(storage) {
+    this.storage = storage;
   }
 }
 

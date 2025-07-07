@@ -5,12 +5,14 @@ const P2PNetwork = require('./P2PNetwork');
 
 class BlockchainCore {
   constructor() {
-    this.chain = [this.createGenesisBlock()];
+    this.dataStorage = null; // 영구 저장소
+    this.chain = []; // 저장소 연결 후에 초기화됨
     this.difficulty = 2;
     this.pendingTransactions = [];
     this.miningReward = 100;
     this.validators = new Map(); // validatorDID -> 등록 정보
     this.testBalances = new Map(); // 테스트용 잔액 저장
+    this.isInitialized = false;
     
     // P2P 네트워크 초기화
     this.p2pNetwork = new P2PNetwork();
@@ -19,7 +21,85 @@ class BlockchainCore {
     // PoC 합의 메커니즘 초기화
     this.pocConsensus = new PoCConsensus();
     
-    console.log('🚀 백야 프로토콜 블록체인 코어 초기화 완료');
+    console.log('🚀 백야 프로토콜 블록체인 코어 생성 (저장소 연결 대기 중)');
+  }
+  
+  // 영구 저장소 설정
+  setDataStorage(storage) {
+    console.log('💾 BlockchainCore에 영구 저장소 연결');
+    this.dataStorage = storage;
+    this.loadChainFromStorage();
+  }
+  
+  // 저장소에서 블록체인 로드
+  loadChainFromStorage() {
+    if (!this.dataStorage) {
+      this.chain = [this.createGenesisBlock()];
+      this.isInitialized = true;
+      return;
+    }
+    
+    const savedChain = this.dataStorage.getBlockchain();
+    if (savedChain && savedChain.length > 0) {
+      this.chain = savedChain.map(blockData => {
+        const block = new Block();
+        Object.assign(block, blockData);
+        block.transactions = blockData.transactions.map(txData => {
+          const tx = new Transaction();
+          Object.assign(tx, txData);
+          return tx;
+        });
+        return block;
+      });
+      console.log(`💾 저장소에서 ${this.chain.length}개 블록 로드 완료`);
+    } else {
+      console.log('💾 저장된 체인이 없음 - 제네시스 블록 생성');
+      this.chain = [this.createGenesisBlock()];
+      this.saveChainToStorage();
+    }
+    
+    // 블록체인 로드 후 검증자 풀 재계산
+    if (this.dataStorage) {
+      console.log('🔄 검증자 풀 재계산 중...');
+      this.dataStorage.resetValidatorPool();
+      
+      // 모든 블록의 트랜잭션을 다시 처리하여 검증자 풀 계산
+      for (let i = 1; i < this.chain.length; i++) { // 제네시스 블록 제외
+        const block = this.chain[i];
+        for (const tx of block.transactions) {
+          // 검증자 풀 후원 트랜잭션만 처리
+          if (tx.toDID === 'did:baekya:system0000000000000000000000000000000001' && 
+              tx.tokenType === 'B-Token' && 
+              tx.data?.type === 'validator_pool_sponsor') {
+            // 검증자 풀에는 후원금 + 검증자 수수료만 들어감
+            const poolAmount = (tx.data.actualSponsorAmount || 0) + (tx.data.validatorFee || 0);
+            this.dataStorage.updateValidatorPool(tx.fromDID, poolAmount);
+          }
+        }
+      }
+      
+      const poolStatus = this.dataStorage.getValidatorPoolStatus();
+      console.log(`✅ 검증자 풀 재계산 완료: ${poolStatus.totalStake}B`);
+    }
+    
+    this.isInitialized = true;
+    console.log('✅ 블록체인 초기화 완료');
+  }
+  
+  // 블록체인을 저장소에 저장
+  saveChainToStorage() {
+    if (!this.dataStorage) return;
+    
+    this.dataStorage.saveBlockchain(this.chain.map(block => ({
+      index: block.index,
+      timestamp: block.timestamp,
+      transactions: block.transactions,
+      previousHash: block.previousHash,
+      hash: block.hash,
+      nonce: block.nonce,
+      validator: block.validator,
+      data: block.data
+    })));
   }
 
   // 제네시스 블록 생성
@@ -165,6 +245,12 @@ class BlockchainCore {
 
       // 체인에 블록 추가
       this.chain.push(newBlock);
+      
+      // 영구 저장소에 저장
+      this.saveChainToStorage();
+      
+      // 블록의 트랜잭션들을 영구 저장소에 기록
+      this.updateStorageFromBlock(newBlock);
 
       // 검증자에게 보상 지급은 mineBlock에서만 발생
       // addBlock에서는 보상 지급하지 않음 (테스트 잔액 계산 정확성을 위해)
@@ -248,8 +334,13 @@ class BlockchainCore {
 
   // 트랜잭션을 풀에 추가 (보안 강화)
   addTransaction(transaction) {
+    console.log('🔍 BlockchainCore.addTransaction 디버깅 시작');
+    
     // 기본 필드 검증 먼저 (빈 DID 등)
+    console.log(`  - fromDID 존재: ${!!transaction.fromDID}`);
+    console.log(`  - toDID 존재: ${!!transaction.toDID}`);
     if (!transaction.fromDID || !transaction.toDID) {
+      console.error('❌ 기본 필드 검증 실패');
       return {
         success: false,
         error: '유효하지 않은 트랜잭션입니다'
@@ -257,7 +348,10 @@ class BlockchainCore {
     }
 
     // 무결성 검증 (보안 강화)
-    if (!transaction.verifyIntegrity()) {
+    const integrityValid = transaction.verifyIntegrity();
+    console.log(`  - 무결성 검증: ${integrityValid}`);
+    if (!integrityValid) {
+      console.error('❌ 무결성 검증 실패');
       return {
         success: false,
         error: '트랜잭션 무결성 검증 실패'
@@ -265,15 +359,32 @@ class BlockchainCore {
     }
 
     // 서명 검증
+    console.log(`  - 서명 존재: ${!!transaction.signature}`);
     if (!transaction.signature) {
+      console.error('❌ 서명 없음');
       return {
         success: false,
         error: '서명되지 않은 트랜잭션입니다'
       };
     }
 
-    // 금액 검증
-    if (typeof transaction.amount !== 'number' || transaction.amount <= 0) {
+    // 금액 검증 - 특정 트랜잭션 타입은 0 금액 허용
+    console.log(`  - 금액 타입: ${typeof transaction.amount}, 값: ${transaction.amount}`);
+    
+    // 금액이 0이어도 허용되는 트랜잭션 타입들
+    const zeroAmountAllowedTypes = [
+      'invite_code_registration',
+      'dca_verification',
+      'system_notification',
+      'metadata_update'
+    ];
+    
+    const isZeroAmountAllowed = transaction.data?.type && 
+      zeroAmountAllowedTypes.includes(transaction.data.type);
+    
+    if (typeof transaction.amount !== 'number' || 
+        (!isZeroAmountAllowed && transaction.amount <= 0)) {
+      console.error('❌ 금액 검증 실패');
       return {
         success: false,
         error: '유효하지 않은 금액입니다'
@@ -282,7 +393,9 @@ class BlockchainCore {
 
     // 최대 금액 제한 (보안)
     const maxAmount = 1000000000; // 10억 한도
+    console.log(`  - 최대 금액 검사: ${transaction.amount} <= ${maxAmount}`);
     if (transaction.amount > maxAmount) {
+      console.error('❌ 최대 금액 초과');
       return {
         success: false,
         error: `금액이 너무 큽니다 (최대: ${maxAmount})`
@@ -290,7 +403,11 @@ class BlockchainCore {
     }
 
     // 전체 유효성 검증 (DID 레지스트리 전달)
-    if (!transaction.isValid(this.didRegistry)) {
+    console.log(`  - DID 레지스트리 존재: ${!!this.didRegistry}`);
+    const isValidResult = transaction.isValid(this.didRegistry);
+    console.log(`  - 전체 유효성 검증: ${isValidResult}`);
+    if (!isValidResult) {
+      console.error('❌ 전체 유효성 검증 실패');
       return {
         success: false,
         error: '유효하지 않은 트랜잭션입니다'
@@ -305,7 +422,8 @@ class BlockchainCore {
         'genesis-initial-ptokens', 
         'mining_reward',
         'contribution_reward',
-        'p_token_distribution'
+        'p_token_distribution',
+        'invite_reward'
       ];
       
       if (!allowedSystemTypes.includes(transaction.data?.type || transaction.data)) {
@@ -388,6 +506,7 @@ class BlockchainCore {
     }
 
     console.log(`📝 트랜잭션 추가됨: ${transaction.fromDID.substring(0, 8)}... -> ${transaction.toDID.substring(0, 8)}... (${transaction.amount} ${transaction.tokenType})`);
+    console.log(`✅ addTransaction 성공 반환`);
 
     return {
       success: true,
@@ -401,6 +520,67 @@ class BlockchainCore {
     this.pendingTransactions = this.pendingTransactions.filter(tx => 
       !processedHashes.includes(tx.hash)
     );
+  }
+  
+  // 블록의 트랜잭션들을 영구 저장소에 반영
+  updateStorageFromBlock(block) {
+    if (!this.dataStorage) return;
+    
+    for (const tx of block.transactions) {
+      // 트랜잭션 기록
+      this.dataStorage.recordTransaction(tx);
+      
+      // 토큰 잔액 업데이트
+      if (!tx.fromDID.includes('system') && !tx.fromDID.includes('genesis')) {
+        const fromBalance = this.getBalance(tx.fromDID, tx.tokenType);
+        this.dataStorage.setTokenBalance(tx.fromDID, fromBalance, tx.tokenType.replace('-Token', ''));
+      }
+      
+      if (!tx.toDID.includes('system')) {
+        const toBalance = this.getBalance(tx.toDID, tx.tokenType);
+        this.dataStorage.setTokenBalance(tx.toDID, toBalance, tx.tokenType.replace('-Token', ''));
+      }
+      
+      // 검증자 풀 후원인 경우 - 실제 후원 금액과 수수료를 분리해서 처리
+      if (tx.toDID === 'did:baekya:system0000000000000000000000000000000001' && tx.tokenType === 'B-Token' && tx.data?.type === 'validator_pool_sponsor') {
+        // 검증자 풀에는 후원금 + 검증자 수수료만 들어감 (10B + 0.0006B = 10.0006B)
+        const poolAmount = (tx.data.actualSponsorAmount || 0) + (tx.data.validatorFee || 0);
+        this.dataStorage.updateValidatorPool(tx.fromDID, poolAmount);
+        
+        // TODO: DAO 수수료(tx.data.daoFee = 0.0004B) 처리 로직 추가 필요
+      }
+      
+      // DAO 금고 후원인 경우
+      if (tx.data?.type === 'dao_treasury_sponsor') {
+        const targetDaoId = tx.data.targetDaoId;
+        const targetDaoAmount = tx.data.actualSponsorAmount || 0;
+        
+        // 대상 DAO 금고에 후원금 업데이트 (수수료 제외한 순수 후원금만)
+        if (targetDaoId && targetDaoAmount > 0) {
+          this.dataStorage.updateDAOTreasury(targetDaoId, targetDaoAmount);
+        }
+        
+        // 검증자 풀에 수수료 추가
+        if (tx.data.validatorFee > 0) {
+          this.dataStorage.updateValidatorPool(tx.fromDID, tx.data.validatorFee);
+        }
+        
+        // DAO 수수료 분배는 server.js에서 사용자 소속 DAO들에게 처리
+        // 블록체인에서는 대상 DAO와 검증자 풀 업데이트만 처리
+      }
+      
+      // DAO 수수료 분배 - 100% 검증자 풀로 변경됨으로 제거됨
+      // dao_fee_distribution 타입 트랜잭션 처리 제거됨
+      
+      // 토큰 전송 수수료인 경우
+      if (tx.data?.type === 'transfer_fee') {
+        // 검증자 풀에 수수료 추가
+        if (tx.data.validatorFee > 0) {
+          this.dataStorage.updateValidatorPool(tx.fromDID, tx.data.validatorFee);
+        }
+        // DAO 수수료는 별도 트랜잭션으로 처리됨
+      }
+    }
   }
 
   // 블록체인 유효성 검증
@@ -512,14 +692,14 @@ class BlockchainCore {
       if (result.success) {
         console.log(`⛏️ 블록 #${result.block.index} 마이닝 완료`);
         
-        // 마이닝 보상을 시스템 트랜잭션으로 체인에 추가
+        // 마이닝 보상을 시스템 트랜잭션으로 체인에 추가 (Validator DAO DCA)
         const Transaction = require('./Transaction');
         const rewardTransaction = new Transaction(
           'did:baekya:system0000000000000000000000000000000000000000',
           selectedValidator,
-          100,
+          5,
           'B-Token',
-          { type: 'mining_reward', blockIndex: result.block.index }
+          { type: 'validator_reward', blockIndex: result.block.index, description: '블록 생성 기여가치 (Validator DAO DCA)' }
         );
         
         // 보상 트랜잭션을 현재 블록에 추가
@@ -542,19 +722,19 @@ class BlockchainCore {
   }
 
   // 검증자 등록 (통신주소 포함)
-  registerValidator(validatorDID, contributionScore = 100, communicationAddress = null) {
+  registerValidator(validatorDID, contributionValue = 100, communicationAddress = null) {
     this.validators.set(validatorDID, {
       did: validatorDID,
-      contributionScore,
+      contributionValue,
       communicationAddress,
       status: 'active',
       registeredAt: Date.now(),
       totalRewards: 0,
       validatedBlocks: 0
     });
-    this.pocConsensus.setContributionScore(validatorDID, contributionScore);
+    this.pocConsensus.setContributionScore(validatorDID, contributionValue);
     
-    console.log(`👤 검증자 등록됨: ${validatorDID.substring(0, 8)}... (기여도: ${contributionScore})`);
+    console.log(`👤 검증자 등록됨: ${validatorDID.substring(0, 8)}...`);
     if (communicationAddress) {
       console.log(`📞 통신주소 연결: ${communicationAddress}`);
     }
@@ -563,6 +743,12 @@ class BlockchainCore {
 
   // 잔액 조회 (보안 강화)
   getBalance(did, tokenType = 'B-Token') {
+    // 초기화 확인
+    if (!this.isInitialized || this.chain.length === 0) {
+      console.warn('⚠️ 블록체인이 아직 초기화되지 않음');
+      return 0;
+    }
+    
     // 시스템 계정 제한 (보안 강화)
     if (did.includes('system')) {
       // 시스템 계정의 무한 잔액을 제한
@@ -575,9 +761,9 @@ class BlockchainCore {
       return 0;
     }
 
-    // 초기 잔액 설정 (테스트 잔액이 있으면 사용)
+    // 초기 잔액 설정 (테스트 잔액이 있으면 사용 - 단, Founder 계정은 제외)
     let balance = 0;
-    if (this.testBalances) {
+    if (this.testBalances && !did.includes('founder')) {
       const key = `${did}-${tokenType}`;
       const testBalance = this.testBalances.get(key);
       if (testBalance !== undefined) {
@@ -599,7 +785,8 @@ class BlockchainCore {
       }
     }
 
-    return Math.max(0, balance); // 음수 잔액 방지
+    // 부동소수점 오류 방지를 위해 소수점 4자리까지 반올림
+    return Math.round(Math.max(0, balance) * 10000) / 10000;
   }
 
   /**
@@ -953,9 +1140,9 @@ class BlockchainCore {
       return Number.MAX_SAFE_INTEGER;
     }
 
-    // 초기 테스트 잔액 가져오기 (체인 트랜잭션 적용 전 기준점)
+    // 초기 테스트 잔액 가져오기 (체인 트랜잭션 적용 전 기준점 - Founder 계정 제외)
     let balance = 0;
-    if (this.testBalances) {
+    if (this.testBalances && !did.includes('founder')) {
       const key = `${did}-${tokenType}`;
       const initialBalance = this.testBalances.get(key);
       if (initialBalance !== undefined) {
@@ -977,7 +1164,8 @@ class BlockchainCore {
       }
     }
 
-    return Math.max(0, balance);
+    // 부동소수점 오류 방지를 위해 소수점 4자리까지 반올림
+    return Math.round(Math.max(0, balance) * 10000) / 10000;
   }
 
   // 채굴 난이도 조정

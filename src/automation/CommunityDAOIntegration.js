@@ -5,7 +5,6 @@
 class CommunityDAOIntegration {
   constructor(daoSystem, cvcmSystem, automationSystem) {
     this.daoSystem = daoSystem;
-    this.cvcmSystem = cvcmSystem;
     this.automationSystem = automationSystem;
     this.verifiedContributions = new Map();
     this.inviteTracker = new Map(); // inviteCode -> {inviterDID, createdAt}
@@ -34,7 +33,7 @@ class CommunityDAOIntegration {
       title: '초대 활동',
       inviteCode,
       inviteeDID,
-      bValue: 50,
+      bValue: 30,
       verifiedAt: Date.now(),
       inviteData: {
         inviteCode,
@@ -53,21 +52,12 @@ class CommunityDAOIntegration {
       console.log('이미 커뮤니티DAO 구성원입니다.');
     }
 
-    // CVCM 시스템에 기여 기록 (B 토큰 발급)
-    const cvcmResult = await this.cvcmSystem.submitContribution(inviterDID, 'community-dao', {
-      dcaId: 'invite-activity',
-      evidence: `초대코드: ${inviteCode}`,
-      description: `새로운 사용자 초대 성공: ${inviteeDID}`,
-      metadata: contribution.inviteData
-    });
-
     console.log(`🎉 초대 활동 검증 완료: ${inviterDID} -> ${contribution.bValue}B`);
 
     return {
       success: true,
       contribution,
       bTokensAwarded: contribution.bValue,
-      cvcmResult,
       message: `초대 활동으로 ${contribution.bValue}B가 지급되었습니다`
     };
   }
@@ -125,21 +115,12 @@ class CommunityDAOIntegration {
       console.log('이미 커뮤니티DAO 구성원입니다.');
     }
 
-    // CVCM 시스템에 기여 기록
-    const cvcmResult = await this.cvcmSystem.submitContribution(proposerDID, 'community-dao', {
-      dcaId: 'proposal-funding-success',
-      evidence: `제안 ID: ${proposalId}`,
-      description: `제안 모금 성공: ${fundingData.currentAmount}/${fundingData.targetAmount} B`,
-      metadata: contribution.fundingData
-    });
-
     console.log(`🎉 제안 모금 성공 검증 완료: ${proposerDID} -> ${contribution.bValue}B`);
 
     return {
       success: true,
       contribution,
       bTokensAwarded: contribution.bValue,
-      cvcmResult,
       message: `제안 모금 성공으로 ${contribution.bValue}B가 지급되었습니다`
     };
   }
@@ -200,21 +181,12 @@ class CommunityDAOIntegration {
       console.log('이미 커뮤니티DAO 구성원입니다.');
     }
 
-    // CVCM 시스템에 기여 기록
-    const cvcmResult = await this.cvcmSystem.submitContribution(proposerDID, 'community-dao', {
-      dcaId: 'proposal-voting-success',
-      evidence: `제안 ID: ${proposalId}`,
-      description: `제안 투표 통과: ${votingData.approveVotes}/${votingData.totalVotes} 찬성`,
-      metadata: contribution.votingData
-    });
-
     console.log(`🎉 제안 투표 통과 검증 완료: ${proposerDID} -> ${contribution.bValue}B`);
 
     return {
       success: true,
       contribution,
       bTokensAwarded: contribution.bValue,
-      cvcmResult,
       message: `제안 투표 통과로 ${contribution.bValue}B가 지급되었습니다`
     };
   }
@@ -274,21 +246,12 @@ class CommunityDAOIntegration {
       console.log('이미 커뮤니티DAO 구성원입니다.');
     }
 
-    // CVCM 시스템에 기여 기록
-    const cvcmResult = await this.cvcmSystem.submitContribution(proposerDID, 'community-dao', {
-      dcaId: 'proposal-first-review-approval',
-      evidence: `제안 ID: ${proposalId}`,
-      description: `제안 1차검토 승인: ${reviewData.reviewerDID}`,
-      metadata: contribution.reviewData
-    });
-
     console.log(`🎉 제안 1차검토 승인 검증 완료: ${proposerDID} -> ${contribution.bValue}B`);
 
     return {
       success: true,
       contribution,
       bTokensAwarded: contribution.bValue,
-      cvcmResult,
       message: `제안 1차검토 승인으로 ${contribution.bValue}B가 지급되었습니다`
     };
   }
@@ -348,21 +311,12 @@ class CommunityDAOIntegration {
       console.log('이미 커뮤니티DAO 구성원입니다.');
     }
 
-    // CVCM 시스템에 기여 기록
-    const cvcmResult = await this.cvcmSystem.submitContribution(proposerDID, 'community-dao', {
-      dcaId: 'proposal-final-review-approval',
-      evidence: `제안 ID: ${proposalId}`,
-      description: `제안 최종검토 승인: ${reviewData.reviewerDID}`,
-      metadata: contribution.reviewData
-    });
-
     console.log(`🎉 제안 최종검토 승인 검증 완료: ${proposerDID} -> ${contribution.bValue}B`);
 
     return {
       success: true,
       contribution,
       bTokensAwarded: contribution.bValue,
-      cvcmResult,
       message: `제안 최종검토 승인으로 ${contribution.bValue}B가 지급되었습니다`
     };
   }
@@ -509,6 +463,59 @@ class CommunityDAOIntegration {
       totalInvites: this.inviteTracker.size,
       successfulInvites: Array.from(this.inviteTracker.values()).filter(invite => invite.used).length,
       trackedProposals: this.proposalTracker.size
+    };
+  }
+
+  /**
+   * 초대받은 사용자(생성자)의 커뮤니티DAO 가입 처리
+   * 초대받아 가입한 사용자는 기여자로 간주되어 자동으로 커뮤니티DAO 구성원이 됨
+   * @param {string} inviteCode 
+   * @param {string} inviteeDID 새로 생성된 사용자의 DID
+   * @param {string} inviterDID 초대한 사용자의 DID
+   */
+  async handleInviteeJoinCommunityDAO(inviteCode, inviteeDID, inviterDID) {
+    const contributionId = `invite_join_${inviteCode}_${inviteeDID}_${Date.now()}`;
+    
+    // 중복 방지 체크
+    if (this.verifiedContributions.has(contributionId)) {
+      return { success: false, message: 'Already processed' };
+    }
+
+    const contribution = {
+      id: contributionId,
+      userDID: inviteeDID,
+      type: 'invite_join',
+      title: '초대 참여',
+      inviteCode,
+      inviterDID,
+      bValue: 20, // 실제 지급받은 B-Token
+      verified: true,
+      verifiedAt: Date.now(),
+      metadata: {
+        inviteCode,
+        inviterDID,
+        joinedAt: Date.now(),
+        description: '초대를 통해 커뮤니티에 참여'
+      }
+    };
+
+    // 기여 활동 기록
+    this.verifiedContributions.set(contributionId, contribution);
+    
+    // 커뮤니티DAO에 기여자 추가 (초대받은 사용자도 기여자로 간주)
+    try {
+      this.daoSystem.addContributor('community-dao', inviteeDID);
+      console.log(`🎉 초대받은 사용자 커뮤니티DAO 가입: ${inviteeDID}`);
+    } catch (error) {
+      console.log('이미 커뮤니티DAO 구성원입니다.');
+    }
+
+    console.log(`🎉 초대받은 사용자 커뮤니티DAO 가입 완료: ${inviteeDID} (초대자: ${inviterDID})`);
+
+    return {
+      success: true,
+      contribution,
+      message: '초대를 통해 커뮤니티DAO에 가입했습니다'
     };
   }
 }

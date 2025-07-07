@@ -114,16 +114,20 @@ class Block {
     // 검증자 DID 형식 검증
     const didPattern = /^did:baekya:[a-f0-9]{40}$/;
     const systemDIDPattern = /^did:baekya:system[0-9a-f]{32}$/;
+    const systemValidatorPattern = /^did:baekya:system_validator_[0-9a-f]+$/;
     const testDIDPattern = /^did:baekya:test[a-f0-9]{40,48}$/;
     const genesisDIDPattern = /^did:baekya:genesis[0-9a-f]{32}$/;
+    const simpleAuthDIDPattern = /^[a-f0-9]{64}$/; // SimpleAuth에서 생성하는 DID 형식
     
     const isValidValidator = didPattern.test(this.validator) || 
                             systemDIDPattern.test(this.validator) || 
+                            systemValidatorPattern.test(this.validator) ||
                             testDIDPattern.test(this.validator) ||
-                            genesisDIDPattern.test(this.validator);
+                            genesisDIDPattern.test(this.validator) ||
+                            simpleAuthDIDPattern.test(this.validator);
     
     if (!isValidValidator) {
-      console.error('❌ 유효하지 않은 검증자 DID입니다');
+      console.error(`❌ 유효하지 않은 검증자 DID입니다: ${this.validator}`);
       return false;
     }
 

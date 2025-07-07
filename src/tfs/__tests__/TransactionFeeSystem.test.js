@@ -83,12 +83,11 @@ describe('TransactionFeeSystem', () => {
 
       expect(result.success).toBe(true);
       expect(result.fees.total).toBe(1); // 1000 * 0.001
-      expect(result.fees.validatorShare).toBe(0.6); // 1 * 0.6
-      expect(result.fees.daoShare).toBe(0.4); // 1 * 0.4
+      expect(result.fees.validatorShare).toBe(1.0); // 1 * 1.0
+      expect(result.fees.daoShare).toBe(0.0); // 1 * 0.0
       
-      // DAO 분배 확인
-      expect(result.fees.daoDistribution.dao1).toBeCloseTo(0.24, 10); // 0.4 * 0.6
-      expect(result.fees.daoDistribution.dao2).toBeCloseTo(0.16, 10); // 0.4 * 0.4
+      // DAO 분배 확인 (분배하지 않음)
+      expect(result.fees.daoDistribution).toEqual({}); // 분배되지 않음
     });
 
     test('검증자 풀 분배 확인', () => {
@@ -97,14 +96,14 @@ describe('TransactionFeeSystem', () => {
       tfs.processTxFee('sender', 'receiver', 1000, 'B', userContributions);
       
       const poolInfo = tfs.getValidatorPoolInfo();
-      expect(poolInfo.totalFees).toBe(0.6);
+      expect(poolInfo.totalFees).toBe(1.0);
       
       // 각 검증자가 동일하게 분배받았는지 확인
       const validator1Share = tfs.validatorPool.validators.get('validator1');
       const validator2Share = tfs.validatorPool.validators.get('validator2');
       
-      expect(validator1Share).toBe(0.3); // 0.6 / 2
-      expect(validator2Share).toBe(0.3); // 0.6 / 2
+      expect(validator1Share).toBe(0.5); // 1.0 / 2
+      expect(validator2Share).toBe(0.5); // 1.0 / 2
     });
 
     test('DAO 금고 분배 확인', () => {
@@ -119,10 +118,10 @@ describe('TransactionFeeSystem', () => {
       const dao2Treasury = tfs.getDAOTreasuryInfo('dao2');
       
       expect(dao1Treasury.success).toBe(true);
-      expect(dao1Treasury.treasury.balance).toBeCloseTo(0.3, 10); // 0.4 * 0.75
+      expect(dao1Treasury.treasury.balance).toBeCloseTo(0.0, 10); // 0.0 * 0.75
       
       expect(dao2Treasury.success).toBe(true);
-      expect(dao2Treasury.treasury.balance).toBeCloseTo(0.1, 10); // 0.4 * 0.25
+      expect(dao2Treasury.treasury.balance).toBeCloseTo(0.0, 10); // 0.0 * 0.25
     });
 
     test('기여 내역 없는 경우 처리', () => {
@@ -133,7 +132,7 @@ describe('TransactionFeeSystem', () => {
       
       // 검증자 풀에만 분배
       const poolInfo = tfs.getValidatorPoolInfo();
-      expect(poolInfo.totalFees).toBe(0.6);
+      expect(poolInfo.totalFees).toBe(1.0);
     });
   });
 
@@ -183,7 +182,7 @@ describe('TransactionFeeSystem', () => {
       expect(result.success).toBe(true);
       
       const treasuryInfo = tfs.getDAOTreasuryInfo('dao1');
-      expect(treasuryInfo.treasury.balance).toBeCloseTo(0.2, 10); // 0.4 - 0.2
+      expect(treasuryInfo.treasury.balance).toBeCloseTo(-0.2, 10); // 0.0 - 0.2
       
       // 거래 기록 확인
       const lastTransaction = treasuryInfo.treasury.transactions[treasuryInfo.treasury.transactions.length - 1];
@@ -209,11 +208,11 @@ describe('TransactionFeeSystem', () => {
 
   describe('수수료 분배 비율 관리', () => {
     test('분배 비율 업데이트', () => {
-      const result = tfs.updateFeeDistributionRatio(0.7, 0.3);
+      const result = tfs.updateFeeDistributionRatio(1.0, 0.0);
       
       expect(result.success).toBe(true);
-      expect(tfs.feeDistributionRatio.validator).toBe(0.7);
-      expect(tfs.feeDistributionRatio.dao).toBe(0.3);
+      expect(tfs.feeDistributionRatio.validator).toBe(1.0);
+      expect(tfs.feeDistributionRatio.dao).toBe(0.0);
     });
 
     test('잘못된 분배 비율', () => {
@@ -289,6 +288,29 @@ describe('TransactionFeeSystem', () => {
       
       expect(result.success).toBe(false);
       expect(result.error).toContain('DID가 필요');
+    });
+  });
+
+  describe('TFS 인스턴스 초기화', () => {
+    test('TFS 인스턴스 초기화', () => {
+      const result = tfs.handleTransactionFee(txFee, userDID, userDAOs);
+      
+      // 수수료 분배 확인 (100%:0%)
+      expect(result.fees.validatorShare).toBe(1.0); // 1 * 1.0
+      expect(result.fees.daoShare).toBe(0.0); // 1 * 0.0
+      
+      // DAO 분배 정보 확인 (분배하지 않음)
+      expect(result.fees.daoDistribution).toEqual({});
+      
+      // 검증자 풀 정보 확인
+      const poolInfo = tfs.getValidatorPoolInfo();
+      expect(poolInfo.totalFees).toBe(1.0);
+      
+      // 검증자별 분배 확인
+      const validator1Share = tfs.getValidatorReward('validator1');
+      const validator2Share = tfs.getValidatorReward('validator2');
+      expect(validator1Share).toBe(0.5); // 1.0 / 2
+      expect(validator2Share).toBe(0.5); // 1.0 / 2
     });
   });
 }); 

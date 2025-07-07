@@ -13,8 +13,8 @@ class TransactionFeeSystem {
 
     this.daoTreasuries = new Map(); // DAO별 금고
     this.feeDistributionRatio = {
-      validator: 0.6, // 검증자 풀 60%
-      dao: 0.4 // DAO 금고 40%
+      validator: 1.0, // 검증자 풀 100%
+      dao: 0.0 // DAO 금고 0%
     };
 
     this.transactionHistory = [];

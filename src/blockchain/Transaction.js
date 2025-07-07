@@ -53,8 +53,19 @@ class Transaction {
       return false;
     }
 
-    // 금액 검증 (0보다 커야 함)
-    if (typeof this.amount !== 'number' || this.amount <= 0) {
+    // 금액 검증 - 특정 트랜잭션 타입은 0 금액 허용
+    const zeroAmountAllowedTypes = [
+      'invite_code_registration',
+      'dca_verification',
+      'system_notification',
+      'metadata_update'
+    ];
+    
+    const isZeroAmountAllowed = this.data?.type && 
+      zeroAmountAllowedTypes.includes(this.data.type);
+    
+    if (typeof this.amount !== 'number' || 
+        (!isZeroAmountAllowed && this.amount <= 0)) {
       return false;
     }
 
@@ -69,23 +80,33 @@ class Transaction {
     }
 
     // 실제 DID 존재 확인 (가능한 경우)
-    if (didRegistry && !this.fromDID.includes('system') && !this.fromDID.includes('genesis')) {
-      if (!didRegistry.has(this.fromDID)) {
-        console.warn(`존재하지 않는 발신자 DID: ${this.fromDID}`);
-        return false;
+    // 주의: 시스템 계정으로의 전송은 DID 검증을 건너뜀
+    if (didRegistry && !this.fromDID.includes('system') && !this.fromDID.includes('genesis') && !this.toDID.includes('system')) {
+      // didRegistry가 Set/Map이 아닌 경우를 처리
+      if (typeof didRegistry.has === 'function') {
+        // Set 또는 Map인 경우
+        if (!didRegistry.has(this.fromDID)) {
+          console.warn(`존재하지 않는 발신자 DID: ${this.fromDID}`);
+          return false;
+        }
+        if (!didRegistry.has(this.toDID)) {
+          console.warn(`존재하지 않는 수신자 DID: ${this.toDID}`);
+          return false;
+        }
       }
-      if (!didRegistry.has(this.toDID)) {
-        console.warn(`존재하지 않는 수신자 DID: ${this.toDID}`);
-        return false;
-      }
+      // 그 외의 경우는 DID 검증을 건너뜀 (개발 환경)
     }
 
     // 타임스탬프 검증 (너무 오래된 트랜잭션 거부)
     const currentTime = Date.now();
-    const maxAge = 10 * 60 * 1000; // 10분
-    if (currentTime - this.timestamp > maxAge) {
-      console.warn(`트랜잭션이 너무 오래됨: ${this.timestamp}`);
-      return false;
+    const maxAge = 24 * 60 * 60 * 1000; // 24시간으로 확대
+    
+    // founder 초기 설정이나 시스템 트랜잭션은 타임스탬프 검증 완화
+    if (!this.data || (this.data.type !== 'founder_initial' && this.data.type !== 'founder_benefit')) {
+      if (currentTime - this.timestamp > maxAge) {
+        console.warn(`트랜잭션이 너무 오래됨: ${this.timestamp}`);
+        return false;
+      }
     }
 
     // 미래 타임스탬프 거부
@@ -115,17 +136,20 @@ class Transaction {
   isValidDIDFormat(did) {
     // 표준 DID 패턴
     const didPattern = /^did:baekya:[a-f0-9]{40,64}$/;
-    // 시스템 DID 패턴  
-    const systemDIDPattern = /^did:baekya:(system|genesis)[0-9a-f]{32,64}$/;
+    // 시스템 DID 패턴 - system, genesis, validator 포함  
+    const systemDIDPattern = /^did:baekya:(system|genesis|system_validator)[0-9a-f_]{32,64}$/;
     // 테스트 DID 패턴 (개발 환경에서만)
     const testDIDPattern = /^did:baekya:test[a-f0-9]{40,48}$/;
+    // SimpleAuth DID 패턴 (접두사 없는 64자리 hex)
+    const simpleAuthDIDPattern = /^[a-f0-9]{64}$/;
     
     const isStandardDID = didPattern.test(did);
     const isSystemDID = systemDIDPattern.test(did);
     const isTestDID = testDIDPattern.test(did) && 
                      (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development');
+    const isSimpleAuthDID = simpleAuthDIDPattern.test(did);
     
-    return isStandardDID || isSystemDID || isTestDID;
+    return isStandardDID || isSystemDID || isTestDID || isSimpleAuthDID;
   }
 
   /**

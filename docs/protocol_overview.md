@@ -46,7 +46,7 @@ DAO-consortium에 지정된 기여활동(DCA) 트리거로 인해 트랜잭션�
 1. 기여-> 검증-> 계산-> 발행 메커니즘으로, 구성원의 기여를 증명하여 화폐(B-token)를 발행합니다.
 2. 기여(Contribution): 구성원은 자신의 의사/선호/상황에 맞게 DAO 내 지정된 기여활동(DCA)을 자율적으로 행합니다.
 3. 검증(Verification): 구성원의 기여는 DCA의 고유한 검증기준에 따라 검증되며, 트랜잭션을 발생시켜 계산모듈에 전송합니다.
-4. 계산(Calculation): 전송된 구성원의 정보 및 DCA의 B-token가치 정보를 바탕으로 B-token의 생애기간 동안의 시간당 발행량을 산출합니다.
+4. 계산(Calculation): 전송된 구성원의 정보 및 DCA의 B-token가치 정보를 바탕으로 B-token의 생애기간 동안의 시간당 발행량을 산출합니다. (폐기된 아이디어)
    - B-token은 구성원의 남은 기대 생애기간 (R = 평균 기대수명 − 현재 나이)에 걸쳐서, 기여시점에 가중치를 두고 시간이 흐를수록 점차 감소하는 구조로 발행됩니다(LDM: Lifetime Decay Minting 방식). 
       ```math
       \text{DCA의 B-token 가치} = B_{\text{total}} = \int_{0}^{R} BMR(t) \, dt
