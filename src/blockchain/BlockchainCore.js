@@ -423,7 +423,14 @@ class BlockchainCore {
         'mining_reward',
         'contribution_reward',
         'p_token_distribution',
-        'invite_reward'
+        'invite_reward',
+        'github_integration',      // GitHub 연동 보상
+        'dca_reward',             // DCA 기여 보상
+        'validator_reward',       // 검증자 보상
+        'pr_merged_reward',       // PR 병합 보상
+        'pr_review_reward',       // PR 리뷰 보상
+        'issue_resolved_reward',  // Issue 해결 보상
+        'github_integration_bonus' // GitHub 연동 보너스
       ];
       
       if (!allowedSystemTypes.includes(transaction.data?.type || transaction.data)) {

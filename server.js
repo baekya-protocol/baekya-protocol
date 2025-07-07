@@ -5,16 +5,24 @@ if (!process.env.NODE_ENV) {
 }
 
 const express = require('express');
-const path = require('path');
-const http = require('http');
+const cors = require('cors');
 const WebSocket = require('ws');
+const http = require('http');
+const path = require('path');
+const fs = require('fs');
 const readline = require('readline');
-const BaekyaProtocol = require('./src/index');
+const { Server } = require('socket.io');
+const localtunnel = require('localtunnel');
+// Node.js 18+ 버전에서는 fetch가 내장되어 있음
+
+// 백야 프로토콜 컴포넌트들
+const Protocol = require('./src/index.js');
 
 const app = express();
 const port = 3000;
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+const io = new Server(server);
 
 // 메인 프로토콜 인스턴스
 let protocol = null;
@@ -32,6 +40,10 @@ let validatorDID = null;
 let validatorUsername = null;
 let blockGenerationTimer = null;
 let blocksGenerated = 0;
+
+// 터널링 관련 변수
+let tunnel = null;
+let webhookUrl = null;
 
 // WebSocket 연결 핸들러
 wss.on('connection', (ws) => {
@@ -159,10 +171,10 @@ async function initializeServer() {
       communicationAddress: '010-0000-0000' // 테스트용 기본 통신주소
     });
   
-    const initialized = await protocol.initialize();
-    if (!initialized) {
+  const initialized = await protocol.initialize();
+  if (!initialized) {
       throw new Error('프로토콜 초기화 실패');
-    }
+  }
     
     // 자동검증 시스템 초기화
     console.log('🤖 자동검증 시스템 초기화 중...');
@@ -190,7 +202,7 @@ async function initializeServer() {
     automationSystem.start();
     
     console.log('✅ 자동검증 시스템 초기화 완료');
-    
+  
     // 서버 시작 시 검증자 풀 초기화
     console.log('🔄 검증자 풀을 초기화합니다.');
     if (protocol.components && protocol.components.storage && typeof protocol.components.storage.resetValidatorPool === 'function') {
@@ -1889,55 +1901,60 @@ app.post('/api/webhook/github/:integrationId', async (req, res) => {
   try {
     const { integrationId } = req.params;
     const payload = req.body;
+    const eventType = req.headers['x-github-event'] || 'unknown';
     
-    console.log(`🔔 GitHub 웹훅 수신: ${integrationId}, 이벤트: ${payload.action}`);
+    console.log(`🔔 GitHub 웹훅 수신: ${integrationId}`);
+    console.log(`📦 이벤트 타입: ${eventType}`);
+    console.log(`📦 액션: ${payload.action || 'none'}`);
+    console.log(`📦 저장소: ${payload.repository?.full_name || 'unknown'}`);
+    console.log(`📋 전체 Payload:`, JSON.stringify(payload, null, 2));
     
-    if (!githubIntegration) {
-      return res.status(503).json({
+    // 체인에서 연동 정보 조회
+    const integrationData = protocol.components.storage.getGitHubIntegration(integrationId);
+    
+    // 웹훅 수신 시간 업데이트
+    if (integrationData) {
+      integrationData.lastWebhookPing = new Date().toISOString();
+      integrationData.webhookConfigured = true;
+      
+      // 연동 정보 업데이트
+      const userIntegrations = protocol.components.storage.getGitHubIntegrations(integrationData.userDID);
+      const updatedIntegrations = userIntegrations.map(integration => 
+        integration.id === integrationId ? integrationData : integration
+      );
+      protocol.components.storage.saveGitHubIntegrations(integrationData.userDID, updatedIntegrations);
+      
+      console.log(`✅ 웹훅 수신 시간 업데이트: ${integrationData.lastWebhookPing}`);
+    }
+    
+    if (!integrationData) {
+      console.log(`❌ GitHub 연동 정보를 찾을 수 없습니다: ${integrationId}`);
+      return res.status(404).json({
         success: false,
-        error: 'GitHub 통합 시스템이 초기화되지 않았습니다'
+        error: '연동 정보를 찾을 수 없습니다'
+      });
+    }
+    
+    if (!integrationData.isActive) {
+      console.log(`⚠️ 비활성화된 GitHub 연동: ${integrationId}`);
+      return res.status(403).json({
+        success: false,
+        error: '비활성화된 연동입니다'
+      });
+    }
+    
+    // GitHub ping 이벤트 처리
+    if (eventType === 'ping') {
+      console.log(`🏓 GitHub ping 이벤트 처리`);
+      return res.json({
+        success: true,
+        message: 'Ping received successfully',
+        webhookConfigured: true
       });
     }
     
     // 웹훅 이벤트 처리
-    const result = await githubIntegration.handleWebhookEvent(integrationId, payload);
-    
-    if (result.success) {
-      console.log(`✅ GitHub 웹훅 처리 완료: ${result.message}`);
-      
-      // 기여 내역이 있으면 저장소에 기록
-      if (result.contribution) {
-        const contrib = result.contribution;
-        protocol.components.storage.saveContribution(contrib.userDID, 'dev-dao', {
-          id: contrib.id,
-          type: contrib.type,
-          title: contrib.title,
-          dcaId: contrib.type === 'pull_request' ? 'pull-request' : 
-                 contrib.type === 'pull_request_review' ? 'pull-request-review' : 
-                 'issue-report',
-          evidence: contrib.url,
-          description: contrib.title,
-          bValue: contrib.bValue,
-          verified: true,
-          verifiedAt: contrib.verifiedAt,
-          metadata: contrib.githubData
-        });
-        
-        // 개발DAO 기여자 WebSocket 업데이트
-        const updatedWallet = await protocol.getUserWallet(contrib.userDID);
-        broadcastStateUpdate(contrib.userDID, {
-          wallet: updatedWallet,
-          newContribution: {
-            dao: 'dev-dao',
-            type: contrib.type,
-            title: contrib.title,
-            bTokens: contrib.bValue,
-            description: contrib.title,
-            date: new Date().toISOString().split('T')[0]
-          }
-        });
-      }
-    }
+    const result = await processGitHubWebhook(integrationData, payload, eventType);
     
     res.json(result);
   } catch (error) {
@@ -1950,30 +1967,533 @@ app.post('/api/webhook/github/:integrationId', async (req, res) => {
   }
 });
 
+// GitHub 웹훅 이벤트 처리 함수
+async function processGitHubWebhook(integrationData, payload, eventType) {
+  try {
+    const { userDID, repository, dcaTypes } = integrationData;
+    
+    console.log(`🔍 GitHub 이벤트 처리 시작: ${eventType}`);
+    console.log(`👤 사용자: ${userDID.substring(0, 8)}...`);
+    console.log(`📂 저장소: ${repository.fullName}`);
+    
+    // Pull Request 이벤트 처리
+    if (eventType === 'pull_request' && payload.pull_request) {
+      const pr = payload.pull_request;
+      
+      console.log(`🔍 PR 이벤트: ${payload.action}, PR #${pr.number}: ${pr.title}`);
+      console.log(`🔍 PR 상태: merged=${pr.merged}, state=${pr.state}`);
+      
+      // PR 병합 처리
+      if (payload.action === 'closed' && pr.merged) {
+        const reward = dcaTypes.pull_request?.reward || 250;
+        
+        console.log(`🎉 PR 병합 감지! PR #${pr.number} → 보상: ${reward}B`);
+        
+        // 블록체인 트랜잭션 생성
+        const Transaction = require('./src/blockchain/Transaction');
+        const rewardTransaction = new Transaction(
+          'did:baekya:system000000000000000000000000000000000', // 시스템에서 지급
+          userDID, // 기여자에게
+          reward, // 250B
+          'B-Token',
+          'pr_merged_reward', // 메모
+          {
+            type: 'dca_reward',
+            dcaType: 'pull_request',
+            prNumber: pr.number,
+            prTitle: pr.title,
+            prUrl: pr.html_url,
+            repository: repository.fullName,
+            mergedAt: pr.merged_at,
+            integrationId: integrationData.id
+          }
+        );
+        
+        // 트랜잭션에 서명 (시스템 트랜잭션)
+        rewardTransaction.signature = 'system-dca-reward-signature';
+        
+        // 블록체인에 트랜잭션 추가 (pendingTransactions에 들어감)
+        const blockchain = protocol.getBlockchain();
+        const txResult = blockchain.addTransaction(rewardTransaction);
+        
+        if (txResult.success) {
+          console.log(`✅ PR 병합 보상 트랜잭션 생성 성공: ${rewardTransaction.hash}`);
+          
+          // 기여 내역 저장 (블록 생성되면 자동으로 저장됨)
+          const contribution = {
+            id: `pr_${pr.number}_${Date.now()}`,
+            type: 'pull_request',
+            title: pr.title,
+            dcaId: 'pull-request',
+            evidence: pr.html_url,
+            description: `PR #${pr.number}: ${pr.title}`,
+            bValue: reward,
+            verified: true,
+            verifiedAt: Date.now(),
+            transactionHash: rewardTransaction.hash,
+            metadata: {
+              prNumber: pr.number,
+              prUrl: pr.html_url,
+              repository: repository.fullName,
+              mergedAt: pr.merged_at
+            }
+          };
+          
+          protocol.components.storage.saveContribution(userDID, 'dev-dao', contribution);
+          protocol.components.storage.saveGitHubContribution(userDID, contribution);
+          
+          // WebSocket 업데이트 (실제 잔액은 블록 생성 후 업데이트됨)
+          broadcastStateUpdate(userDID, {
+            newContribution: {
+              dao: 'dev-dao',
+              type: 'pull_request',
+              title: pr.title,
+              bTokens: reward,
+              description: `PR #${pr.number}: ${pr.title}`,
+              date: new Date().toISOString().split('T')[0],
+              evidence: pr.html_url,
+              status: 'pending_block' // 블록 생성 대기 중
+            }
+          });
+          
+          return {
+            success: true,
+            message: 'PR 병합 보상 트랜잭션 생성 완료',
+            contribution: contribution,
+            transactionHash: rewardTransaction.hash
+          };
+        } else {
+          console.error('❌ PR 병합 보상 트랜잭션 생성 실패:', txResult.error);
+          return {
+            success: false,
+            error: 'PR 병합 보상 트랜잭션 생성 실패',
+            details: txResult.error
+          };
+        }
+      } else {
+        console.log(`ℹ️ PR 이벤트 무시: action=${payload.action}, merged=${pr.merged}`);
+      }
+    }
+    
+    // Pull Request Review 이벤트 처리
+    if (eventType === 'pull_request_review' && payload.review && payload.action === 'submitted') {
+      const review = payload.review;
+      const pr = payload.pull_request;
+      const reward = dcaTypes.pull_request_review?.reward || 120;
+      
+      console.log(`🎉 PR 리뷰 감지! PR #${pr.number} 리뷰 → 보상: ${reward}B`);
+      
+      // 블록체인 트랜잭션 생성
+      const Transaction = require('./src/blockchain/Transaction');
+      const rewardTransaction = new Transaction(
+        'did:baekya:system000000000000000000000000000000000',
+        userDID,
+        reward,
+        'B-Token',
+        'pr_review_reward',
+        {
+          type: 'dca_reward',
+          dcaType: 'pull_request_review',
+          reviewId: review.id,
+          prNumber: pr.number,
+          prTitle: pr.title,
+          reviewUrl: review.html_url,
+          repository: repository.fullName,
+          submittedAt: review.submitted_at,
+          integrationId: integrationData.id
+        }
+      );
+      
+      rewardTransaction.signature = 'system-dca-reward-signature';
+      
+      const blockchain = protocol.getBlockchain();
+      const txResult = blockchain.addTransaction(rewardTransaction);
+      
+      if (txResult.success) {
+        console.log(`✅ PR 리뷰 보상 트랜잭션 생성 성공: ${rewardTransaction.hash}`);
+        
+        const contribution = {
+          id: `pr_review_${review.id}_${Date.now()}`,
+          type: 'pull_request_review',
+          title: `PR #${pr.number} 리뷰`,
+          dcaId: 'pull-request-review',
+          evidence: review.html_url,
+          description: `PR #${pr.number} 리뷰: ${pr.title}`,
+          bValue: reward,
+          verified: true,
+          verifiedAt: Date.now(),
+          transactionHash: rewardTransaction.hash,
+          metadata: {
+            reviewId: review.id,
+            reviewUrl: review.html_url,
+            prNumber: pr.number,
+            repository: repository.fullName,
+            submittedAt: review.submitted_at
+          }
+        };
+        
+        protocol.components.storage.saveContribution(userDID, 'dev-dao', contribution);
+        protocol.components.storage.saveGitHubContribution(userDID, contribution);
+        
+        broadcastStateUpdate(userDID, {
+          newContribution: {
+            dao: 'dev-dao',
+            type: 'pull_request_review',
+            title: `PR #${pr.number} 리뷰`,
+            bTokens: reward,
+            description: `PR #${pr.number} 리뷰: ${pr.title}`,
+            date: new Date().toISOString().split('T')[0],
+            evidence: review.html_url,
+            status: 'pending_block'
+          }
+        });
+        
+        return {
+          success: true,
+          message: 'PR 리뷰 보상 트랜잭션 생성 완료',
+          contribution: contribution,
+          transactionHash: rewardTransaction.hash
+        };
+      } else {
+        console.error('❌ PR 리뷰 보상 트랜잭션 생성 실패:', txResult.error);
+        return {
+          success: false,
+          error: 'PR 리뷰 보상 트랜잭션 생성 실패',
+          details: txResult.error
+        };
+      }
+    }
+    
+    // Issues 이벤트 처리
+    if (eventType === 'issues' && payload.issue && payload.action === 'closed') {
+      const issue = payload.issue;
+      const reward = dcaTypes.issue?.reward || 80;
+      
+      console.log(`🎉 Issue 해결 감지! Issue #${issue.number} → 보상: ${reward}B`);
+      
+      // 블록체인 트랜잭션 생성
+      const Transaction = require('./src/blockchain/Transaction');
+      const rewardTransaction = new Transaction(
+        'did:baekya:system000000000000000000000000000000000',
+        userDID,
+        reward,
+        'B-Token',
+        'issue_resolved_reward',
+        {
+          type: 'dca_reward',
+          dcaType: 'issue',
+          issueNumber: issue.number,
+          issueTitle: issue.title,
+          issueUrl: issue.html_url,
+          repository: repository.fullName,
+          closedAt: issue.closed_at,
+          integrationId: integrationData.id
+        }
+      );
+      
+      rewardTransaction.signature = 'system-dca-reward-signature';
+      
+      const blockchain = protocol.getBlockchain();
+      const txResult = blockchain.addTransaction(rewardTransaction);
+      
+      if (txResult.success) {
+        console.log(`✅ Issue 해결 보상 트랜잭션 생성 성공: ${rewardTransaction.hash}`);
+        
+        const contribution = {
+          id: `issue_${issue.number}_${Date.now()}`,
+          type: 'issue',
+          title: issue.title,
+          dcaId: 'issue-report',
+          evidence: issue.html_url,
+          description: `Issue #${issue.number}: ${issue.title}`,
+          bValue: reward,
+          verified: true,
+          verifiedAt: Date.now(),
+          transactionHash: rewardTransaction.hash,
+          metadata: {
+            issueNumber: issue.number,
+            issueUrl: issue.html_url,
+            repository: repository.fullName,
+            closedAt: issue.closed_at
+          }
+        };
+        
+        protocol.components.storage.saveContribution(userDID, 'dev-dao', contribution);
+        protocol.components.storage.saveGitHubContribution(userDID, contribution);
+        
+        broadcastStateUpdate(userDID, {
+          newContribution: {
+            dao: 'dev-dao',
+            type: 'issue',
+            title: issue.title,
+            bTokens: reward,
+            description: `Issue #${issue.number}: ${issue.title}`,
+            date: new Date().toISOString().split('T')[0],
+            evidence: issue.html_url,
+            status: 'pending_block'
+          }
+        });
+        
+        return {
+          success: true,
+          message: 'Issue 해결 보상 트랜잭션 생성 완료',
+          contribution: contribution,
+          transactionHash: rewardTransaction.hash
+        };
+      } else {
+        console.error('❌ Issue 해결 보상 트랜잭션 생성 실패:', txResult.error);
+        return {
+          success: false,
+          error: 'Issue 해결 보상 트랜잭션 생성 실패',
+          details: txResult.error
+        };
+      }
+    }
+    
+    // 처리되지 않은 이벤트
+    console.log(`⚠️ 처리되지 않은 GitHub 이벤트: ${eventType} (action: ${payload.action})`);
+    return {
+      success: true,
+      message: `이벤트 수신 완료 (${eventType} - 처리하지 않음)`
+    };
+    
+  } catch (error) {
+    console.error('❌ GitHub 웹훅 처리 중 오류:', error);
+    return {
+      success: false,
+      error: '웹훅 처리 실패',
+      details: error.message
+    };
+  }
+}
+
+// GitHub PR 시뮬레이션 엔드포인트 (테스트용)
+app.post('/api/github/simulate-pr', async (req, res) => {
+  try {
+    const { userDID, action, prNumber, prTitle, repository } = req.body;
+    
+    if (!userDID || !action || !prNumber || !prTitle || !repository) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 파라미터가 누락되었습니다 (userDID, action, prNumber, prTitle, repository)'
+      });
+    }
+    
+    // 해당 사용자의 GitHub 연동 정보 조회
+    const integrations = protocol.components.storage.getGitHubIntegrations(userDID);
+    const integration = integrations.find(i => i.repository.fullName === repository);
+    
+    if (!integration) {
+      return res.status(404).json({
+        success: false,
+        error: `${repository} 저장소와 연동된 정보를 찾을 수 없습니다`
+      });
+    }
+    
+    // 가상의 PR 웹훅 페이로드 생성
+    const mockPayload = {
+      action: action,
+      pull_request: {
+        number: prNumber,
+        title: prTitle,
+        html_url: `https://github.com/${repository}/pull/${prNumber}`,
+        merged: action === 'closed',
+        merged_at: action === 'closed' ? new Date().toISOString() : null,
+        state: action === 'closed' ? 'closed' : 'open'
+      },
+      repository: {
+        full_name: repository
+      }
+    };
+    
+    console.log(`🎭 GitHub PR 시뮬레이션 시작: ${userDID} → ${repository} PR #${prNumber}`);
+    
+    // 웹훅 처리 함수 호출
+    const result = await processGitHubWebhook(integration, mockPayload);
+    
+    if (result.success) {
+      console.log(`✅ GitHub PR 시뮬레이션 완료: ${result.message}`);
+    }
+    
+    res.json({
+      success: true,
+      message: 'PR 시뮬레이션 완료',
+      simulation: {
+        userDID: userDID,
+        repository: repository,
+        prNumber: prNumber,
+        prTitle: prTitle,
+        action: action
+      },
+      result: result
+    });
+    
+  } catch (error) {
+    console.error('GitHub PR 시뮬레이션 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'PR 시뮬레이션 실패',
+      details: error.message
+    });
+  }
+});
+
 // GitHub 통합 설정
 app.post('/api/github/setup', async (req, res) => {
   try {
-    const { userDID, repoOwner, repoName, accessToken } = req.body;
+    const { userDID, daoId, repository, accessToken } = req.body;
     
-    if (!userDID || !repoOwner || !repoName) {
+    if (!userDID || !daoId || !repository) {
       return res.status(400).json({
         success: false,
-        error: 'userDID, repoOwner, repoName이 필요합니다'
+        error: 'userDID, daoId, repository 정보가 필요합니다'
       });
     }
     
-    if (!githubIntegration) {
-      return res.status(503).json({
+    if (!repository.owner || !repository.name) {
+      return res.status(400).json({
         success: false,
-        error: 'GitHub 통합 시스템이 초기화되지 않았습니다'
+        error: '저장소 소유자와 이름이 필요합니다'
       });
     }
     
-    const result = githubIntegration.setupUserIntegration(userDID, repoOwner, repoName, accessToken);
+    // GitHub 연동 정보 생성
+    const integrationId = `github_${userDID}_${Date.now()}`;
+    const integrationData = {
+      id: integrationId,
+      userDID: userDID,
+      daoId: daoId,
+      repository: {
+        owner: repository.owner,
+        name: repository.name,
+        fullName: `${repository.owner}/${repository.name}`
+      },
+      accessToken: accessToken || null,
+      connectedAt: new Date().toISOString(),
+      webhookUrl: getWebhookUrl() ? `${getWebhookUrl()}/api/webhook/github/${integrationId}` : `https://baekya-node-3000.loca.lt/api/webhook/github/${integrationId}`,
+      isActive: true,
+      dcaTypes: {
+        'pull_request': { reward: 250, enabled: true },
+        'pull_request_review': { reward: 120, enabled: true },
+        'issue': { reward: 80, enabled: true }
+      }
+    };
     
-    console.log(`🔗 GitHub 통합 설정: ${userDID} -> ${repoOwner}/${repoName}`);
+    // 체인에 GitHub 연동 정보 저장
+    try {
+      if (protocol.components && protocol.components.storage) {
+        // 기존 GitHub 연동 정보 조회
+        const existingIntegrations = protocol.components.storage.getGitHubIntegrations(userDID) || [];
+        
+        // 새 연동 정보 추가
+        existingIntegrations.push(integrationData);
+        
+        // 체인에 저장
+        protocol.components.storage.saveGitHubIntegrations(userDID, existingIntegrations);
+        
+        console.log(`✅ GitHub 연동 정보가 체인에 저장되었습니다: ${userDID} -> ${repository.fullName}`);
+      }
+    } catch (storageError) {
+      console.error('GitHub 연동 정보 체인 저장 실패:', storageError);
+      // 체인 저장 실패해도 계속 진행 (메모리에서라도 사용)
+    }
     
-    res.json(result);
+    // GitHub 통합 시스템에 등록
+    if (githubIntegration) {
+      try {
+        githubIntegration.setupUserIntegration(userDID, repository.owner, repository.name, accessToken);
+        console.log(`🔗 GitHub 통합 시스템에 등록: ${userDID} -> ${repository.fullName}`);
+      } catch (integrationError) {
+        console.error('GitHub 통합 시스템 등록 실패:', integrationError);
+        // 통합 시스템 등록 실패해도 계속 진행
+      }
+    }
+    
+    // GitHub 연동 완료 트랜잭션 생성 (연동 자체를 기여 활동으로 인정)
+    try {
+      const Transaction = require('./src/blockchain/Transaction');
+      const integrationTransaction = new Transaction(
+        'did:baekya:system000000000000000000000000000000000', // 시스템에서 지급
+        userDID, // 연동한 사용자에게
+        10, // 연동 보상 10B
+        'B-Token',
+        'github_integration_bonus',
+        {
+          type: 'github_integration',
+          repository: repository.fullName,
+          integrationId: integrationId,
+          daoId: daoId,
+          connectedAt: integrationData.connectedAt,
+          webhookUrl: integrationData.webhookUrl
+        }
+      );
+      
+      integrationTransaction.signature = 'system-integration-signature';
+      
+      // 블록체인에 트랜잭션 추가
+      const blockchain = protocol.getBlockchain();
+      const txResult = blockchain.addTransaction(integrationTransaction);
+      
+      if (txResult.success) {
+        console.log(`🎉 GitHub 연동 보상 트랜잭션 생성: ${userDID} → +10B (${repository.fullName} 연동)`);
+        
+        // 연동 기여 내역 저장
+        const integrationContribution = {
+          id: `github_integration_${Date.now()}`,
+          type: 'github_integration',
+          title: `GitHub 저장소 연동: ${repository.fullName}`,
+          dcaId: 'github-integration',
+          evidence: `Integration ID: ${integrationId}`,
+          description: `${repository.fullName} 저장소와 GitHub 연동 완료`,
+          bValue: 10,
+          verified: true,
+          verifiedAt: Date.now(),
+          transactionHash: integrationTransaction.hash,
+          metadata: {
+            repository: repository.fullName,
+            integrationId: integrationId,
+            webhookUrl: integrationData.webhookUrl
+          }
+        };
+        
+        protocol.components.storage.saveContribution(userDID, daoId, integrationContribution);
+        
+        // WebSocket으로 연동 완료 알림
+        broadcastStateUpdate(userDID, {
+          newContribution: {
+            dao: daoId,
+            type: 'github_integration',
+            title: `GitHub 저장소 연동: ${repository.fullName}`,
+            bTokens: 10,
+            description: `${repository.fullName} 저장소와 연동하여 개발DAO DCA 수행 준비 완료`,
+            date: new Date().toISOString().split('T')[0],
+            evidence: `Integration ID: ${integrationId}`,
+            status: 'pending_block'
+          }
+        });
+        
+      } else {
+        console.warn('GitHub 연동 보상 트랜잭션 생성 실패:', txResult.error);
+        // 연동 자체는 성공했으므로 계속 진행
+      }
+      
+    } catch (txError) {
+      console.warn('GitHub 연동 트랜잭션 생성 중 오류:', txError.message);
+      // 연동 자체는 성공했으므로 계속 진행
+    }
+    
+    console.log(`🎉 GitHub 연동 완료: ${userDID} -> ${repository.fullName}`);
+    console.log(`📡 웹훅 URL: ${integrationData.webhookUrl}`);
+    
+    res.json({
+      success: true,
+      message: 'GitHub 연동이 완료되었습니다',
+      integrationId: integrationId,
+      webhookUrl: integrationData.webhookUrl,
+      repository: repository.fullName,
+      dcaTypes: integrationData.dcaTypes,
+      integrationBonus: 10 // 연동 보상
+    });
   } catch (error) {
     console.error('GitHub 통합 설정 실패:', error);
     res.status(500).json({
@@ -2141,162 +2661,6 @@ app.get('/api/automation/stats', async (req, res) => {
   }
 });
 
-// 테스트용 GitHub 이벤트 시뮬레이션 엔드포인트
-app.post('/api/test/github-event', async (req, res) => {
-  try {
-    const { userDID, eventType, prData } = req.body;
-    
-    console.log(`🧪 GitHub 이벤트 테스트: ${eventType} for ${userDID}`);
-    
-    if (!githubIntegration) {
-      return res.status(503).json({
-        success: false,
-        error: 'GitHub 통합 시스템이 초기화되지 않았습니다'
-      });
-    }
-    
-    // 사용자의 GitHub 통합 설정 확인
-    const integrationStatus = githubIntegration.getIntegrationStatus(userDID);
-    if (!integrationStatus.connected) {
-      return res.status(400).json({
-        success: false,
-        error: '사용자의 GitHub 통합이 설정되지 않았습니다'
-      });
-    }
-    
-    // 테스트용 GitHub 이벤트 데이터 생성
-    let payload = {};
-    
-    switch (eventType) {
-      case 'pull_request_merged':
-        payload = {
-          action: 'closed',
-          pull_request: {
-            id: prData?.id || Math.floor(Math.random() * 100000),
-            number: prData?.number || Math.floor(Math.random() * 100),
-            title: prData?.title || '테스트 PR',
-            html_url: prData?.url || `https://github.com/test/repo/pull/${Math.floor(Math.random() * 100)}`,
-            merged: true,
-            merged_at: new Date().toISOString(),
-            additions: prData?.additions || 10,
-            deletions: prData?.deletions || 5,
-            changed_files: prData?.files || 2
-          }
-        };
-        break;
-        
-      case 'pull_request_review':
-        payload = {
-          action: 'submitted',
-          review: {
-            id: Math.floor(Math.random() * 100000),
-            html_url: `https://github.com/test/repo/pull/${Math.floor(Math.random() * 100)}#review`,
-            state: 'approved',
-            submitted_at: new Date().toISOString()
-          },
-          pull_request: {
-            id: prData?.id || Math.floor(Math.random() * 100000),
-            number: prData?.number || Math.floor(Math.random() * 100),
-            title: prData?.title || '테스트 PR',
-            merged_at: new Date().toISOString() // 이미 병합된 상태로 시뮬레이션
-          }
-        };
-        break;
-        
-      case 'issue_closed':
-        payload = {
-          action: 'closed',
-          issue: {
-            id: Math.floor(Math.random() * 100000),
-            number: Math.floor(Math.random() * 100),
-            title: prData?.title || '테스트 이슈',
-            html_url: `https://github.com/test/repo/issues/${Math.floor(Math.random() * 100)}`,
-            state: 'closed',
-            closed_at: new Date().toISOString(),
-            labels: []
-          }
-        };
-        break;
-        
-      default:
-        return res.status(400).json({
-          success: false,
-          error: '지원되지 않는 이벤트 타입입니다'
-        });
-    }
-    
-    // 통합 ID 생성 (실제 통합 설정에서 가져오기)
-    const integration = integrationStatus.integration;
-    const integrationId = `${integration.repoOwner}/${integration.repoName}`;
-    
-    // GitHub 웹훅 이벤트 처리 (실제 웹훅과 동일한 로직)
-    const result = await githubIntegration.handleWebhookEvent(integrationId, payload);
-    
-    if (result.success) {
-      console.log(`✅ GitHub 이벤트 시뮬레이션 성공: ${result.message}`);
-      
-      // 기여 내역 저장 및 토큰 지급
-      if (result.contribution) {
-        const contrib = result.contribution;
-        
-        // 프로토콜 저장소에 기여 내역 저장
-        protocol.components.storage.saveContribution(contrib.userDID, 'dev-dao', {
-          id: contrib.id,
-          type: contrib.type,
-          title: contrib.title,
-          dcaId: contrib.type === 'pull_request' ? 'pull-request' : 
-                 contrib.type === 'pull_request_review' ? 'pull-request-review' : 
-                 'issue-report',
-          evidence: contrib.url,
-          description: contrib.title,
-          bValue: contrib.bValue,
-          verified: true,
-          verifiedAt: contrib.verifiedAt,
-          metadata: contrib.githubData
-        });
-        
-        // B-토큰 지급 (블록체인에 직접 반영)
-        const currentBalance = protocol.getBlockchain().getBalance(contrib.userDID, 'B-Token');
-        protocol.getBlockchain().setBalance(contrib.userDID, currentBalance + contrib.bValue, 'B-Token');
-        
-        console.log(`💰 B-토큰 지급 완료: ${contrib.userDID} -> +${contrib.bValue}B`);
-        
-        // WebSocket 업데이트
-        const updatedWallet = await protocol.getUserWallet(contrib.userDID);
-        broadcastStateUpdate(contrib.userDID, {
-          wallet: updatedWallet,
-          newContribution: {
-            dao: 'dev-dao',
-            type: contrib.type,
-            title: contrib.title,
-            bTokens: contrib.bValue,
-            description: contrib.title,
-            date: new Date().toISOString().split('T')[0]
-          }
-        });
-        
-        return res.json({
-          success: true,
-          message: `${eventType} 이벤트 처리 완료`,
-          contribution: contrib,
-          tokenAwarded: contrib.bValue,
-          newBalance: currentBalance + contrib.bValue
-        });
-      }
-    }
-    
-    res.json(result);
-    
-  } catch (error) {
-    console.error('GitHub 이벤트 시뮬레이션 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: 'GitHub 이벤트 시뮬레이션 실패',
-      details: error.message
-    });
-  }
-});
-
 // 디버그용 - 등록된 사용자 목록 조회
 app.get('/api/debug/users', (req, res) => {
   try {
@@ -2344,7 +2708,7 @@ async function startServer() {
     await initializeServer();
     
     // 서버 시작 - 모든 네트워크 인터페이스에서 접속 가능하도록 0.0.0.0으로 바인딩
-    server.listen(port, '0.0.0.0', () => {
+    server.listen(port, '0.0.0.0', async () => {
       console.log(`\n🌅 백야 프로토콜 웹 DApp이 실행 중입니다!`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       console.log(`🌐 PC에서 http://localhost:${port} 로 접속하세요`);
@@ -2360,6 +2724,10 @@ async function startServer() {
       console.log(`🔐 통합 인증: http://localhost:${port}/api/auth/verify`);
       console.log(`🔌 WebSocket: ws://localhost:${port}`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+      
+      // 자동 터널 생성 (GitHub 웹훅용)
+      console.log('🚀 GitHub 웹훅 자동 터널 설정 시작...');
+      await setupAutoTunnel();
     });
   } catch (error) {
     console.error('❌ 서버 시작 실패:', error);
@@ -2642,21 +3010,220 @@ async function generateBlock() {
   }
 }
 
-// 서버 시작
-startServer().then(() => {
-  // 서버가 시작된 후 터미널 인터페이스 시작
-  setTimeout(() => {
-    setupTerminalInterface();
-  }, 1000);
-});
-
 // 프로세스 종료 시 정리
 process.on('SIGINT', () => {
   console.log('\n\n서버를 종료합니다...');
   if (blockGenerationTimer) {
     clearInterval(blockGenerationTimer);
   }
+  closeTunnel();
   process.exit(0);
+});
+
+// GitHub 웹훅 자동 설정 (GitHub API 사용)
+app.post('/api/github/setup-webhook', async (req, res) => {
+  try {
+    const { integrationId, githubToken } = req.body;
+    
+    if (!integrationId || !githubToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'integrationId와 githubToken이 필요합니다'
+      });
+    }
+    
+    // 체인에서 연동 정보 조회
+    const integrationData = protocol.components.storage.getGitHubIntegration(integrationId);
+    
+    if (!integrationData) {
+      return res.status(404).json({
+        success: false,
+        error: '연동 정보를 찾을 수 없습니다'
+      });
+    }
+    
+    const { repository, webhookUrl } = integrationData;
+    
+    // GitHub API를 통해 웹훅 설정
+    const webhookConfig = {
+      name: 'web',
+      active: true,
+      events: ['pull_request', 'pull_request_review', 'issues'],
+      config: {
+        url: webhookUrl,
+        content_type: 'json',
+        insecure_ssl: '1' // localhost 테스트용
+      }
+    };
+    
+    try {
+      const response = await fetch(`https://api.github.com/repos/${repository.fullName}/hooks`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${githubToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'Baekya-Protocol-Bot'
+        },
+        body: JSON.stringify(webhookConfig)
+      });
+      
+      if (response.ok) {
+        const webhookData = await response.json();
+        
+        console.log(`✅ GitHub 웹훅 자동 설정 완료: ${repository.fullName} → ${webhookUrl}`);
+        
+        // 연동 정보에 웹훅 ID 저장
+        integrationData.githubWebhookId = webhookData.id;
+        integrationData.webhookConfigured = true;
+        
+        // 체인에 업데이트된 정보 저장
+        const userIntegrations = protocol.components.storage.getGitHubIntegrations(integrationData.userDID);
+        const updatedIntegrations = userIntegrations.map(integration => 
+          integration.id === integrationId ? integrationData : integration
+        );
+        protocol.components.storage.saveGitHubIntegrations(integrationData.userDID, updatedIntegrations);
+        
+        res.json({
+          success: true,
+          message: 'GitHub 웹훅이 자동으로 설정되었습니다',
+          webhookId: webhookData.id,
+          webhookUrl: webhookUrl
+        });
+        
+      } else {
+        const errorData = await response.json();
+        console.error('GitHub 웹훅 설정 실패:', errorData);
+        
+        res.status(response.status).json({
+          success: false,
+          error: 'GitHub 웹훅 설정 실패',
+          details: errorData.message || '권한이 없거나 저장소를 찾을 수 없습니다'
+        });
+      }
+      
+    } catch (fetchError) {
+      console.error('GitHub API 호출 실패:', fetchError);
+      res.status(500).json({
+        success: false,
+        error: 'GitHub API 호출 실패',
+        details: fetchError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('웹훅 설정 처리 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '웹훅 설정 처리 실패',
+      details: error.message
+    });
+  }
+});
+
+// GitHub 웹훅 확인 엔드포인트
+app.get('/api/github/verify-webhook/:integrationId', async (req, res) => {
+  try {
+    const { integrationId } = req.params;
+    
+    // 체인에서 연동 정보 조회
+    const integrationData = protocol.components.storage.getGitHubIntegration(integrationId);
+    
+    if (!integrationData) {
+      return res.status(404).json({
+        success: false,
+        error: '연동 정보를 찾을 수 없습니다'
+      });
+    }
+    
+    // 웹훅 상태 확인 (실제로는 GitHub API로 확인해야 하지만, 여기서는 단순화)
+    const webhookActive = integrationData.webhookConfigured || false;
+    const lastPing = integrationData.lastWebhookPing || null;
+    
+    console.log(`🔍 웹훅 상태 확인: ${integrationId} → 활성화: ${webhookActive}`);
+    
+    res.json({
+      success: true,
+      webhookActive: webhookActive,
+      webhookUrl: integrationData.webhookUrl,
+      repository: integrationData.repository.fullName,
+      lastPing: lastPing,
+      integrationId: integrationId
+    });
+    
+  } catch (error) {
+    console.error('웹훅 확인 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '웹훅 확인 실패',
+      details: error.message
+    });
+  }
+});
+
+// 자동 터널 생성 및 웹훅 URL 설정
+async function setupAutoTunnel() {
+  try {
+    console.log('🚇 GitHub 웹훅용 터널 생성 중...');
+    
+    // 노드별 고유 서브도메인 생성 (포트 기반)
+    const port = process.env.PORT || 3000;
+    const subdomain = `baekya-node-${port}`;
+    
+    // 터널 생성
+    tunnel = await localtunnel({
+      port: port,
+      subdomain: subdomain
+    });
+    
+    webhookUrl = tunnel.url;
+    console.log(`✅ 터널 생성 완료: ${webhookUrl}`);
+    console.log(`🔗 GitHub 웹훅 URL: ${webhookUrl}/api/webhook/github/[INTEGRATION_ID]`);
+    
+    // 터널 오류 처리
+    tunnel.on('error', (err) => {
+      console.error('❌ 터널 오류:', err);
+      console.log('🔄 터널 재연결 시도...');
+      setTimeout(setupAutoTunnel, 5000); // 5초 후 재시도
+    });
+    
+    // 터널 종료 처리
+    tunnel.on('close', () => {
+      console.log('⚠️ 터널 연결이 종료되었습니다.');
+      console.log('🔄 터널 재연결 시도...');
+      setTimeout(setupAutoTunnel, 5000); // 5초 후 재시도
+    });
+    
+    return webhookUrl;
+    
+  } catch (error) {
+    console.error('❌ 터널 생성 실패:', error);
+    console.log('🔄 5초 후 재시도합니다...');
+    setTimeout(setupAutoTunnel, 5000);
+    return null;
+  }
+}
+
+// 웹훅 URL 가져오기 (API에서 사용)
+function getWebhookUrl() {
+  return webhookUrl;
+}
+
+// 터널 종료
+function closeTunnel() {
+  if (tunnel) {
+    tunnel.close();
+    tunnel = null;
+    webhookUrl = null;
+    console.log('🚇 터널이 종료되었습니다.');
+  }
+}
+
+// 서버 시작 후 터미널 인터페이스 시작
+startServer().then(() => {
+  // 서버가 완전히 시작된 후 터미널 인터페이스 시작
+  setTimeout(() => {
+    setupTerminalInterface();
+  }, 2000); // 2초 대기 후 터미널 인터페이스 시작
 });
 
 module.exports = app; 

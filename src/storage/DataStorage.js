@@ -499,6 +499,96 @@ class DataStorage {
     return this.data.inviteCodes || {};
   }
 
+  // GitHub 연동 정보 관리
+  saveGitHubIntegrations(userDID, integrations) {
+    if (!this.data.githubIntegrations) this.data.githubIntegrations = {};
+    
+    this.data.githubIntegrations[userDID] = {
+      integrations: integrations,
+      lastUpdated: Date.now()
+    };
+    
+    this.saveData();
+    console.log(`🔗 GitHub 연동 정보 저장: ${userDID} (${integrations.length}개 연동)`);
+  }
+
+  getGitHubIntegrations(userDID) {
+    if (!this.data.githubIntegrations) this.data.githubIntegrations = {};
+    
+    const userData = this.data.githubIntegrations[userDID];
+    return userData ? userData.integrations : [];
+  }
+
+  // 특정 GitHub 연동 정보 조회
+  getGitHubIntegration(integrationId) {
+    if (!this.data.githubIntegrations) return null;
+    
+    for (const [userDID, userData] of Object.entries(this.data.githubIntegrations)) {
+      const integration = userData.integrations.find(i => i.id === integrationId);
+      if (integration) {
+        return {
+          userDID: userDID,
+          ...integration
+        };
+      }
+    }
+    return null;
+  }
+
+  // GitHub 연동 활성화/비활성화
+  updateGitHubIntegrationStatus(integrationId, isActive) {
+    if (!this.data.githubIntegrations) return false;
+    
+    for (const [userDID, userData] of Object.entries(this.data.githubIntegrations)) {
+      const integration = userData.integrations.find(i => i.id === integrationId);
+      if (integration) {
+        integration.isActive = isActive;
+        integration.lastUpdated = Date.now();
+        this.saveData();
+        console.log(`🔗 GitHub 연동 상태 업데이트: ${integrationId} → ${isActive ? '활성' : '비활성'}`);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // GitHub 기여 기록 저장
+  saveGitHubContribution(userDID, contributionData) {
+    if (!this.data.githubContributions) this.data.githubContributions = {};
+    if (!this.data.githubContributions[userDID]) this.data.githubContributions[userDID] = [];
+    
+    const contribution = {
+      ...contributionData,
+      id: `github_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      verified: true,
+      verifiedAt: Date.now()
+    };
+    
+    this.data.githubContributions[userDID].push(contribution);
+    
+    // 최근 100개만 유지
+    if (this.data.githubContributions[userDID].length > 100) {
+      this.data.githubContributions[userDID] = this.data.githubContributions[userDID].slice(-100);
+    }
+    
+    this.saveData();
+    console.log(`🎯 GitHub 기여 기록 저장: ${userDID} → ${contributionData.type} (+${contributionData.reward}B)`);
+    return contribution;
+  }
+
+  // GitHub 기여 내역 조회
+  getGitHubContributions(userDID) {
+    if (!this.data.githubContributions) this.data.githubContributions = {};
+    
+    return this.data.githubContributions[userDID] || [];
+  }
+
+  // 모든 GitHub 연동 정보 조회 (관리자용)
+  getAllGitHubIntegrations() {
+    return this.data.githubIntegrations || {};
+  }
+
   // 기여 내역 저장
   saveContribution(userDID, daoId, contribution) {
     if (!this.data.contributions) this.data.contributions = {};

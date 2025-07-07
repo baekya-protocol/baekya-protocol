@@ -4168,21 +4168,279 @@ class BaekyaProtocolDApp {
   }
 
   async setupGitHubIntegration(daoId) {
-    const repoOwner = prompt('GitHub 저장소 소유자명을 입력하세요:');
-    const repoName = prompt('저장소 이름을 입력하세요:');
+    // GitHub 연동 설정 모달 표시
+    this.showGitHubIntegrationModal(daoId);
+  }
 
-    if (!repoOwner || !repoName) {
-      alert('저장소 정보를 모두 입력해주세요.');
+  showGitHubIntegrationModal(daoId) {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>GitHub 저장소 연동</h3>
+          <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="github-integration-form">
+            <div class="form-group">
+              <label>GitHub 저장소 정보</label>
+              <div class="repo-info">
+                <input type="text" id="github-owner" placeholder="저장소 소유자 (예: facebook)" required>
+                <input type="text" id="github-repo" placeholder="저장소 이름 (예: react)" required>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>GitHub 개인 액세스 토큰 (선택사항)</label>
+              <input type="password" id="github-token" placeholder="GitHub Token (Public 저장소는 불필요)">
+              <div class="token-help">
+                <small>
+                  <i class="fas fa-info-circle"></i>
+                  Private 저장소 연동 시에만 필요합니다.
+                  <a href="https://github.com/settings/tokens" target="_blank">토큰 생성</a>
+                </small>
+              </div>
+            </div>
+            
+            <div class="integration-preview">
+              <h4>연동 후 가능한 DCA:</h4>
+              <ul>
+                <li>Pull Request 생성 후 Merge: 250B</li>
+                <li>Pull Request Review 참여: 120B</li>
+                <li>Issue 리포트 및 해결: 80B</li>
+              </ul>
+            </div>
+            
+            <div class="form-actions">
+              <button class="btn-primary" onclick="window.dapp.processGitHubIntegration('${daoId}')">
+                <i class="fas fa-link"></i> 연동 설정
+              </button>
+              <button class="btn-secondary" onclick="this.closest('.modal').remove()">
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+  }
+
+  async processGitHubIntegration(daoId) {
+    const owner = document.getElementById('github-owner').value.trim();
+    const repo = document.getElementById('github-repo').value.trim();
+    const token = document.getElementById('github-token').value.trim();
+    
+    if (!owner || !repo) {
+      alert('저장소 소유자와 이름을 모두 입력해주세요.');
       return;
     }
 
-    // 시뮬레이션 처리
-    this.showSuccessMessage(`${repoOwner}/${repoName} 저장소와 GitHub 연동이 완료되었습니다!`);
+    this.showLoadingMessage('GitHub 연동 중...');
+    
+    try {
+      // 서버에 GitHub 연동 요청
+      const response = await fetch(`${this.apiBase}/github/setup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.currentUser?.did}`
+        },
+        body: JSON.stringify({
+          userDID: this.currentUser.did,
+          daoId: daoId,
+          repository: {
+            owner: owner,
+            name: repo,
+            fullName: `${owner}/${repo}`
+          },
+          accessToken: token || null
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        this.hideLoadingMessage();
+        this.showGitHubIntegrationSuccess(result, owner, repo, daoId);
+        
+        // GitHub 연동 모달 닫기
+        const githubModal = document.querySelector('.modal');
+        if (githubModal) {
+          githubModal.remove();
+        }
     
     // DAO 참여 모달 닫기
     const daoModal = document.querySelector('.dao-participate-modal');
     if (daoModal) {
       daoModal.closest('.modal').remove();
+        }
+        
+        // 연동 상태를 로컬 스토리지에 저장
+        this.saveGitHubIntegration(daoId, {
+          repository: `${owner}/${repo}`,
+          connectedAt: new Date().toISOString(),
+          integrationId: result.integrationId,
+          webhookUrl: result.webhookUrl
+        });
+        
+      } else {
+        this.hideLoadingMessage();
+        this.showErrorMessage(`GitHub 연동 실패: ${result.error}`);
+      }
+      
+    } catch (error) {
+      this.hideLoadingMessage();
+      this.showErrorMessage('GitHub 연동 중 오류가 발생했습니다.');
+      console.error('GitHub 연동 오류:', error);
+    }
+  }
+
+  saveGitHubIntegration(daoId, integrationData) {
+    try {
+      const key = `github_integration_${this.currentUser.did}`;
+      const existing = JSON.parse(localStorage.getItem(key) || '{}');
+      existing[daoId] = integrationData;
+      localStorage.setItem(key, JSON.stringify(existing));
+      
+      console.log('GitHub 연동 정보 저장됨:', integrationData);
+    } catch (error) {
+      console.error('GitHub 연동 정보 저장 실패:', error);
+    }
+  }
+
+  showGitHubIntegrationSuccess(result, owner, repo, daoId) {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🎉 GitHub 연동 완료</h3>
+          <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="success-message">
+            <div class="success-icon">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <h4>${owner}/${repo} 저장소와 연동되었습니다!</h4>
+            <p>이제 Pull Request를 생성하고 Merge되면 자동으로 250B가 지급됩니다.</p>
+            <p class="bonus-info">🎁 GitHub 연동 보너스 ${result.integrationBonus || 10}B가 지급됩니다!</p>
+          </div>
+          
+          <div class="webhook-section">
+            <h5><i class="fab fa-github"></i> GitHub 웹훅 설정</h5>
+            <p>GitHub 저장소에 다음 웹훅을 등록해야 실제 PR 알림을 받을 수 있습니다:</p>
+            
+            <div class="webhook-info">
+              <label>웹훅 URL:</label>
+              <div class="webhook-url-container">
+                <input type="text" id="webhookUrl" value="${result.webhookUrl}" readonly style="width: 100%; margin-bottom: 10px;">
+                <button class="btn-secondary" onclick="window.dapp.copyWebhookUrl()">
+                  <i class="fas fa-copy"></i> 웹훅 URL 복사
+                </button>
+              </div>
+            </div>
+            
+            <div class="webhook-settings">
+              <h6>GitHub 웹훅 설정 방법:</h6>
+              <ol>
+                <li>GitHub 저장소 → Settings → Webhooks → Add webhook</li>
+                <li>Payload URL에 위 웹훅 URL 붙여넣기</li>
+                <li>Content type: <code>application/json</code></li>
+                <li>Events: Pull requests, Pull request reviews, Issues 선택</li>
+                <li>Active 체크 후 Add webhook 클릭</li>
+              </ol>
+            </div>
+            
+            <div class="webhook-actions">
+              <button class="btn-primary" onclick="window.dapp.openGitHubWebhookSettings('${owner}', '${repo}')">
+                <i class="fab fa-github"></i> GitHub 웹훅 설정하러 가기
+              </button>
+              <button class="btn-secondary" onclick="window.dapp.verifyWebhook('${result.integrationId}')">
+                <i class="fas fa-check"></i> 웹훅 확인하기
+              </button>
+            </div>
+            
+            <div class="dca-info">
+              <h6>DCA 보상 체계:</h6>
+              <ul>
+                <li>Pull Request Merge: <strong>250B</strong></li>
+                <li>Pull Request Review: <strong>120B</strong></li>
+                <li>Issue 해결: <strong>80B</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+  }
+
+  copyWebhookUrl() {
+    const webhookInput = document.getElementById('webhookUrl');
+    webhookInput.select();
+    webhookInput.setSelectionRange(0, 99999); // 모바일 지원
+    
+    try {
+      document.execCommand('copy');
+      this.showSuccessMessage('웹훅 URL이 클립보드에 복사되었습니다!');
+    } catch (err) {
+      // 최신 브라우저용 Clipboard API
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(webhookInput.value).then(() => {
+          this.showSuccessMessage('웹훅 URL이 클립보드에 복사되었습니다!');
+        }).catch(() => {
+          this.showErrorMessage('복사에 실패했습니다. 수동으로 복사해주세요.');
+        });
+      } else {
+        this.showErrorMessage('복사에 실패했습니다. 수동으로 복사해주세요.');
+      }
+    }
+  }
+
+  openGitHubWebhookSettings(owner, repo) {
+    const webhooksUrl = `https://github.com/${owner}/${repo}/settings/hooks`;
+    window.open(webhooksUrl, '_blank');
+    
+    this.showSuccessMessage(`GitHub 웹훅 설정 페이지를 새 탭에서 열었습니다.\n웹훅을 설정한 후 "웹훅 확인하기" 버튼을 클릭하세요.`);
+  }
+
+  async verifyWebhook(integrationId) {
+    this.showLoadingMessage('웹훅 상태 확인 중...');
+    
+    try {
+      const response = await fetch(`${this.apiBase}/github/verify-webhook/${integrationId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.currentUser?.did}`
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        this.hideLoadingMessage();
+        if (result.webhookActive) {
+          this.showSuccessMessage(`✅ 웹훅이 정상적으로 설정되었습니다!\n\n마지막 ping: ${result.lastPing || '확인되지 않음'}\n상태: 활성화`);
+        } else {
+          this.showErrorMessage(`❌ 웹훅이 아직 설정되지 않았거나 비활성화 상태입니다.\n\nGitHub에서 웹훅을 설정해주세요.`);
+        }
+      } else {
+        this.hideLoadingMessage();
+        this.showErrorMessage(`웹훅 확인 실패: ${result.error}`);
+      }
+      
+    } catch (error) {
+      this.hideLoadingMessage();
+      this.showErrorMessage('웹훅 확인 중 오류가 발생했습니다.');
+      console.error('웹훅 확인 오류:', error);
     }
   }
 
@@ -4191,6 +4449,134 @@ class BaekyaProtocolDApp {
     if (daoId === 'dev-dao') {
       // 새 탭에서 DevDAO 기여 가이드 열기
       window.open('./docs/devdao-contribution-guide.md', '_blank');
+    }
+  }
+
+  // 기여 활동 섹션 렌더링
+  renderContributionActions(daoId) {
+    if (daoId === 'dev-dao') {
+      // GitHub 연동 상태 확인
+      const integrationStatus = this.checkGitHubIntegrationStatus(daoId);
+      
+      if (integrationStatus) {
+        // 이미 연동된 경우
+        return `
+          <div class="contribution-action-box connected">
+            <div class="action-header">
+              <h4><i class="fas fa-check-circle"></i> GitHub 연동 완료</h4>
+            </div>
+            <div class="connected-info">
+              <p><strong>연동 저장소:</strong> ${integrationStatus.repository}</p>
+              <p><strong>연동 일시:</strong> ${new Date(integrationStatus.connectedAt).toLocaleString()}</p>
+            </div>
+            <div class="dca-guide">
+              <h5>DCA 수행 방법:</h5>
+              <ol>
+                <li>저장소를 Fork하여 개인 계정으로 복사</li>
+                <li>코드 수정 후 Pull Request 생성</li>
+                <li>PR이 Merge되면 자동으로 250B 지급</li>
+              </ol>
+            </div>
+            <div class="action-buttons">
+              <button class="btn-primary" onclick="window.open('${integrationStatus.repository}', '_blank')">
+                <i class="fab fa-github"></i> 저장소 바로가기
+              </button>
+              <button class="btn-secondary" onclick="window.dapp.testPRSimulation()">
+                <i class="fas fa-play"></i> PR 시뮬레이션 테스트
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        // 연동되지 않은 경우
+        return `
+          <div class="contribution-action-box">
+            <div class="action-header">
+              <h4><i class="fab fa-github"></i> GitHub 저장소 연동 필요</h4>
+            </div>
+            <div class="action-content">
+              <p>개발DAO DCA를 수행하려면 먼저 GitHub 저장소와 연동해야 합니다.</p>
+              <div class="action-buttons">
+                <button class="btn-primary" onclick="window.dapp.setupGitHubIntegration('${daoId}')">
+                  <i class="fab fa-github"></i> GitHub 연동 설정
+                </button>
+                <button class="btn-secondary" onclick="window.dapp.openContributionGuide('${daoId}')">
+                  <i class="fas fa-book"></i> 기여 가이드
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+    
+    // 다른 DAO들은 기본 처리
+    return `
+      <div class="contribution-action-box">
+        <div class="action-header">
+          <h4><i class="fas fa-hands-helping"></i> 기여하러 가기</h4>
+        </div>
+        <div class="action-content">
+          <div class="action-buttons">
+            <button class="btn-primary" onclick="window.dapp.goToProposalCreation('${daoId}')">
+              <i class="fas fa-lightbulb"></i> 제안 생성
+            </button>
+            <button class="btn-secondary" onclick="window.dapp.createInviteCode('${daoId}')">
+              <i class="fas fa-user-plus"></i> 초대하기
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // PR 시뮬레이션 테스트
+  async testPRSimulation() {
+    const prNumber = prompt('테스트할 PR 번호를 입력하세요:', '1');
+    const prTitle = prompt('PR 제목을 입력하세요:', 'Test PR for DCA');
+    
+    if (!prNumber || !prTitle) {
+      alert('PR 번호와 제목을 모두 입력해주세요.');
+      return;
+    }
+    
+    const integrationStatus = await this.checkGitHubIntegrationStatus('dev-dao');
+    if (!integrationStatus) {
+      alert('GitHub 연동 정보를 찾을 수 없습니다.');
+      return;
+    }
+    
+    this.showLoadingMessage('PR 시뮬레이션 실행 중...');
+    
+    try {
+      const response = await fetch(`${this.apiBase}/github/simulate-pr`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userDID: this.currentUser.did,
+          action: 'closed',
+          prNumber: parseInt(prNumber),
+          prTitle: prTitle,
+          repository: integrationStatus.repository
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        this.hideLoadingMessage();
+        this.showSuccessMessage(`🎉 PR 시뮬레이션 완료!\n\nPR #${prNumber} "${prTitle}"이 병합되었습니다.\n250B가 지급되었습니다.`);
+      } else {
+        this.hideLoadingMessage();
+        this.showErrorMessage(`PR 시뮬레이션 실패: ${result.error}`);
+      }
+      
+    } catch (error) {
+      this.hideLoadingMessage();
+      this.showErrorMessage('PR 시뮬레이션 중 오류가 발생했습니다.');
+      console.error('PR 시뮬레이션 오류:', error);
     }
   }
 
@@ -4237,6 +4623,19 @@ class BaekyaProtocolDApp {
       setTimeout(() => {
         desktopProposalButton.classList.remove('highlight-animation');
       }, 3000);
+    }
+  }
+
+  // GitHub 연동 상태 확인
+  async checkGitHubIntegrationStatus(daoId) {
+    try {
+      const key = `github_integration_${this.currentUser.did}`;
+      const integrations = JSON.parse(localStorage.getItem(key) || '{}');
+      
+      return integrations[daoId] ? integrations[daoId] : null;
+    } catch (error) {
+      console.error('GitHub 연동 상태 확인 실패:', error);
+      return null;
     }
   }
 
