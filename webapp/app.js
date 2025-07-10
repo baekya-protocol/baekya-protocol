@@ -7,15 +7,15 @@ class BaekyaProtocolDApp {
     this.isAuthenticated = false;
     this.currentTab = 'dashboard';
     
-    // 프로토콜 API 설정
-    // 경량 클라이언트 모드 - 로컬 프록시 서버를 통해 메인넷 노드와 통신
-    this.apiBase = '/api';  // 경량 클라이언트의 프록시 API 사용
+    // 프로토콜 API 설정 - 로컬 서버 연결
+    // 로컬에서 실행 중인 노드와 직접 통신
+    this.apiBase = 'http://localhost:3000/api';  // 로컬 서버
     this.isDecentralized = true;
     
-    // WebSocket 연결
+    // WebSocket 연결 - 로컬 서버용
     this.ws = null;
     this.wsReconnectInterval = null;
-    this.wsUrl = `ws://${window.location.host}`;
+    this.wsUrl = 'ws://localhost:3000';  // 로컬 WebSocket 서버
     
     // 데이터 캐싱으로 성능 향상
     this.dataCache = {

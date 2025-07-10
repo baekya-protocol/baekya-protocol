@@ -38677,3 +38677,200 @@ body {
 html {
   background-color: var(--bg-secondary) !important;
 }
+
+/* 웹 버전 전용 스타일 - P2P 앱 다운로드 안내 */
+.web-app-required {
+  text-align: center;
+  padding: 3rem 2rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.app-required-icon {
+  font-size: 4rem;
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+}
+
+.web-app-required h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.app-required-description {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
+}
+
+.app-download-section {
+  margin-bottom: 2.5rem;
+}
+
+.app-download-section h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+
+.download-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.app-download-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: var(--text-primary);
+  min-width: 180px;
+}
+
+.app-download-btn:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+  transform: translateY(-2px);
+}
+
+.app-download-btn.android:hover {
+  border-color: #34a853;
+  color: #34a853;
+}
+
+.app-download-btn.ios:hover {
+  border-color: #007aff;
+  color: #007aff;
+}
+
+.app-download-btn i {
+  font-size: 2rem;
+}
+
+.btn-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.btn-text .small {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.btn-text .large {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.web-features {
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.web-features h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.web-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.web-features li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.web-features li i {
+  color: var(--secondary-color);
+  font-size: 0.9rem;
+}
+
+/* QR 스캔 안내 노티스 */
+.web-qr-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  min-width: 180px;
+  justify-content: center;
+}
+
+.web-qr-notice i {
+  color: var(--primary-color);
+  font-size: 1rem;
+}
+
+.address-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.address-input-group input {
+  flex: 1;
+}
+
+/* 웹 버전 모바일 반응형 */
+@media (max-width: 768px) {
+  .web-app-required {
+    padding: 2rem 1rem;
+  }
+  
+  .app-required-icon {
+    font-size: 3rem;
+  }
+  
+  .web-app-required h2 {
+    font-size: 1.5rem;
+  }
+  
+  .download-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .app-download-btn {
+    width: 100%;
+    max-width: 280px;
+  }
+  
+  .address-input-group {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .web-qr-notice {
+    width: 100%;
+  }
+}

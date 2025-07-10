@@ -6,20 +6,54 @@ if (!process.env.NODE_ENV) {
 
 const express = require('express');
 const cors = require('cors');
-const WebSocket = require('ws');
-const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
+const localtunnel = require('localtunnel');
+const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+
+// Firebase Admin SDK 추가
+const admin = require('firebase-admin');
+
+// Firebase Admin SDK 초기화 (서비스 계정 키 파일 필요)
+try {
+  // 실제 운영 환경에서는 서비스 계정 키를 안전하게 관리해야 합니다
+  const serviceAccount = {
+    type: "service_account",
+    project_id: "baekya-protocol",
+    private_key_id: "df4e535a76ad6525b31db8f1758ffb8af5cea5a2",
+    private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD2Aa3j9Ox0hSKV\nQ6r0sR6EtEtj9bBaick4Y+hm32a9QzQczCuHFypDTyNyVkmFGJqVdxRT7xYm1ric\nk9hkG7ms9bRihuKxzGx6mU+7ukqQBBv9nVNYrn4Vl7nygzjtngLMKjMoZhrqHYD7\nEObp6G/rDZCTqrZsiBRv8sDu8biOUA4bjBkYznEs68aijThEdciaMWj4+QyugEY1\ngU7BZ0pmaLqhoY0L+VwCGSeUnwUIrU1uPJidswFD2+CsGzohbNhSK5UX2jaXycgK\nnwkZqAR3yo9U44+qOaLhjfhtIxoFSzRdtam3SE9934KApi6Zp5EHJne2wj5nJnn3\nwXq2GMxxAgMBAAECggEAGMUPA/ShiVLtaj+Tu0sJMl3v+Frg3KDifpfKqu8ECnr1\niI/DMzkxI3FYtZa8FNdnGzUP+iqI3bTBhlx5jYzgG2rq9H+13Caj5o1AwrttbgZH\n5jec0IFTRyvNiH5PcVd3WyTFnWP4gkmhtsXbJkKl4DIvtDqcXx2thx8Xb4etqEBz\nPRxMkCOy7Ef6Um7zWoUq4q+rBgfxkFFXsftPmf1ZkbLNaLZQCATZ+Sw1Oca0Ekxd\nK4mZUgTcVyTcvLPdxpSXKhahIAtyB9MY9nZjSh/lZeG/nGyeYtMHtncsN4n8p7sD\nnTWGx+OhaiIJkqM0dcUpO+9Urc99C+f/8CEpSyi4MQKBgQD9p2AZqAzkvIrYHq1K\nPBm9OJcYXyuF9yUTNGMwXrsUQ9RqaRLjmwAppN8fbPzFg1W4iPJcRGlTKGIIBQ8p\njey/J41ABKcVnrOwzJN5PdXPUlYWdpvWvq9GUEFV28M7SfzY53w0ZCR8F5qoqFpc\nYX0l7PeqVYufHd2eepaREOqseQKBgQD4SDItzZotwBPcaTFDN+l3Zw0rb9tVarDZ\nUQ4S2gI6V6z0MDojFKA9VSP7D+JYACaiCpdCbORLUyYhfPDK5G6y569xQz6v1exT\nhx8sQF8DlZY+YLXjhPqVxXRLy0wshu0LpETYV9jo/Q7jdZcg7RoYWSyOs1iXzYkl\nqQ+Bv7cxuQKBgQDvyURdvLHDokEXIZjr7njemhqsHXvFfud7ijCiT0tHUwABQCdt\nJuA2ffe3e45RIWDtu/hxJPL0e96AelflDpfZ9QfglwVkuMxhvGNFYCE5hjp/rcyQ\na17Cd6fsBH5BFCaE3gBafrjG3oGEIvKZFkf6jFNsoMYGu3MAGB8yL+3I8QKBgQDy\n+HwatNVIJmuJTGxIMsRH9FJACuQjMBjHYvoZ2r1JaRm5kiSixgGWY+alQEMqCWPF\nOgYSnEvBpypupT1j4K6wZ+kaN0t2eiwfBeGsxYX2FQKGItB9SlqMDUKlFduCy7vY\no7Y33ahJQbS7Rg1SzJW39DSVpc9yJ1MqxsqFGB/oCQKBgBXPTVUkSPbH/MPPXtqW\nT0k90mUCYyNqni6qSiYTpp19wibsDuYxTMFs0AeZ9VCtQP9+AM+JBsaqfcc6TY8e\nwpYN174h36G+8MZkq75Rzuk2/8/7ApOCXXssv0HKj8Ym86KBD27TV4Nm3ZN+a7/d\nq5Ke/mptBDUF7+nh4vqr674Z\n-----END PRIVATE KEY-----\n",
+    client_email: "firebase-adminsdk-fbsvc@baekya-protocol.iam.gserviceaccount.com",
+    client_id: "112430965355841449474",
+    auth_uri: "https://accounts.google.com/o/oauth2/auth",
+    token_uri: "https://oauth2.googleapis.com/token",
+    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+    client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40baekya-protocol.iam.gserviceaccount.com",
+    universe_domain: "googleapis.com"
+  };
+  
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://baekya-protocol.firebaseio.com"
+  });
+  
+  console.log('🔥 Firebase Admin SDK 초기화 완료');
+} catch (error) {
+  console.log('⚠️  Firebase Admin SDK 초기화 건너뜀 (개발 모드)');
+}
+
+const WebSocket = require('ws');
+const http = require('http');
 const readline = require('readline');
 const { Server } = require('socket.io');
-const localtunnel = require('localtunnel');
 // Node.js 18+ 버전에서는 fetch가 내장되어 있음
 
 // 백야 프로토콜 컴포넌트들
 const Protocol = require('./src/index.js');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000; // Railway 환경변수 사용
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const io = new Server(server);
@@ -183,8 +217,12 @@ async function initializeServer() {
     const GitHubIntegration = require('./src/automation/GitHubIntegration');
     githubIntegration = new GitHubIntegration(
       protocol.components.daoSystem,
-      null // CVCM 시스템은 제거되었으므로 null
+      null, // CVCM 시스템은 제거되었으므로 null
+      protocol.components.storage // DataStorage 인스턴스 전달
     );
+    
+    // 블록체인 인스턴스 설정
+    githubIntegration.setBlockchain(protocol.getBlockchain());
     
     // CommunityDAOIntegration 초기화
     const CommunityDAOIntegration = require('./src/automation/CommunityDAOIntegration');
@@ -1896,52 +1934,87 @@ app.get('/api/blockchain/status', (req, res) => {
   }
 });
 
-// GitHub 웹훅 엔드포인트 
+// GitHub 중앙 웹훅 엔드포인트 (백야 프로토콜 원본 저장소용)
+app.post('/api/webhook/github/central', async (req, res) => {
+  try {
+    const payload = req.body;
+    const eventType = req.headers['x-github-event'] || 'unknown';
+    
+    // 불필요한 액션은 로그 출력하지 않고 조용히 무시
+    const ignoredActions = ['opened', 'synchronize', 'reopened', 'edited'];
+    if (ignoredActions.includes(payload.action)) {
+      return res.json({
+        success: true,
+        message: `${payload.action} event ignored`,
+        eventType: eventType,
+        action: payload.action
+      });
+    }
+
+    console.log(`🔔 GitHub 중앙 웹훅 수신`);
+    console.log(`📦 이벤트 타입: ${eventType}`);
+    console.log(`📦 액션: ${payload.action || 'none'}`);
+    console.log(`📦 저장소: ${payload.repository?.full_name || 'unknown'}`);
+    
+    // 백야 프로토콜 원본 저장소인지 확인
+    if (payload.repository?.full_name !== 'baekya-protocol/baekya-protocol') {
+      console.log(`⚠️ 처리 대상이 아닌 저장소: ${payload.repository?.full_name}`);
+      return res.json({
+        success: true,
+        message: 'Repository not monitored',
+        repository: payload.repository?.full_name
+      });
+    }
+    
+    // GitHub ping 이벤트 처리
+    if (eventType === 'ping') {
+      console.log(`🏓 GitHub 중앙 웹훅 ping 이벤트 처리`);
+      return res.json({
+        success: true,
+        message: 'Central webhook ping received successfully',
+        webhookConfigured: true
+      });
+    }
+    
+    // 중앙 웹훅 이벤트 처리
+    if (githubIntegration) {
+      const result = await githubIntegration.handleCentralWebhookEvent(payload, eventType);
+      
+      if (result.success) {
+        console.log(`✅ 중앙 웹훅 이벤트 처리 완료: ${result.message}`);
+      } else {
+        console.log(`⚠️ 중앙 웹훅 이벤트 처리 실패: ${result.message}`);
+      }
+      
+      res.json(result);
+    } else {
+      console.error('GitHub 통합 시스템이 초기화되지 않았습니다');
+      res.status(503).json({
+        success: false,
+        error: 'GitHub 통합 시스템이 초기화되지 않았습니다'
+      });
+    }
+  } catch (error) {
+    console.error('GitHub 중앙 웹훅 처리 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'GitHub 중앙 웹훅 처리 실패',
+      details: error.message
+    });
+  }
+});
+
+// GitHub 개별 웹훅 엔드포인트 (호환성을 위해 유지)
 app.post('/api/webhook/github/:integrationId', async (req, res) => {
   try {
     const { integrationId } = req.params;
     const payload = req.body;
     const eventType = req.headers['x-github-event'] || 'unknown';
     
-    console.log(`🔔 GitHub 웹훅 수신: ${integrationId}`);
+    console.log(`🔔 GitHub 개별 웹훅 수신: ${integrationId}`);
     console.log(`📦 이벤트 타입: ${eventType}`);
     console.log(`📦 액션: ${payload.action || 'none'}`);
     console.log(`📦 저장소: ${payload.repository?.full_name || 'unknown'}`);
-    console.log(`📋 전체 Payload:`, JSON.stringify(payload, null, 2));
-    
-    // 체인에서 연동 정보 조회
-    const integrationData = protocol.components.storage.getGitHubIntegration(integrationId);
-    
-    // 웹훅 수신 시간 업데이트
-    if (integrationData) {
-      integrationData.lastWebhookPing = new Date().toISOString();
-      integrationData.webhookConfigured = true;
-      
-      // 연동 정보 업데이트
-      const userIntegrations = protocol.components.storage.getGitHubIntegrations(integrationData.userDID);
-      const updatedIntegrations = userIntegrations.map(integration => 
-        integration.id === integrationId ? integrationData : integration
-      );
-      protocol.components.storage.saveGitHubIntegrations(integrationData.userDID, updatedIntegrations);
-      
-      console.log(`✅ 웹훅 수신 시간 업데이트: ${integrationData.lastWebhookPing}`);
-    }
-    
-    if (!integrationData) {
-      console.log(`❌ GitHub 연동 정보를 찾을 수 없습니다: ${integrationId}`);
-      return res.status(404).json({
-        success: false,
-        error: '연동 정보를 찾을 수 없습니다'
-      });
-    }
-    
-    if (!integrationData.isActive) {
-      console.log(`⚠️ 비활성화된 GitHub 연동: ${integrationId}`);
-      return res.status(403).json({
-        success: false,
-        error: '비활성화된 연동입니다'
-      });
-    }
     
     // GitHub ping 이벤트 처리
     if (eventType === 'ping') {
@@ -1953,15 +2026,18 @@ app.post('/api/webhook/github/:integrationId', async (req, res) => {
       });
     }
     
-    // 웹훅 이벤트 처리
-    const result = await processGitHubWebhook(integrationData, payload, eventType);
-    
-    res.json(result);
+    // 중앙 웹훅으로 리디렉션 안내
+    console.log(`ℹ️ 개별 웹훅은 더 이상 지원되지 않습니다. 중앙 웹훅을 사용하세요.`);
+    res.json({
+      success: true,
+      message: '개별 웹훅은 더 이상 지원되지 않습니다. 중앙 웹훅을 사용하세요.',
+      centralWebhookUrl: getWebhookUrl() ? `${getWebhookUrl()}/api/webhook/github/central` : `https://baekya-node-3000.loca.lt/api/webhook/github/central`
+    });
   } catch (error) {
-    console.error('GitHub 웹훅 처리 실패:', error);
+    console.error('GitHub 개별 웹훅 처리 실패:', error);
     res.status(500).json({
       success: false,
-      error: 'GitHub 웹훅 처리 실패',
+      error: 'GitHub 개별 웹훅 처리 실패',
       details: error.message
     });
   }
@@ -2338,167 +2414,204 @@ app.post('/api/github/simulate-pr', async (req, res) => {
   }
 });
 
-// GitHub 통합 설정
-app.post('/api/github/setup', async (req, res) => {
+// Firebase Auth 토큰 검증 미들웨어
+const verifyFirebaseToken = async (req, res, next) => {
   try {
-    const { userDID, daoId, repository, accessToken } = req.body;
+    const { idToken } = req.body;
     
-    if (!userDID || !daoId || !repository) {
-      return res.status(400).json({
+    // 개발 모드에서는 Firebase 검증 건너뛰기
+    if (!admin.apps.length) {
+      console.log('⚠️  개발 모드: Firebase 토큰 검증 건너뛰기');
+      req.firebaseUser = {
+        uid: 'dev_user',
+        email: 'dev@localhost',
+        name: req.body.githubUsername || 'dev_user'
+      };
+      return next();
+    }
+    
+    if (!idToken) {
+      return res.status(401).json({
         success: false,
-        error: 'userDID, daoId, repository 정보가 필요합니다'
+        error: 'Firebase ID 토큰이 필요합니다'
       });
     }
     
-    if (!repository.owner || !repository.name) {
-      return res.status(400).json({
-        success: false,
-        error: '저장소 소유자와 이름이 필요합니다'
-      });
-    }
-    
-    // GitHub 연동 정보 생성
-    const integrationId = `github_${userDID}_${Date.now()}`;
-    const integrationData = {
-      id: integrationId,
-      userDID: userDID,
-      daoId: daoId,
-      repository: {
-        owner: repository.owner,
-        name: repository.name,
-        fullName: `${repository.owner}/${repository.name}`
-      },
-      accessToken: accessToken || null,
-      connectedAt: new Date().toISOString(),
-      webhookUrl: getWebhookUrl() ? `${getWebhookUrl()}/api/webhook/github/${integrationId}` : `https://baekya-node-3000.loca.lt/api/webhook/github/${integrationId}`,
-      isActive: true,
-      dcaTypes: {
-        'pull_request': { reward: 250, enabled: true },
-        'pull_request_review': { reward: 120, enabled: true },
-        'issue': { reward: 80, enabled: true }
-      }
-    };
-    
-    // 체인에 GitHub 연동 정보 저장
     try {
-      if (protocol.components && protocol.components.storage) {
-        // 기존 GitHub 연동 정보 조회
-        const existingIntegrations = protocol.components.storage.getGitHubIntegrations(userDID) || [];
-        
-        // 새 연동 정보 추가
-        existingIntegrations.push(integrationData);
-        
-        // 체인에 저장
-        protocol.components.storage.saveGitHubIntegrations(userDID, existingIntegrations);
-        
-        console.log(`✅ GitHub 연동 정보가 체인에 저장되었습니다: ${userDID} -> ${repository.fullName}`);
-      }
-    } catch (storageError) {
-      console.error('GitHub 연동 정보 체인 저장 실패:', storageError);
-      // 체인 저장 실패해도 계속 진행 (메모리에서라도 사용)
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      req.firebaseUser = decodedToken;
+      next();
+    } catch (error) {
+      console.error('Firebase 토큰 검증 실패:', error);
+      return res.status(401).json({
+        success: false,
+        error: 'Firebase 토큰 검증 실패'
+      });
+    }
+  } catch (error) {
+    console.error('Firebase 토큰 검증 미들웨어 오류:', error);
+    return res.status(500).json({
+      success: false,
+      error: '토큰 검증 중 오류 발생'
+    });
+  }
+};
+
+// GitHub 계정 연동 설정 (Firebase Auth 방식)
+app.post('/api/github/link-account', verifyFirebaseToken, async (req, res) => {
+  try {
+    const { idToken, accessToken, githubUsername, userDID: clientUserDID } = req.body;
+    const firebaseUser = req.firebaseUser;
+    
+    if (!githubUsername) {
+      return res.status(400).json({
+        success: false,
+        error: 'githubUsername이 필요합니다'
+      });
     }
     
-    // GitHub 통합 시스템에 등록
+    // Firebase 사용자 정보 확인
+    const firebaseUID = firebaseUser.uid;
+    const userEmail = firebaseUser.email;
+    const displayName = firebaseUser.name || githubUsername;
+    
+    console.log(`🔥 Firebase 사용자 인증: ${displayName} (${githubUsername})`);
+    console.log(`📧 이메일: ${userEmail}`);
+    console.log(`🆔 Firebase UID: ${firebaseUID}`);
+    
+    // 백야 프로토콜 사용자 DID 확인
+    let userDID = null;
+    
+    // 1. 클라이언트에서 전달된 DID 사용 (최우선)
+    if (clientUserDID) {
+      userDID = clientUserDID;
+      console.log(`🔗 클라이언트 백야 사용자와 연동: ${userDID}`);
+    } 
+    // 2. Authorization 헤더에서 가져오기
+    else {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        userDID = authHeader.substring(7);
+        console.log(`🔗 헤더 백야 사용자와 연동: ${userDID}`);
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: '백야 프로토콜에 먼저 로그인해주세요'
+        });
+      }
+    }
+    
+    if (!userDID) {
+      return res.status(400).json({
+        success: false,
+        error: 'userDID 처리 실패'
+      });
+    }
+    
+    // GitHub 계정 연동 설정
     if (githubIntegration) {
       try {
-        githubIntegration.setupUserIntegration(userDID, repository.owner, repository.name, accessToken);
-        console.log(`🔗 GitHub 통합 시스템에 등록: ${userDID} -> ${repository.fullName}`);
-      } catch (integrationError) {
-        console.error('GitHub 통합 시스템 등록 실패:', integrationError);
-        // 통합 시스템 등록 실패해도 계속 진행
-      }
-    }
-    
-    // GitHub 연동 완료 트랜잭션 생성 (연동 자체를 기여 활동으로 인정)
-    try {
-      const Transaction = require('./src/blockchain/Transaction');
-      const integrationTransaction = new Transaction(
-        'did:baekya:system000000000000000000000000000000000', // 시스템에서 지급
-        userDID, // 연동한 사용자에게
-        10, // 연동 보상 10B
-        'B-Token',
-        'github_integration_bonus',
-        {
-          type: 'github_integration',
-          repository: repository.fullName,
-          integrationId: integrationId,
-          daoId: daoId,
-          connectedAt: integrationData.connectedAt,
-          webhookUrl: integrationData.webhookUrl
+        const result = githubIntegration.setupUserGitHubMapping(userDID, githubUsername);
+        
+        if (result.success) {
+          // 중앙 웹훅 설정 (처음 연동 시에만)
+          const centralWebhookUrl = getWebhookUrl() ? `${getWebhookUrl()}/api/webhook/github/central` : `https://baekya-node-3000.loca.lt/api/webhook/github/central`;
+          githubIntegration.setupCentralWebhook(centralWebhookUrl);
+          
+          // GitHub 계정 연동 완료 트랜잭션 생성
+          const Transaction = require('./src/blockchain/Transaction');
+          const integrationTransaction = new Transaction(
+            'did:baekya:system000000000000000000000000000000000',
+            userDID,
+            10,
+            'B-Token',
+            'github_account_linked',
+            {
+              type: 'github_integration',
+              githubUsername: githubUsername,
+              targetRepository: 'baekya-protocol/baekya-protocol',
+              connectedAt: new Date().toISOString(),
+              webhookUrl: centralWebhookUrl
+            }
+          );
+          
+          integrationTransaction.signature = 'system-integration-signature';
+          
+          const blockchain = protocol.getBlockchain();
+          const txResult = blockchain.addTransaction(integrationTransaction);
+          
+          if (txResult.success) {
+            console.log(`🎉 GitHub 계정 연동 보상 트랜잭션 생성: ${userDID} → +10B (${githubUsername} 연동)`);
+            
+            // 연동 기여 내역 저장
+            const integrationContribution = {
+              id: `github_account_${Date.now()}`,
+              type: 'github_integration',
+              title: `GitHub 계정 연동: ${githubUsername}`,
+              dcaId: 'github-integration',
+              evidence: `GitHub Username: ${githubUsername}`,
+              description: `${githubUsername} GitHub 계정과 연동하여 개발DAO DCA 수행 준비 완료`,
+              bValue: 10,
+              verified: true,
+              verifiedAt: Date.now(),
+              transactionHash: integrationTransaction.hash,
+              metadata: {
+                githubUsername: githubUsername,
+                targetRepository: 'baekya-protocol/baekya-protocol',
+                webhookUrl: centralWebhookUrl
+              }
+            };
+            
+            protocol.components.storage.saveContribution(userDID, 'dev-dao', integrationContribution);
+            
+            // WebSocket으로 연동 완료 알림
+            broadcastStateUpdate(userDID, {
+              newContribution: {
+                dao: 'dev-dao',
+                type: 'github_integration',
+                title: `GitHub 계정 연동: ${githubUsername}`,
+                bTokens: 10,
+                description: `${githubUsername} GitHub 계정과 연동하여 개발DAO DCA 수행 준비 완료`,
+                date: new Date().toISOString().split('T')[0],
+                evidence: `GitHub Username: ${githubUsername}`,
+                status: 'pending_block'
+              }
+            });
+          }
+          
+          console.log(`🎉 GitHub 계정 연동 완료: ${userDID} -> ${githubUsername}`);
+          console.log(`📡 중앙 웹훅 URL: ${centralWebhookUrl}`);
+          
+          res.json({
+            success: true,
+            message: 'GitHub 계정 연동이 완료되었습니다',
+            githubUsername: githubUsername,
+            targetRepository: 'baekya-protocol/baekya-protocol',
+            centralWebhookUrl: centralWebhookUrl,
+            integrationBonus: 10
+          });
+        } else {
+          res.status(500).json({ error: result.message });
         }
-      );
-      
-      integrationTransaction.signature = 'system-integration-signature';
-      
-      // 블록체인에 트랜잭션 추가
-      const blockchain = protocol.getBlockchain();
-      const txResult = blockchain.addTransaction(integrationTransaction);
-      
-      if (txResult.success) {
-        console.log(`🎉 GitHub 연동 보상 트랜잭션 생성: ${userDID} → +10B (${repository.fullName} 연동)`);
-        
-        // 연동 기여 내역 저장
-        const integrationContribution = {
-          id: `github_integration_${Date.now()}`,
-          type: 'github_integration',
-          title: `GitHub 저장소 연동: ${repository.fullName}`,
-          dcaId: 'github-integration',
-          evidence: `Integration ID: ${integrationId}`,
-          description: `${repository.fullName} 저장소와 GitHub 연동 완료`,
-          bValue: 10,
-          verified: true,
-          verifiedAt: Date.now(),
-          transactionHash: integrationTransaction.hash,
-          metadata: {
-            repository: repository.fullName,
-            integrationId: integrationId,
-            webhookUrl: integrationData.webhookUrl
-          }
-        };
-        
-        protocol.components.storage.saveContribution(userDID, daoId, integrationContribution);
-        
-        // WebSocket으로 연동 완료 알림
-        broadcastStateUpdate(userDID, {
-          newContribution: {
-            dao: daoId,
-            type: 'github_integration',
-            title: `GitHub 저장소 연동: ${repository.fullName}`,
-            bTokens: 10,
-            description: `${repository.fullName} 저장소와 연동하여 개발DAO DCA 수행 준비 완료`,
-            date: new Date().toISOString().split('T')[0],
-            evidence: `Integration ID: ${integrationId}`,
-            status: 'pending_block'
-          }
+      } catch (integrationError) {
+        console.error('GitHub 계정 연동 실패:', integrationError);
+        res.status(500).json({
+          success: false,
+          error: 'GitHub 계정 연동 실패',
+          details: integrationError.message
         });
-        
-      } else {
-        console.warn('GitHub 연동 보상 트랜잭션 생성 실패:', txResult.error);
-        // 연동 자체는 성공했으므로 계속 진행
       }
-      
-    } catch (txError) {
-      console.warn('GitHub 연동 트랜잭션 생성 중 오류:', txError.message);
-      // 연동 자체는 성공했으므로 계속 진행
+    } else {
+      res.status(503).json({
+        success: false,
+        error: 'GitHub 통합 시스템이 초기화되지 않았습니다'
+      });
     }
-    
-    console.log(`🎉 GitHub 연동 완료: ${userDID} -> ${repository.fullName}`);
-    console.log(`📡 웹훅 URL: ${integrationData.webhookUrl}`);
-    
-    res.json({
-      success: true,
-      message: 'GitHub 연동이 완료되었습니다',
-      integrationId: integrationId,
-      webhookUrl: integrationData.webhookUrl,
-      repository: repository.fullName,
-      dcaTypes: integrationData.dcaTypes,
-      integrationBonus: 10 // 연동 보상
-    });
   } catch (error) {
-    console.error('GitHub 통합 설정 실패:', error);
+    console.error('GitHub 계정 연동 설정 실패:', error);
     res.status(500).json({
       success: false,
-      error: 'GitHub 통합 설정 실패',
+      error: 'GitHub 계정 연동 설정 실패',
       details: error.message
     });
   }
@@ -2908,9 +3021,27 @@ async function generateBlock() {
             const actualWithdrawn = protocol.components.storage.withdrawFromValidatorPool(poolIncentive);
             
             if (actualWithdrawn > 0) {
-              // 검증자에게 지급
-              const currentValidatorBalance = blockchain.getBalance(validatorDID, 'B-Token');
-              blockchain.setBalance(validatorDID, currentValidatorBalance + actualWithdrawn, 'B-Token');
+              // 검증자 풀 인센티브를 현재 블록에 트랜잭션으로 직접 추가
+              const Transaction = require('./src/blockchain/Transaction');
+              const incentiveTransaction = new Transaction(
+                'did:baekya:system0000000000000000000000000000000001', // 검증자 풀 시스템
+                validatorDID,
+                actualWithdrawn,
+                'B-Token',
+                { 
+                  type: 'validator_pool_incentive', 
+                  blockIndex: block.index, 
+                  description: `검증자 풀 인센티브 (블록 #${block.index})`,
+                  poolBalanceBefore: poolBalance,
+                  poolBalanceAfter: poolBalance - actualWithdrawn
+                }
+              );
+              
+              // 현재 블록에 직접 추가
+              block.transactions.push(incentiveTransaction);
+              block.merkleRoot = block.calculateMerkleRoot();
+              block.hash = block.calculateHash();
+              
               poolIncentive = actualWithdrawn;
               
               console.log(`🎁 검증자 풀 인센티브: ${actualWithdrawn}B (풀 잔액: ${poolBalance}B → ${poolBalance - actualWithdrawn}B)`);
@@ -3160,47 +3291,162 @@ app.get('/api/github/verify-webhook/:integrationId', async (req, res) => {
   }
 });
 
+// GitHub 중앙 웹훅 자동 설정
+async function setupGitHubCentralWebhook() {
+  try {
+    if (!githubIntegration) {
+      console.log('⚠️ GitHub 통합 시스템이 초기화되지 않았습니다.');
+      return;
+    }
+
+    const webhookUrl = getWebhookUrl();
+    if (!webhookUrl) {
+      console.log('⚠️ 웹훅 URL을 얻을 수 없습니다.');
+      return;
+    }
+
+    const centralWebhookUrl = `${webhookUrl}/api/webhook/github/central`;
+    const isLocalMode = webhookUrl.includes('localhost');
+    
+    console.log('🔗 GitHub 중앙 웹훅 설정 중...');
+    console.log(`📡 중앙 웹훅 URL: ${centralWebhookUrl}`);
+    
+    // GitHub Integration 시스템에 중앙 웹훅 설정
+    const result = githubIntegration.setupCentralWebhook(centralWebhookUrl);
+    
+    if (result.success) {
+      console.log('✅ GitHub 중앙 웹훅 설정 완료');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      if (isLocalMode) {
+        console.log('⚠️  로컬 모드 - GitHub 웹훅 수동 설정 필요:');
+        console.log('💡 외부 터널 서비스를 사용하세요 (ngrok, cloudflared 등)');
+        console.log('   예시: ngrok http 3000');
+        console.log('   그 후 ngrok URL로 웹훅을 설정하세요.');
+      } else {
+        console.log('📋 GitHub 원본 저장소 웹훅 설정 안내:');
+        console.log(`   1. https://github.com/baekya-protocol/baekya-protocol/settings/hooks 접속`);
+        console.log(`   2. "Add webhook" 클릭`);
+        console.log(`   3. Payload URL: ${centralWebhookUrl}`);
+        console.log(`   4. Content type: application/json`);
+        console.log(`   5. Events: Pull requests, Pull request reviews, Issues 선택`);
+        console.log(`   6. Active 체크 후 "Add webhook" 클릭`);
+      }
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } else {
+      console.error('❌ GitHub 중앙 웹훅 설정 실패:', result.message);
+    }
+    
+  } catch (error) {
+    console.error('❌ GitHub 중앙 웹훅 설정 중 오류:', error);
+  }
+}
+
 // 자동 터널 생성 및 웹훅 URL 설정
+let tunnelRetryCount = 0;
+const MAX_TUNNEL_RETRIES = 3;
+let tunnelSetupInProgress = false;
+
 async function setupAutoTunnel() {
+  // 이미 터널 설정이 진행 중이면 중복 실행 방지
+  if (tunnelSetupInProgress) {
+    console.log('⚠️ 터널 설정이 이미 진행 중입니다.');
+    return;
+  }
+
+  tunnelSetupInProgress = true;
+
   try {
     console.log('🚇 GitHub 웹훅용 터널 생성 중...');
+    
+    // 기존 터널이 있으면 정리
+    if (tunnel) {
+      try {
+        tunnel.close();
+        tunnel = null;
+        webhookUrl = null;
+      } catch (err) {
+        console.log('기존 터널 정리 중 오류 (무시됨):', err.message);
+      }
+    }
     
     // 노드별 고유 서브도메인 생성 (포트 기반)
     const port = process.env.PORT || 3000;
     const subdomain = `baekya-node-${port}`;
     
-    // 터널 생성
+    // 터널 생성 시도
     tunnel = await localtunnel({
       port: port,
       subdomain: subdomain
     });
     
     webhookUrl = tunnel.url;
-    console.log(`✅ 터널 생성 완료: ${webhookUrl}`);
-    console.log(`🔗 GitHub 웹훅 URL: ${webhookUrl}/api/webhook/github/[INTEGRATION_ID]`);
+    tunnelRetryCount = 0; // 성공 시 재시도 카운트 초기화
     
-    // 터널 오류 처리
+    console.log(`✅ 터널 생성 완료: ${webhookUrl}`);
+    console.log(`🔗 GitHub 중앙 웹훅 URL: ${webhookUrl}/api/webhook/github/central`);
+    
+    // GitHub 중앙 웹훅 설정
+    await setupGitHubCentralWebhook();
+    
+    // 터널 이벤트 리스너 설정 (한 번만)
+    tunnel.removeAllListeners(); // 기존 리스너 제거
+    
     tunnel.on('error', (err) => {
-      console.error('❌ 터널 오류:', err);
-      console.log('🔄 터널 재연결 시도...');
-      setTimeout(setupAutoTunnel, 5000); // 5초 후 재시도
+      console.error('❌ 터널 오류:', err.message);
+      handleTunnelReconnect('오류 발생');
     });
     
-    // 터널 종료 처리
     tunnel.on('close', () => {
       console.log('⚠️ 터널 연결이 종료되었습니다.');
-      console.log('🔄 터널 재연결 시도...');
-      setTimeout(setupAutoTunnel, 5000); // 5초 후 재시도
+      handleTunnelReconnect('연결 종료');
     });
     
+    tunnelSetupInProgress = false;
     return webhookUrl;
     
   } catch (error) {
-    console.error('❌ 터널 생성 실패:', error);
-    console.log('🔄 5초 후 재시도합니다...');
-    setTimeout(setupAutoTunnel, 5000);
+    console.error('❌ 터널 생성 실패:', error.message);
+    tunnelSetupInProgress = false;
+    
+    // 재시도 횟수 체크
+    if (tunnelRetryCount < MAX_TUNNEL_RETRIES) {
+      tunnelRetryCount++;
+      console.log(`🔄 터널 재시도 (${tunnelRetryCount}/${MAX_TUNNEL_RETRIES}) - 10초 후...`);
+      setTimeout(setupAutoTunnel, 10000);
+    } else {
+      console.log('⚠️ 터널 재시도 횟수 초과. 로컬 모드로 계속 진행합니다.');
+      console.log('💡 GitHub 웹훅을 사용하려면 수동으로 ngrok 등을 설정하세요.');
+      
+      // 로컬 모드 웹훅 URL 설정
+      webhookUrl = `http://localhost:${process.env.PORT || 3000}`;
+      await setupGitHubCentralWebhook();
+      
+      // 30초 후 한 번 더 시도
+      setTimeout(() => {
+        tunnelRetryCount = 0;
+        setupAutoTunnel();
+      }, 30000);
+    }
+    
     return null;
   }
+}
+
+// 터널 재연결 처리 함수
+function handleTunnelReconnect(reason) {
+  if (tunnelSetupInProgress) {
+    return; // 이미 재연결 시도 중
+  }
+
+  console.log(`🔄 터널 재연결 필요 (${reason})`);
+  
+  // 잠시 대기 후 재연결 시도
+  setTimeout(() => {
+    if (!tunnelSetupInProgress) {
+      setupAutoTunnel();
+    }
+  }, 5000);
 }
 
 // 웹훅 URL 가져오기 (API에서 사용)
