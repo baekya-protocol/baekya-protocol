@@ -1,13 +1,4 @@
 {
-  "67fea7046f0d3874681d277071c5d5b89e1814713117bc82094c576585216a87_1752080610083_72j9691tf": {
-    "sessionId": "67fea7046f0d3874681d277071c5d5b89e1814713117bc82094c576585216a87_1752080610083_72j9691tf",
-    "didHash": "67fea7046f0d3874681d277071c5d5b89e1814713117bc82094c576585216a87",
-    "deviceId": "validator_1752080609985",
-    "createdAt": 1752080610083,
-    "lastActivity": 1752080610083,
-    "expiresAt": 1752167010083,
-    "metadata": {}
-  },
   "800fab70e89bcf8483af9447ec029c63b1636d07ef7043d1f3cac5a2cd5a0149_1752092413130_ww7so5v0w": {
     "sessionId": "800fab70e89bcf8483af9447ec029c63b1636d07ef7043d1f3cac5a2cd5a0149_1752092413130_ww7so5v0w",
     "didHash": "800fab70e89bcf8483af9447ec029c63b1636d07ef7043d1f3cac5a2cd5a0149",
@@ -33,6 +24,114 @@
     "createdAt": 1752105626467,
     "lastActivity": 1752105626467,
     "expiresAt": 1752192026467,
+    "metadata": {}
+  },
+  "a889124161b4a49e1b0cc79e28e09194d55039e8f1efd1be0c3ed60ee815dd81_1752143102582_mqvno1916": {
+    "sessionId": "a889124161b4a49e1b0cc79e28e09194d55039e8f1efd1be0c3ed60ee815dd81_1752143102582_mqvno1916",
+    "didHash": "a889124161b4a49e1b0cc79e28e09194d55039e8f1efd1be0c3ed60ee815dd81",
+    "deviceId": "validator_1752143102481",
+    "createdAt": 1752143102582,
+    "lastActivity": 1752143102582,
+    "expiresAt": 1752229502582,
+    "metadata": {}
+  },
+  "4d186bf1bd17c97f7a44bd6c42a2276a2b8456335ba2dbfea1faef6bba3daf33_1752146085104_f2b07i1cv": {
+    "sessionId": "4d186bf1bd17c97f7a44bd6c42a2276a2b8456335ba2dbfea1faef6bba3daf33_1752146085104_f2b07i1cv",
+    "didHash": "4d186bf1bd17c97f7a44bd6c42a2276a2b8456335ba2dbfea1faef6bba3daf33",
+    "deviceId": "validator_1752146085005",
+    "createdAt": 1752146085104,
+    "lastActivity": 1752146085104,
+    "expiresAt": 1752232485104,
+    "metadata": {}
+  },
+  "c09ea8cba436d13ba3e8341a216d92b6ef815f9d7be6bd55da6e74cdf64456c9_1752146872457_9ndovaa5o": {
+    "sessionId": "c09ea8cba436d13ba3e8341a216d92b6ef815f9d7be6bd55da6e74cdf64456c9_1752146872457_9ndovaa5o",
+    "didHash": "c09ea8cba436d13ba3e8341a216d92b6ef815f9d7be6bd55da6e74cdf64456c9",
+    "deviceId": "validator_1752146872357",
+    "createdAt": 1752146872457,
+    "lastActivity": 1752146872457,
+    "expiresAt": 1752233272457,
+    "metadata": {}
+  },
+  "05e8cecbcba5baac434a15f370d8b88a89c124c2288cdc251a019e154f724b1c_1752147425491_9f2yz1zxq": {
+    "sessionId": "05e8cecbcba5baac434a15f370d8b88a89c124c2288cdc251a019e154f724b1c_1752147425491_9f2yz1zxq",
+    "didHash": "05e8cecbcba5baac434a15f370d8b88a89c124c2288cdc251a019e154f724b1c",
+    "deviceId": "validator_1752147425392",
+    "createdAt": 1752147425491,
+    "lastActivity": 1752147425491,
+    "expiresAt": 1752233825491,
+    "metadata": {}
+  },
+  "dd7ad593fe862b5b8d30509ddb23f9bb4ea6a9dea6ffec87b69507aa96126e4d_1752148117836_6zosfjw21": {
+    "sessionId": "dd7ad593fe862b5b8d30509ddb23f9bb4ea6a9dea6ffec87b69507aa96126e4d_1752148117836_6zosfjw21",
+    "didHash": "dd7ad593fe862b5b8d30509ddb23f9bb4ea6a9dea6ffec87b69507aa96126e4d",
+    "deviceId": "validator_1752148117734",
+    "createdAt": 1752148117836,
+    "lastActivity": 1752148117836,
+    "expiresAt": 1752234517836,
+    "metadata": {}
+  },
+  "305a54ad732b10d5a0814823bede7b883ef187ae716f13873dc9637fa904a25a_1752162728531_jg92ncdg3": {
+    "sessionId": "305a54ad732b10d5a0814823bede7b883ef187ae716f13873dc9637fa904a25a_1752162728531_jg92ncdg3",
+    "didHash": "305a54ad732b10d5a0814823bede7b883ef187ae716f13873dc9637fa904a25a",
+    "deviceId": "web_1752162728428_hpedf6uim",
+    "createdAt": 1752162728531,
+    "lastActivity": 1752162728531,
+    "expiresAt": 1752249128531,
+    "metadata": {}
+  },
+  "8b5484ef2c861f2e0e2b777dc0834adbf12063c0a2b730c4b98248049d2d2ff4_1752163349817_8c4fulwx4": {
+    "sessionId": "8b5484ef2c861f2e0e2b777dc0834adbf12063c0a2b730c4b98248049d2d2ff4_1752163349817_8c4fulwx4",
+    "didHash": "8b5484ef2c861f2e0e2b777dc0834adbf12063c0a2b730c4b98248049d2d2ff4",
+    "deviceId": "validator_1752163349720",
+    "createdAt": 1752163349817,
+    "lastActivity": 1752163349817,
+    "expiresAt": 1752249749817,
+    "metadata": {}
+  },
+  "acfb0273d21b6586a7a4400be8e8e6853155d07089d213368e25ed14ca93d820_1752164671883_p04erax6p": {
+    "sessionId": "acfb0273d21b6586a7a4400be8e8e6853155d07089d213368e25ed14ca93d820_1752164671883_p04erax6p",
+    "didHash": "acfb0273d21b6586a7a4400be8e8e6853155d07089d213368e25ed14ca93d820",
+    "deviceId": "web_1752164671787_ox6llig08",
+    "createdAt": 1752164671883,
+    "lastActivity": 1752164671883,
+    "expiresAt": 1752251071883,
+    "metadata": {}
+  },
+  "b39fd30e0e36e513b1b7793c502f4452e3445398ef3108b51073afdf50ba3d2c_1752170704530_y112ucitf": {
+    "sessionId": "b39fd30e0e36e513b1b7793c502f4452e3445398ef3108b51073afdf50ba3d2c_1752170704530_y112ucitf",
+    "didHash": "b39fd30e0e36e513b1b7793c502f4452e3445398ef3108b51073afdf50ba3d2c",
+    "deviceId": "web_1752170704440_qo5v11rvu",
+    "createdAt": 1752170704530,
+    "lastActivity": 1752170704530,
+    "expiresAt": 1752257104530,
+    "metadata": {}
+  },
+  "037426cf7941d423b012b3076fed441de81ea0b1e47fee65baca77982a3d8d10_1752171335489_wfay3eks6": {
+    "sessionId": "037426cf7941d423b012b3076fed441de81ea0b1e47fee65baca77982a3d8d10_1752171335489_wfay3eks6",
+    "didHash": "037426cf7941d423b012b3076fed441de81ea0b1e47fee65baca77982a3d8d10",
+    "deviceId": "web_1752171335385_9n8f5994i",
+    "createdAt": 1752171335489,
+    "lastActivity": 1752171335489,
+    "expiresAt": 1752257735489,
+    "metadata": {}
+  },
+  "cec5638e6c4130200b96433008d030a352d94179f9eab0c254afd0c337f1dec2_1752171676933_sg1tjp24e": {
+    "sessionId": "cec5638e6c4130200b96433008d030a352d94179f9eab0c254afd0c337f1dec2_1752171676933_sg1tjp24e",
+    "didHash": "cec5638e6c4130200b96433008d030a352d94179f9eab0c254afd0c337f1dec2",
+    "deviceId": "validator_1752171676836",
+    "createdAt": 1752171676933,
+    "lastActivity": 1752171676933,
+    "expiresAt": 1752258076933,
+    "metadata": {}
+  },
+  "9a4b6e7961959df6850202de90e31d78c0f63cbf4147ab93376538a8326cf146_1752175555939_rgl22voda": {
+    "sessionId": "9a4b6e7961959df6850202de90e31d78c0f63cbf4147ab93376538a8326cf146_1752175555939_rgl22voda",
+    "didHash": "9a4b6e7961959df6850202de90e31d78c0f63cbf4147ab93376538a8326cf146",
+    "deviceId": "validator_1752175555843",
+    "createdAt": 1752175555939,
+    "lastActivity": 1752175555939,
+    "expiresAt": 1752261955939,
     "metadata": {}
   }
 }

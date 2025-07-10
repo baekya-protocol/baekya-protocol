@@ -7,15 +7,21 @@ class BaekyaProtocolDApp {
     this.isAuthenticated = false;
     this.currentTab = 'dashboard';
     
-    // 프로토콜 API 설정 - 로컬 서버 연결
-    // 로컬에서 실행 중인 노드와 직접 통신
-    this.apiBase = 'http://localhost:3000/api';  // 로컬 서버
+    // 프로토콜 API 설정 - 스마트 서버 연결
+    // 여러 풀노드 서버를 자동으로 시도
+    this.serverNodes = [
+      'https://trainer-harmony-ethical-else.trycloudflare.com', // Cloudflare 터널 (우선순위 1)
+      'https://baekya.loca.lt',           // 로컬 터널 서버
+      'https://mighty-chicken-48.loca.lt', // localtunnel 서버
+      'https://baekya-api-production.up.railway.app'  // Railway 서버 (백업)
+    ];
+    this.apiBase = null;  // 연결 성공한 서버로 설정됨
     this.isDecentralized = true;
     
-    // WebSocket 연결 - 로컬 서버용
+    // WebSocket 연결 - 활성 서버에 따라 동적 설정
     this.ws = null;
     this.wsReconnectInterval = null;
-    this.wsUrl = 'ws://localhost:3000';  // 로컬 WebSocket 서버
+    this.wsUrl = null;  // 연결 성공한 서버로 설정됨
     
     // 데이터 캐싱으로 성능 향상
     this.dataCache = {
@@ -113,6 +119,9 @@ class BaekyaProtocolDApp {
     // 스크롤 효과 설정 (현재는 사용하지 않음)
     // this.setupScrollEffect();
     
+    // 서버 연결 시도 - 먼저 실행
+    await this.findAvailableServer();
+    
     // 저장된 사용자 인증 정보 확인 - 즉시 처리
     this.checkStoredAuth();
     
@@ -135,6 +144,57 @@ class BaekyaProtocolDApp {
     this.updateProfileStatus('offline');
     
     console.log('✅ 백야 프로토콜 DApp 초기화 완료');
+  }
+
+  // 사용 가능한 서버 찾기
+  async findAvailableServer() {
+    console.log('🔍 사용 가능한 풀노드 서버 검색 중...');
+    
+    for (const serverUrl of this.serverNodes) {
+      try {
+        console.log(`📡 서버 연결 시도: ${serverUrl}`);
+        
+        // 서버 상태 확인 (5초 timeout)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(`${serverUrl}/api/protocol-status`, {
+          method: 'GET',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            console.log(`✅ 서버 연결 성공: ${serverUrl}`);
+            
+            // API 베이스 URL 설정
+            this.apiBase = `${serverUrl}/api`;
+            
+            // WebSocket URL 설정
+            this.wsUrl = serverUrl.replace('https://', 'wss://').replace('http://', 'ws://');
+            
+            // 성공 메시지 표시
+            this.showSuccessMessage(`🌐 풀노드 서버에 연결되었습니다: ${serverUrl}`);
+            
+            return true;
+          }
+        }
+      } catch (error) {
+        console.log(`❌ 서버 연결 실패: ${serverUrl} - ${error.message}`);
+      }
+    }
+    
+    // 모든 서버 연결 실패
+    console.error('❌ 모든 풀노드 서버에 연결할 수 없습니다.');
+    this.showErrorMessage('사용 가능한 풀노드 서버를 찾을 수 없습니다. 나중에 다시 시도해주세요.');
+    
+    return false;
   }
 
   // WebSocket 연결 관리
@@ -4394,7 +4454,7 @@ class BaekyaProtocolDApp {
             <div class="pc-instructions">
               <h5>🖥️ PC에서 진행 방법:</h5>
               <ol>
-                <li>PC 브라우저에서 <code>localhost:3000</code> 접속</li>
+                <li>PC 브라우저에서 <code>https://baekya-api-production.up.railway.app</code> 접속</li>
                 <li>백야 프로토콜에 로그인</li>
                 <li>DAO 탭 → 개발DAO 참여하기 → GitHub 계정 연동</li>
                 <li>연동 완료 후 모바일에서도 이용 가능</li>

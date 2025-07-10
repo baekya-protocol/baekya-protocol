@@ -79,6 +79,8 @@ let blocksGenerated = 0;
 let tunnel = null;
 let webhookUrl = null;
 
+// 로컬 직접 연결 모드 - 중계 서버 사용 안함
+
 // WebSocket 연결 핸들러
 wss.on('connection', (ws) => {
   let userDID = null;
@@ -250,6 +252,10 @@ async function initializeServer() {
     }
   
     console.log('✅ 백야 프로토콜 서버 초기화 완료');
+    
+    // 로컬 직접 연결 모드 - 중계 서버 사용 안함
+    console.log('🔗 로컬 직접 연결 모드: 웹앱이 이 노드로 직접 연결됩니다');
+    
     return true;
   } catch (error) {
     console.error('❌ 서버 초기화 실패:', error);
@@ -321,6 +327,32 @@ app.get('/api/status', async (req, res) => {
   } catch (error) {
     console.error('프로토콜 상태 조회 실패:', error);
     res.status(500).json({ error: '프로토콜 상태 조회 실패', details: error.message });
+  }
+});
+
+// 프로토콜 상태 확인 (웹앱 서버 검색용)
+app.get('/api/protocol-status', async (req, res) => {
+  try {
+    if (!protocol) {
+      return res.status(503).json({ 
+        success: false, 
+        error: '프로토콜이 초기화되지 않았습니다' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      status: 'active',
+      version: '1.0.0',
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('프로토콜 상태 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '프로토콜 상태 조회 실패', 
+      details: error.message 
+    });
   }
 });
 
@@ -3463,6 +3495,8 @@ function closeTunnel() {
     console.log('🚇 터널이 종료되었습니다.');
   }
 }
+
+// 중계 서버 관련 함수들 제거됨 - 로컬 직접 연결 모드 사용
 
 // 서버 시작 후 터미널 인터페이스 시작
 startServer().then(() => {
