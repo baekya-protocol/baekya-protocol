@@ -421,5 +421,14 @@
     "lastActivity": 1752274929884,
     "expiresAt": 1752361329884,
     "metadata": {}
+  },
+  "02322ed2a316132f1bd9628e091cee5492f6ac4d20ff2d32dcdcb7c2d7efaa6f_1752276071073_2e8d60lzm": {
+    "sessionId": "02322ed2a316132f1bd9628e091cee5492f6ac4d20ff2d32dcdcb7c2d7efaa6f_1752276071073_2e8d60lzm",
+    "didHash": "02322ed2a316132f1bd9628e091cee5492f6ac4d20ff2d32dcdcb7c2d7efaa6f",
+    "deviceId": "web_1752276070965_4e33iczaz",
+    "createdAt": 1752276071073,
+    "lastActivity": 1752276071073,
+    "expiresAt": 1752362471073,
+    "metadata": {}
   }
 }

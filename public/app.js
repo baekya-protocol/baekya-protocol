@@ -155,10 +155,10 @@ class BaekyaProtocolDApp {
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         if (isLocal) {
           // 로컬 서버용 메시지
-          this.ws.send(JSON.stringify({
-            type: 'auth',
-            did: this.currentUser.did
-          }));
+        this.ws.send(JSON.stringify({
+          type: 'auth',
+          did: this.currentUser.did
+        }));
         } else {
           // 릴레이 서버용 메시지
           this.ws.send(JSON.stringify({
@@ -9399,135 +9399,47 @@ class BaekyaProtocolDApp {
       return;
     }
 
-    if (confirm(`검증자 풀에 ${sponsorAmount}B를 후원하시겠습니까?`)) {
+    if (confirm(`검증자 풀에 ${sponsorAmount}B를 후원하시겠습니까? (수수료 ${transactionFee}B 별도)`)) {
       try {
-        // 실제 블록체인 트랜잭션 생성
-        const sponsorTx = new Transaction(
-          this.userDID,
-          'did:baekya:validator-pool0000000000000000000000000', // 검증자 풀 주소
-          sponsorAmount,
-          'B-Token',
-          { type: 'validator_pool_sponsorship', purpose: '검증자 풀 후원' }
-        );
+        // 서버 API로 검증자 풀 후원 요청
+        const sponsorResponse = await fetch(`${this.apiBase}/validator-pool/sponsor`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sponsorDID: this.currentUser.did,
+            amount: sponsorAmount
+          })
+        });
         
-        const feeTx = new Transaction(
-          this.userDID,
-          'did:baekya:system000000000000000000000000000000000', // 시스템 주소 (수수료)
-          transactionFee,
-          'B-Token',
-          { type: 'transaction_fee', purpose: '검증자 풀 후원 수수료' }
-        );
-        
-        // 트랜잭션 서명 (간단한 서명)
-        sponsorTx.signature = this.userDID + '-signature-' + Date.now();
-        feeTx.signature = this.userDID + '-signature-' + Date.now();
-        
-        // 서버에 트랜잭션 전송
-        try {
-          const sponsorResponse = await fetch(`${this.apiBase}/validator-pool/sponsor`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sponsorDID: this.currentUser.did,
-              amount: sponsorAmount // 후원금만 전송 (수수료는 서버에서 계산)
-            })
-          });
+        if (sponsorResponse.ok) {
+          const result = await sponsorResponse.json();
           
-          if (sponsorResponse.ok) {
-            const result = await sponsorResponse.json();
-            
-            if (result.success) {
-              // 서버에서 받은 최신 잔액 정보로 업데이트
-              const walletResponse = await fetch(`${this.apiBase}/wallet/${this.currentUser.did}`);
-              const walletData = await walletResponse.json();
+          if (result.success) {
+            // 검증자 풀 상태 업데이트
+            if (result.poolStatus) {
+              const validatorPool = document.getElementById('validatorPoolMain');
+              const newPool = result.poolStatus.balance || 0;
+              validatorPool.textContent = `${newPool.toFixed(6)} B`;
+              localStorage.setItem('baekya_validator_pool', newPool.toFixed(6));
               
-              if (walletData.success) {
-                // 서버의 최신 잔액으로 업데이트
-                const newBalance = walletData.balances.bToken;
-                document.getElementById('bTokenBalance').textContent = `${newBalance.toFixed(3)} B`;
-                
-                // 지갑 페이지의 토큰 잔액도 업데이트
-                const walletBBalance = document.getElementById('walletBTokenBalance');
-                if (walletBBalance) walletBBalance.textContent = `${newBalance.toFixed(3)} B`;
-                
-                // localStorage 업데이트
-                localStorage.setItem('currentBalance', newBalance.toFixed(6));
-                
-                // userTokens 업데이트
-                if (this.userTokens) {
-                  this.userTokens.B = newBalance;
-                }
-                
-                // 사용자 정보 업데이트
-                if (this.currentUser) {
-                  this.currentUser.bTokenBalance = newBalance;
-                  localStorage.setItem('baekya_auth', JSON.stringify(this.currentUser));
-                }
+              // 대시보드의 검증자 풀 표시도 업데이트
+              const validatorPoolDashboard = document.getElementById('validatorPool');
+              if (validatorPoolDashboard) {
+                validatorPoolDashboard.textContent = `${newPool.toFixed(6)} B`;
               }
-              
-              // 검증자 풀 상태 업데이트
-              if (result.poolStatus) {
-                const validatorPool = document.getElementById('validatorPoolMain');
-                const newPool = result.poolStatus.balance || 0;
-                validatorPool.textContent = `${newPool.toFixed(6)} B`;
-                localStorage.setItem('baekya_validator_pool', newPool.toFixed(6));
-                
-                // 대시보드의 검증자 풀 표시도 업데이트
-                const validatorPoolDashboard = document.getElementById('validatorPool');
-                if (validatorPoolDashboard) {
-                  validatorPoolDashboard.textContent = `${newPool.toFixed(6)} B`;
-                }
-              }
-              
-              this.showSuccessMessage(`검증자 풀에 ${sponsorAmount}B를 성공적으로 후원했습니다! (블록 #${result.blockNumber})`);
-            } else {
-              throw new Error(result.error || '트랜잭션 처리 실패');
             }
+            
+            this.showSuccessMessage(`검증자 풀에 ${sponsorAmount}B를 성공적으로 후원했습니다!`);
+            
+            // 모달 닫기
+            document.getElementById('validatorSponsorModal').remove();
+            
           } else {
-            const errorData = await sponsorResponse.json();
-            throw new Error(errorData.error || '트랜잭션 처리 실패');
+            throw new Error(result.error || '트랜잭션 처리 실패');
           }
-        } catch (serverError) {
-          // 서버 오류 시 로컬 처리 (개발 모드)
-          console.warn('서버 트랜잭션 처리 실패, 로컬 모드로 전환:', serverError);
-          
-          // 로컬 트랜잭션 기록
-          const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-          transactions.push(sponsorTx, feeTx);
-          localStorage.setItem('transactions', JSON.stringify(transactions));
-          
-          // UI 업데이트
-          const newBalance = currentBTokens - totalRequired;
-          document.getElementById('bTokenBalance').textContent = `${newBalance.toFixed(3)} B`;
-          
-          // currentBalance 업데이트
-          localStorage.setItem('currentBalance', newBalance.toFixed(6));
-          
-          // userTokens 업데이트
-          if (this.userTokens) {
-            this.userTokens.B = newBalance;
-          }
-          
-          // 검증자 풀 후원 금액 추가 (수수료 없음)
-          const validatorPool = document.getElementById('validatorPoolMain');
-          const currentPool = parseFloat(localStorage.getItem('baekya_validator_pool') || '0');
-          const newPool = currentPool + sponsorAmount;
-          validatorPool.textContent = `${newPool.toFixed(6)} B`;
-      localStorage.setItem('baekya_validator_pool', newPool.toFixed(6));
-      
-      // 사용자 정보 업데이트
-      if (this.currentUser) {
-        this.currentUser.bTokenBalance = newBalance;
-        localStorage.setItem('baekya_auth', JSON.stringify(this.currentUser));
-      }
-      
-          this.showSuccessMessage(`검증자 풀에 ${sponsorAmount}B를 성공적으로 후원했습니다! (로컬 모드)`);
-          
-          // 검증자 풀 총액 로그
-          console.log(`검증자 풀 업데이트: ${currentPool.toFixed(6)}B → ${newPool.toFixed(6)}B (후원금 ${sponsorAmount}B)`);
-          
-          // 토큰 잔액 UI 업데이트는 하지 않음 (이미 위에서 직접 업데이트함)
-          // updateTokenBalances는 localStorage의 이전 값을 불러와서 덮어쓰므로 호출하지 않음
+        } else {
+          const errorData = await sponsorResponse.json();
+          throw new Error(errorData.error || '트랜잭션 처리 실패');
         }
       
       // 모달 닫기
