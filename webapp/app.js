@@ -7,21 +7,19 @@ class BaekyaProtocolDApp {
     this.isAuthenticated = false;
     this.currentTab = 'dashboard';
     
-    // 프로토콜 API 설정 - 스마트 서버 연결
-    // 여러 풀노드 서버를 자동으로 시도
-    this.serverNodes = [
-      'https://trainer-harmony-ethical-else.trycloudflare.com', // Cloudflare 터널 (우선순위 1)
-      'https://baekya.loca.lt',           // 로컬 터널 서버
-      'https://mighty-chicken-48.loca.lt', // localtunnel 서버
-      'https://baekya-api-production.up.railway.app'  // Railway 서버 (백업)
-    ];
-    this.apiBase = null;  // 연결 성공한 서버로 설정됨
+    // 프로토콜 API 설정
+    // 로컬 서버 직접 연결 모드
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const localServerUrl = `http://${window.location.hostname}:3000`;
+    this.relayServerUrl = isLocal ? localServerUrl : (window.RELAY_SERVER_URL || 'https://baekya-relay.up.railway.app');
+    this.apiBase = isLocal ? `${localServerUrl}/api` : `${this.relayServerUrl}/api`;
     this.isDecentralized = true;
     
-    // WebSocket 연결 - 활성 서버에 따라 동적 설정
+    // WebSocket 연결
     this.ws = null;
     this.wsReconnectInterval = null;
-    this.wsUrl = null;  // 연결 성공한 서버로 설정됨
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    this.wsUrl = isLocal ? `ws://${window.location.hostname}:3000` : this.relayServerUrl.replace('https:', 'wss:').replace('http:', 'ws:');
     
     // 데이터 캐싱으로 성능 향상
     this.dataCache = {
@@ -119,9 +117,6 @@ class BaekyaProtocolDApp {
     // 스크롤 효과 설정 (현재는 사용하지 않음)
     // this.setupScrollEffect();
     
-    // 서버 연결 시도 - 먼저 실행
-    await this.findAvailableServer();
-    
     // 저장된 사용자 인증 정보 확인 - 즉시 처리
     this.checkStoredAuth();
     
@@ -146,83 +141,58 @@ class BaekyaProtocolDApp {
     console.log('✅ 백야 프로토콜 DApp 초기화 완료');
   }
 
-  // 사용 가능한 서버 찾기
-  async findAvailableServer() {
-    console.log('🔍 사용 가능한 풀노드 서버 검색 중...');
-    
-    for (const serverUrl of this.serverNodes) {
-      try {
-        console.log(`📡 서버 연결 시도: ${serverUrl}`);
-        
-        // 서버 상태 확인 (5초 timeout)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        const response = await fetch(`${serverUrl}/api/protocol-status`, {
-          method: 'GET',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            console.log(`✅ 서버 연결 성공: ${serverUrl}`);
-            
-            // API 베이스 URL 설정
-            this.apiBase = `${serverUrl}/api`;
-            
-            // WebSocket URL 설정
-            this.wsUrl = serverUrl.replace('https://', 'wss://').replace('http://', 'ws://');
-            
-            // 성공 메시지 표시
-            this.showSuccessMessage(`🌐 풀노드 서버에 연결되었습니다: ${serverUrl}`);
-            
-            return true;
-          }
-        }
-      } catch (error) {
-        console.log(`❌ 서버 연결 실패: ${serverUrl} - ${error.message}`);
-      }
-    }
-    
-    // 모든 서버 연결 실패
-    console.error('❌ 모든 풀노드 서버에 연결할 수 없습니다.');
-    this.showErrorMessage('사용 가능한 풀노드 서버를 찾을 수 없습니다. 나중에 다시 시도해주세요.');
-    
-    return false;
-  }
-
   // WebSocket 연결 관리
   connectWebSocket() {
     if (!this.isAuthenticated || !this.currentUser) return;
     
+    // 기존 연결이 있으면 먼저 정리
+    this.disconnectWebSocket();
+    
     try {
+      console.log('🔌 WebSocket 연결 시도:', this.wsUrl);
       this.ws = new WebSocket(this.wsUrl);
       
       this.ws.onopen = () => {
-        console.log('🔌 WebSocket 연결됨');
+        console.log('🔌 서버에 연결됨');
         
-        // 인증 메시지 전송
-        this.ws.send(JSON.stringify({
-          type: 'auth',
-          did: this.currentUser.did
-        }));
+        // 연결 상태 UI 업데이트
+        this.updateConnectionStatus('connected');
+        
+        // 로컬 서버에 맞는 인증 메시지 전송
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocal) {
+          // 로컬 서버용 메시지
+          this.ws.send(JSON.stringify({
+            type: 'auth',
+            did: this.currentUser.did
+          }));
+          console.log('📤 로컬 서버 인증 메시지 전송:', this.currentUser.did);
+        } else {
+          // 릴레이 서버용 메시지
+          this.ws.send(JSON.stringify({
+            type: 'user_connect',
+            sessionId: this.generateSessionId(),
+            did: this.currentUser.did
+          }));
+          console.log('📤 릴레이 서버 인증 메시지 전송:', this.currentUser.did);
+        }
         
         // 재연결 인터벌 정리
         if (this.wsReconnectInterval) {
           clearInterval(this.wsReconnectInterval);
           this.wsReconnectInterval = null;
         }
+        
+        // 연결 후 즉시 상태 확인 요청
+        setTimeout(() => {
+          this.requestCurrentState();
+        }, 1000);
       };
       
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('📥 WebSocket 메시지 수신:', data);
           this.handleWebSocketMessage(data);
         } catch (error) {
           console.error('WebSocket 메시지 파싱 오류:', error);
@@ -236,10 +206,14 @@ class BaekyaProtocolDApp {
       this.ws.onclose = () => {
         console.log('🔌 WebSocket 연결 종료');
         
+        // 연결 상태 UI 업데이트
+        this.updateConnectionStatus('disconnected');
+        
         // 세션이 종료된 경우가 아니면 재연결 시도
         if (this.isAuthenticated && !this.wsReconnectInterval) {
           this.wsReconnectInterval = setInterval(() => {
             console.log('🔄 WebSocket 재연결 시도...');
+            this.updateConnectionStatus('connecting');
             this.connectWebSocket();
           }, 5000);
         }
@@ -249,34 +223,123 @@ class BaekyaProtocolDApp {
     }
   }
   
+  // 현재 상태 요청
+  requestCurrentState() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'request_state',
+        did: this.currentUser.did
+      }));
+      console.log('📋 현재 상태 요청 전송');
+    }
+  }
+  
+  // 연결 상태 업데이트
+  updateConnectionStatus(status) {
+    const statusElements = document.querySelectorAll('.connection-status');
+    const statusText = {
+      'connected': '🟢 실시간 연결',
+      'connecting': '🟡 연결 중...',
+      'disconnected': '🔴 연결 끊김'
+    };
+    
+    statusElements.forEach(element => {
+      element.textContent = statusText[status] || '❓ 알 수 없음';
+      element.className = `connection-status ${status}`;
+    });
+    
+    // 상태에 따른 추가 안내 메시지
+    if (status === 'connected') {
+      console.log(`📶 연결 상태: ${status} - 실시간 업데이트 활성화`);
+    } else if (status === 'disconnected') {
+      console.warn(`📶 연결 상태: ${status} - 잔액 업데이트가 지연될 수 있습니다`);
+    } else {
+      console.log(`📶 연결 상태: ${status}`);
+    }
+  }
+  
+  // 세션 ID 생성
+  generateSessionId() {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
   // WebSocket 메시지 처리
   handleWebSocketMessage(data) {
     switch (data.type) {
+      case 'user_connected':
+        // 릴레이 서버가 풀노드를 할당함
+        console.log('✅ 풀노드 할당됨:', data.assignedNode);
+        this.assignedNode = data.assignedNode;
+        this.sessionId = data.sessionId;
+        this.updateConnectionStatus('connected');
+        break;
+        
+      case 'user_connect_failed':
+        // 연결 실패
+        console.error('❌ 풀노드 연결 실패:', data.error);
+        this.updateConnectionStatus('disconnected');
+        this.showErrorMessage(data.error);
+        break;
+        
+      case 'connection_confirmed':
+        // 연결 확인 (로컬 서버)
+        console.log('✅ 연결 확인됨:', data.message);
+        this.sessionId = data.sessionId;
+        this.updateConnectionStatus('connected');
+        this.showSuccessMessage(data.message);
+        break;
+        
+      case 'node_response':
+        // 풀노드로부터의 응답
+        this.handleNodeResponse(data.response);
+        break;
+        
       case 'session_terminated':
         // 다른 기기에서 로그인으로 인한 세션 종료
         console.log('⚠️ 세션 종료:', data.reason);
+        this.updateConnectionStatus('disconnected');
         this.handleSessionTermination(data.reason);
         break;
         
       case 'state_update':
         // 상태 업데이트
+        console.log('📊 상태 업데이트 수신:', data.timestamp);
         this.handleStateUpdate(data);
         break;
         
       case 'pool_update':
         // 검증자 풀 업데이트
+        console.log('💰 검증자 풀 업데이트 수신:', data.timestamp);
         this.handlePoolUpdate(data.validatorPool);
         break;
         
       case 'dao_treasury_update':
         // DAO 금고 업데이트
+        console.log('🏛️ DAO 금고 업데이트 수신:', data.timestamp);
         this.handleDAOTreasuryUpdate(data.daoTreasuries);
+        break;
+        
+      case 'error':
+        // 서버 오류
+        console.error('❌ 서버 오류:', data.message);
+        this.showErrorMessage(data.message);
         break;
         
       case 'pong':
         // ping-pong 응답
         console.log('🏓 Pong received');
         break;
+        
+      default:
+        console.log('❓ 알 수 없는 메시지 타입:', data.type);
+    }
+  }
+  
+  // 풀노드 응답 처리
+  handleNodeResponse(response) {
+    // 기존의 state_update와 유사하게 처리
+    if (response.type === 'state_update') {
+      this.handleStateUpdate(response);
     }
   }
   
@@ -309,18 +372,22 @@ class BaekyaProtocolDApp {
       const walletData = data.wallet;
       
       // B-토큰 잔액 업데이트
-        const bTokenAmount = walletData.balances.bToken || 0;
+      const bTokenAmount = walletData.balances.bToken || 0;
       const pTokenAmount = walletData.balances.pToken || 0;
+      
+      // 이전 잔액 확인
+      const prevBTokenAmount = this.userTokens?.B || 0;
+      const prevPTokenAmount = this.userTokens?.P || 0;
       
       console.log(`💰 지갑 잔액 업데이트: B-Token ${bTokenAmount}, P-Token ${pTokenAmount}`);
       
-        localStorage.setItem('currentBalance', bTokenAmount.toString());
-        
-        // userTokens 업데이트
-        if (!this.userTokens) {
-          this.userTokens = { B: 0, P: 0 };
-        }
-        this.userTokens.B = bTokenAmount;
+      localStorage.setItem('currentBalance', bTokenAmount.toString());
+      
+      // userTokens 업데이트
+      if (!this.userTokens) {
+        this.userTokens = { B: 0, P: 0 };
+      }
+      this.userTokens.B = bTokenAmount;
       this.userTokens.P = pTokenAmount;
       
       // currentUser 잔액도 업데이트
@@ -329,12 +396,22 @@ class BaekyaProtocolDApp {
         this.currentUser.pTokenBalance = pTokenAmount;
         localStorage.setItem('baekya_auth', JSON.stringify(this.currentUser));
       }
-        
-        // UI 업데이트
-        this.updateTokenBalances();
       
-      // 보상 알림 표시
-      this.showSuccessMessage(`💰 지갑이 업데이트되었습니다!\nB-Token: ${bTokenAmount}`);
+      // UI 업데이트
+      this.updateTokenBalances();
+      
+      // 실제 잔액 변경이 있을 때만 알림 표시
+      if (bTokenAmount !== prevBTokenAmount || pTokenAmount !== prevPTokenAmount) {
+        const changeB = bTokenAmount - prevBTokenAmount;
+        const changeP = pTokenAmount - prevPTokenAmount;
+        
+        if (changeB > 0 || changeP > 0) {
+          let message = '💰 토큰을 받았습니다!';
+          if (changeB > 0) message += `\nB-Token: +${changeB}`;
+          if (changeP > 0) message += `\nP-Token: +${changeP}`;
+          this.showSuccessMessage(message);
+        }
+      }
     }
     
     // 새로운 거래 처리
@@ -2679,6 +2756,13 @@ class BaekyaProtocolDApp {
         this.loadWallet();
       }
       
+      // 회원가입 완료 후 지갑 잔액 강제 새로고침
+      if (!this.isExistingUser) {
+        setTimeout(() => {
+          this.updateTokenBalances(true); // 강제 새로고침
+        }, 2000); // 2초 후 새로고침 (서버 처리 시간 고려)
+      }
+      
       if (this.isExistingUser) {
         this.showSuccessMessage(`환영합니다, ${this.currentUser.name}님!`);
       } else {
@@ -3153,7 +3237,7 @@ class BaekyaProtocolDApp {
     return `${did.substring(0, 8)}...${did.substring(did.length - 8)}`;
   }
 
-  async updateTokenBalances() {
+  async updateTokenBalances(forceRefresh = false) {
     // 대시보드 토큰 표시 요소들
     const bTokenBalance = document.getElementById('bTokenBalance');
     const hourlyRate = document.getElementById('hourlyRate');
@@ -3167,9 +3251,9 @@ class BaekyaProtocolDApp {
       let bTokenAmount = '0.000000';
       let pTokenAmount = 0;
       
-      // localStorage를 우선적으로 사용
+      // forceRefresh가 true이거나 localStorage에 값이 없을 때만 서버에서 가져오기
       const savedBalance = localStorage.getItem('currentBalance');
-      if (savedBalance !== null) {
+      if (!forceRefresh && savedBalance !== null) {
         // localStorage에 저장된 값이 있으면 그것을 사용
         bTokenAmount = parseFloat(savedBalance).toFixed(3);
         if (!this.userTokens) {
@@ -3178,7 +3262,7 @@ class BaekyaProtocolDApp {
         this.userTokens.B = parseFloat(savedBalance);
       } else {
       try {
-          // localStorage에 값이 없을 때만 서버에서 가져오기
+          // forceRefresh가 true이거나 localStorage에 값이 없을 때 서버에서 가져오기
         const response = await fetch(`${this.apiBase}/wallet/${this.currentUser.did}`);
         if (response.ok) {
           const walletData = await response.json();
@@ -3195,6 +3279,10 @@ class BaekyaProtocolDApp {
             
               // localStorage에 저장
             localStorage.setItem('currentBalance', bTokenAmount);
+            
+            if (forceRefresh) {
+              console.log(`💰 지갑 강제 새로고침 완료: ${bTokenAmount} B`);
+            }
           }
         }
       } catch (error) {
@@ -4454,7 +4542,7 @@ class BaekyaProtocolDApp {
             <div class="pc-instructions">
               <h5>🖥️ PC에서 진행 방법:</h5>
               <ol>
-                <li>PC 브라우저에서 <code>https://baekya-api-production.up.railway.app</code> 접속</li>
+                <li>PC 브라우저에서 <code>localhost:3000</code> 접속</li>
                 <li>백야 프로토콜에 로그인</li>
                 <li>DAO 탭 → 개발DAO 참여하기 → GitHub 계정 연동</li>
                 <li>연동 완료 후 모바일에서도 이용 가능</li>

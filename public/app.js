@@ -8,14 +8,18 @@ class BaekyaProtocolDApp {
     this.currentTab = 'dashboard';
     
     // 프로토콜 API 설정
-    // 경량 클라이언트 모드 - 로컬 프록시 서버를 통해 메인넷 노드와 통신
-    this.apiBase = '/api';  // 경량 클라이언트의 프록시 API 사용
+    // 로컬 서버 직접 연결 모드
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const localServerUrl = `http://${window.location.hostname}:3000`;
+    this.relayServerUrl = isLocal ? localServerUrl : (window.RELAY_SERVER_URL || 'https://baekya-relay.up.railway.app');
+    this.apiBase = isLocal ? `${localServerUrl}/api` : `${this.relayServerUrl}/api`;
     this.isDecentralized = true;
     
     // WebSocket 연결
     this.ws = null;
     this.wsReconnectInterval = null;
-    this.wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    this.wsUrl = isLocal ? `ws://${window.location.hostname}:3000` : this.relayServerUrl.replace('https:', 'wss:').replace('http:', 'ws:');
     
     // 데이터 캐싱으로 성능 향상
     this.dataCache = {
@@ -145,13 +149,24 @@ class BaekyaProtocolDApp {
       this.ws = new WebSocket(this.wsUrl);
       
       this.ws.onopen = () => {
-        console.log('🔌 WebSocket 연결됨');
+        console.log('🔌 서버에 연결됨');
         
-        // 인증 메시지 전송
-        this.ws.send(JSON.stringify({
-          type: 'auth',
-          did: this.currentUser.did
-        }));
+        // 로컬 서버에 맞는 인증 메시지 전송
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocal) {
+          // 로컬 서버용 메시지
+          this.ws.send(JSON.stringify({
+            type: 'auth',
+            did: this.currentUser.did
+          }));
+        } else {
+          // 릴레이 서버용 메시지
+          this.ws.send(JSON.stringify({
+            type: 'user_connect',
+            sessionId: this.generateSessionId(),
+            did: this.currentUser.did
+          }));
+        }
         
         // 재연결 인터벌 정리
         if (this.wsReconnectInterval) {
@@ -189,9 +204,32 @@ class BaekyaProtocolDApp {
     }
   }
   
+  // 세션 ID 생성
+  generateSessionId() {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+  
   // WebSocket 메시지 처리
   handleWebSocketMessage(data) {
     switch (data.type) {
+      case 'user_connected':
+        // 릴레이 서버가 풀노드를 할당함
+        console.log('✅ 풀노드 할당됨:', data.assignedNode);
+        this.assignedNode = data.assignedNode;
+        this.sessionId = data.sessionId;
+        break;
+        
+      case 'user_connect_failed':
+        // 연결 실패
+        console.error('❌ 풀노드 연결 실패:', data.error);
+        this.showErrorMessage(data.error);
+        break;
+        
+      case 'node_response':
+        // 풀노드로부터의 응답
+        this.handleNodeResponse(data.response);
+        break;
+        
       case 'session_terminated':
         // 다른 기기에서 로그인으로 인한 세션 종료
         console.log('⚠️ 세션 종료:', data.reason);
@@ -217,6 +255,14 @@ class BaekyaProtocolDApp {
         // ping-pong 응답
         console.log('🏓 Pong received');
         break;
+    }
+  }
+  
+  // 풀노드 응답 처리
+  handleNodeResponse(response) {
+    // 기존의 state_update와 유사하게 처리
+    if (response.type === 'state_update') {
+      this.handleStateUpdate(response);
     }
   }
   
@@ -2619,6 +2665,13 @@ class BaekyaProtocolDApp {
         this.loadWallet();
       }
       
+      // 회원가입 완료 후 지갑 잔액 강제 새로고침
+      if (!this.isExistingUser) {
+        setTimeout(() => {
+          this.updateTokenBalances(true); // 강제 새로고침
+        }, 2000); // 2초 후 새로고침 (서버 처리 시간 고려)
+      }
+      
       if (this.isExistingUser) {
         this.showSuccessMessage(`환영합니다, ${this.currentUser.name}님!`);
       } else {
@@ -3093,7 +3146,7 @@ class BaekyaProtocolDApp {
     return `${did.substring(0, 8)}...${did.substring(did.length - 8)}`;
   }
 
-  async updateTokenBalances() {
+  async updateTokenBalances(forceRefresh = false) {
     // 대시보드 토큰 표시 요소들
     const bTokenBalance = document.getElementById('bTokenBalance');
     const hourlyRate = document.getElementById('hourlyRate');
@@ -3107,9 +3160,9 @@ class BaekyaProtocolDApp {
       let bTokenAmount = '0.000000';
       let pTokenAmount = 0;
       
-      // localStorage를 우선적으로 사용
+      // forceRefresh가 true이거나 localStorage에 값이 없을 때만 서버에서 가져오기
       const savedBalance = localStorage.getItem('currentBalance');
-      if (savedBalance !== null) {
+      if (!forceRefresh && savedBalance !== null) {
         // localStorage에 저장된 값이 있으면 그것을 사용
         bTokenAmount = parseFloat(savedBalance).toFixed(3);
         if (!this.userTokens) {
@@ -3118,7 +3171,7 @@ class BaekyaProtocolDApp {
         this.userTokens.B = parseFloat(savedBalance);
       } else {
       try {
-          // localStorage에 값이 없을 때만 서버에서 가져오기
+          // forceRefresh가 true이거나 localStorage에 값이 없을 때 서버에서 가져오기
         const response = await fetch(`${this.apiBase}/wallet/${this.currentUser.did}`);
         if (response.ok) {
           const walletData = await response.json();
@@ -3135,6 +3188,10 @@ class BaekyaProtocolDApp {
             
               // localStorage에 저장
             localStorage.setItem('currentBalance', bTokenAmount);
+            
+            if (forceRefresh) {
+              console.log(`💰 지갑 강제 새로고침 완료: ${bTokenAmount} B`);
+            }
           }
         }
       } catch (error) {

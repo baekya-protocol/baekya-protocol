@@ -67,7 +67,8 @@ let communityIntegration = null;
 let automationSystem = null;
 
 // WebSocket 연결 관리
-const clients = new Map(); // DID -> WebSocket connections
+const clients = new Map(); // DID -> WebSocket connection (단일 연결)
+const clientSessions = new Map(); // WebSocket -> { did, sessionId }
 
 // 검증자 관련 변수
 let validatorDID = null;
@@ -79,119 +80,249 @@ let blocksGenerated = 0;
 let tunnel = null;
 let webhookUrl = null;
 
+// 릴레이 서버 연결 관련 변수
+let relayConnection = null;
+let relayReconnectInterval = null;
+let nodeId = uuidv4(); // 이 풀노드의 고유 ID
+
+// 릴레이 서버 설정 (환경변수 또는 기본값)
+const RELAY_SERVER_URL = process.env.RELAY_SERVER_URL || 'wss://baekya-relay-production.up.railway.app';
+
 // 로컬 직접 연결 모드 - 중계 서버 사용 안함
 
 // WebSocket 연결 핸들러
 wss.on('connection', (ws) => {
   let userDID = null;
+  let sessionId = null;
+  
+  console.log('🔌 새로운 WebSocket 연결 시도');
   
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
+      console.log('📨 WebSocket 메시지 수신:', data.type, data.did ? `DID: ${data.did.substring(0, 16)}...` : '');
       
       switch (data.type) {
         case 'auth':
           // 사용자 인증
           userDID = data.did;
-          if (!clients.has(userDID)) {
-            clients.set(userDID, new Set());
-          }
+          sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           
-          // 기존 연결이 있으면 종료 (다중 로그인 방지)
-          const existingConnections = clients.get(userDID);
-          existingConnections.forEach(existingWs => {
-            if (existingWs !== ws && existingWs.readyState === WebSocket.OPEN) {
+          console.log(`🔐 인증 요청: ${userDID}`);
+          
+          // 기존 연결이 있으면 강제 종료 (1기기 1계정 정책)
+          if (clients.has(userDID)) {
+            const existingWs = clients.get(userDID);
+            if (existingWs && existingWs.readyState === WebSocket.OPEN) {
+              console.log(`⚠️ 기존 연결 종료: ${userDID}`);
               existingWs.send(JSON.stringify({
                 type: 'session_terminated',
-                reason: '다른 기기에서 로그인했습니다'
+                reason: '다른 기기에서 로그인했습니다.'
               }));
               existingWs.close();
+              
+              // 기존 세션 정보 정리
+              if (clientSessions.has(existingWs)) {
+                clientSessions.delete(existingWs);
+              }
             }
-          });
+          }
           
-          // 새 연결 추가
-          existingConnections.clear();
-          existingConnections.add(ws);
+          // 새 연결 등록
+          clients.set(userDID, ws);
+          clientSessions.set(ws, { did: userDID, sessionId: sessionId });
           
-          // 최신 상태 전송
+          console.log(`✅ 새 연결 등록: ${userDID}, 세션: ${sessionId}`);
+          
+          // 즉시 최신 상태 전송
           protocol.getUserWallet(userDID).then(wallet => {
             const poolStatus = protocol.components.storage.getValidatorPoolStatus();
             
-            ws.send(JSON.stringify({
+            console.log(`💰 연결 시 지갑 정보 전송: ${userDID} -> B:${wallet.balances?.bToken || 0}B`);
+            
+            const stateUpdate = {
               type: 'state_update',
               wallet: wallet,
-              validatorPool: poolStatus
+              validatorPool: poolStatus,
+              sessionId: sessionId
+            };
+            
+            ws.send(JSON.stringify(stateUpdate));
+            
+            // 연결 확인 메시지
+            ws.send(JSON.stringify({
+              type: 'connection_confirmed',
+              sessionId: sessionId,
+              message: '실시간 연결이 활성화되었습니다.'
+            }));
+            
+          }).catch(error => {
+            console.error(`❌ 지갑 정보 조회 실패: ${userDID}`, error);
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: '지갑 정보를 불러오는데 실패했습니다.'
             }));
           });
           
-          console.log(`🔌 WebSocket 연결: ${userDID}`);
+          break;
+          
+        case 'request_state':
+          // 현재 상태 요청 처리
+          if (userDID) {
+            console.log(`📋 상태 요청 처리: ${userDID}`);
+            
+            protocol.getUserWallet(userDID).then(wallet => {
+              const poolStatus = protocol.components.storage.getValidatorPoolStatus();
+              
+              ws.send(JSON.stringify({
+                type: 'state_update',
+                wallet: wallet,
+                validatorPool: poolStatus,
+                sessionId: sessionId
+              }));
+            }).catch(error => {
+              console.error(`❌ 상태 요청 처리 실패: ${userDID}`, error);
+            });
+          }
           break;
           
         case 'ping':
-          ws.send(JSON.stringify({ type: 'pong' }));
+          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
           break;
+          
+        default:
+          console.log(`❓ 알 수 없는 메시지 타입: ${data.type}`);
       }
     } catch (error) {
-      console.error('WebSocket 메시지 처리 오류:', error);
+      console.error('❌ WebSocket 메시지 처리 오류:', error);
     }
   });
   
-  ws.on('close', () => {
-    if (userDID && clients.has(userDID)) {
-      clients.get(userDID).delete(ws);
-      if (clients.get(userDID).size === 0) {
+  ws.on('close', (code, reason) => {
+    console.log(`🔌 WebSocket 연결 종료: ${userDID || '알 수 없음'}, 코드: ${code}, 이유: ${reason}`);
+    
+    if (userDID) {
+      // 클라이언트 맵에서 제거 (동일한 연결인 경우에만)
+      if (clients.get(userDID) === ws) {
         clients.delete(userDID);
+        console.log(`🗑️ 클라이언트 맵에서 제거: ${userDID}`);
       }
-      console.log(`🔌 WebSocket 연결 종료: ${userDID}`);
     }
+    
+    // 세션 정보 정리
+    if (clientSessions.has(ws)) {
+      clientSessions.delete(ws);
+    }
+  });
+  
+  ws.on('error', (error) => {
+    console.error(`❌ WebSocket 연결 오류: ${userDID || '알 수 없음'}`, error);
   });
 });
 
-// 모든 클라이언트에 상태 업데이트 브로드캐스트
+// 특정 사용자에게 상태 업데이트 브로드캐스트
 function broadcastStateUpdate(userDID, updateData) {
+  console.log(`📤 상태 업데이트 브로드캐스트: ${userDID} ->`, updateData);
+  
+  // 로컬 WebSocket 클라이언트에 전송
   if (clients.has(userDID)) {
-    const userConnections = clients.get(userDID);
-    userConnections.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'state_update',
-          ...updateData
-        }));
-      }
-    });
+    const ws = clients.get(userDID);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      const message = JSON.stringify({
+        type: 'state_update',
+        timestamp: Date.now(),
+        ...updateData
+      });
+      
+      ws.send(message);
+      console.log(`✅ 로컬 클라이언트에 전송 성공: ${userDID}`);
+    } else {
+      console.log(`⚠️ 로컬 클라이언트 연결 상태 불량: ${userDID}`);
+    }
+  } else {
+    console.log(`⚠️ 로컬 클라이언트 없음: ${userDID}`);
+  }
+  
+  // 릴레이 서버에도 전송 (Vercel 웹앱용)
+  if (relayConnection && relayConnection.readyState === WebSocket.OPEN) {
+    relayConnection.send(JSON.stringify({
+      type: 'state_update',
+      userDID: userDID,
+      updateData: updateData,
+      timestamp: Date.now()
+    }));
+    console.log(`✅ 릴레이 서버에 전송 성공: ${userDID}`);
   }
 }
 
 // 전체 사용자에게 검증자 풀 업데이트 브로드캐스트
 function broadcastPoolUpdate(poolStatus) {
+  console.log(`📤 검증자 풀 업데이트 브로드캐스트:`, poolStatus);
+  
   const message = JSON.stringify({
     type: 'pool_update',
-    validatorPool: poolStatus
+    validatorPool: poolStatus,
+    timestamp: Date.now()
   });
   
-  clients.forEach((connections, did) => {
-    connections.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(message);
-      }
-    });
+  let successCount = 0;
+  let totalCount = 0;
+  
+  // 로컬 WebSocket 클라이언트에 전송
+  clients.forEach((ws, did) => {
+    totalCount++;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+      successCount++;
+    }
   });
+  
+  console.log(`✅ 로컬 클라이언트 전송: ${successCount}/${totalCount}`);
+  
+  // 릴레이 서버에도 전송 (Vercel 웹앱용)
+  if (relayConnection && relayConnection.readyState === WebSocket.OPEN) {
+    relayConnection.send(JSON.stringify({
+      type: 'pool_update',
+      validatorPool: poolStatus,
+      timestamp: Date.now()
+    }));
+    console.log(`✅ 릴레이 서버에 전송 성공`);
+  }
 }
 
 // 전체 사용자에게 DAO 금고 업데이트 브로드캐스트
 function broadcastDAOTreasuryUpdate(daoTreasuries) {
+  console.log(`📤 DAO 금고 업데이트 브로드캐스트:`, daoTreasuries);
+  
   const message = JSON.stringify({
     type: 'dao_treasury_update',
-    daoTreasuries: daoTreasuries
+    daoTreasuries: daoTreasuries,
+    timestamp: Date.now()
   });
   
-  clients.forEach((connections, did) => {
-    connections.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(message);
-      }
-    });
+  let successCount = 0;
+  let totalCount = 0;
+  
+  // 로컬 WebSocket 클라이언트에 전송
+  clients.forEach((ws, did) => {
+    totalCount++;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(message);
+      successCount++;
+    }
   });
+  
+  console.log(`✅ 로컬 클라이언트 전송: ${successCount}/${totalCount}`);
+  
+  // 릴레이 서버에도 전송 (Vercel 웹앱용)
+  if (relayConnection && relayConnection.readyState === WebSocket.OPEN) {
+    relayConnection.send(JSON.stringify({
+      type: 'dao_treasury_update',
+      daoTreasuries: daoTreasuries,
+      timestamp: Date.now()
+    }));
+    console.log(`✅ 릴레이 서버에 전송 성공`);
+  }
 }
 
 // 서버 초기화 함수
@@ -253,13 +384,787 @@ async function initializeServer() {
   
     console.log('✅ 백야 프로토콜 서버 초기화 완료');
     
-    // 로컬 직접 연결 모드 - 중계 서버 사용 안함
-    console.log('🔗 로컬 직접 연결 모드: 웹앱이 이 노드로 직접 연결됩니다');
+    // 릴레이 서버에 연결
+    connectToRelayServer();
     
     return true;
   } catch (error) {
     console.error('❌ 서버 초기화 실패:', error);
     throw error;
+  }
+}
+
+// 릴레이 서버 연결 함수
+function connectToRelayServer() {
+  if (process.env.DIRECT_MODE === 'true') {
+    console.log('🔗 직접 연결 모드: 릴레이 서버를 사용하지 않습니다');
+    return;
+  }
+  
+  console.log(`🌐 릴레이 서버에 연결 중: ${RELAY_SERVER_URL}`);
+  
+  try {
+    relayConnection = new WebSocket(RELAY_SERVER_URL);
+    
+    relayConnection.on('open', () => {
+      console.log('✅ 릴레이 서버에 연결됨');
+      
+      // 풀노드 등록
+      const nodeInfo = {
+        type: 'register_node',
+        nodeId: nodeId,
+        endpoint: `http://localhost:${port}`,
+        version: '1.0.0',
+        capabilities: ['transaction', 'validation', 'storage']
+      };
+      
+      relayConnection.send(JSON.stringify(nodeInfo));
+      
+      // 재연결 인터벌 정리
+      if (relayReconnectInterval) {
+        clearInterval(relayReconnectInterval);
+        relayReconnectInterval = null;
+      }
+      
+      // Ping 주기적으로 전송 (20초마다)
+      setInterval(() => {
+        if (relayConnection && relayConnection.readyState === WebSocket.OPEN) {
+          relayConnection.send(JSON.stringify({ type: 'node_ping' }));
+        }
+      }, 20000);
+    });
+    
+    relayConnection.on('message', (data) => {
+      try {
+        const message = JSON.parse(data);
+        handleRelayMessage(message);
+      } catch (error) {
+        console.error('릴레이 메시지 파싱 오류:', error);
+      }
+    });
+    
+    relayConnection.on('error', (error) => {
+      console.error('릴레이 서버 연결 오류:', error);
+    });
+    
+    relayConnection.on('close', () => {
+      console.log('🔌 릴레이 서버 연결 종료');
+      
+      // 재연결 시도
+      if (!relayReconnectInterval) {
+        relayReconnectInterval = setInterval(() => {
+          console.log('🔄 릴레이 서버 재연결 시도...');
+          connectToRelayServer();
+        }, 5000);
+      }
+    });
+    
+  } catch (error) {
+    console.error('릴레이 서버 연결 실패:', error);
+  }
+}
+
+// 릴레이 서버 메시지 처리
+async function handleRelayMessage(message) {
+  switch (message.type) {
+    case 'node_registered':
+      console.log(`🎉 릴레이 서버에 등록 완료! Node ID: ${message.nodeId}`);
+      break;
+      
+    case 'http_request':
+      // HTTP 요청 처리
+      try {
+        const { requestId, request } = message;
+        const { method, path, headers, body, query } = request;
+        
+        // Express 라우터를 통해 요청 처리
+        const response = await processHttpRequest(method, path, headers, body, query);
+        
+        // 응답 전송
+        relayConnection.send(JSON.stringify({
+          type: 'http_response',
+          requestId: requestId,
+          response: response
+        }));
+      } catch (error) {
+        console.error('HTTP 요청 처리 오류:', error);
+      }
+      break;
+      
+    case 'user_request':
+      // WebSocket 사용자 요청 처리
+      const { sessionId, request } = message;
+      // 필요한 경우 구현
+      break;
+      
+    case 'pong':
+      // Ping 응답
+      break;
+  }
+}
+
+// HTTP 요청을 Express 라우터로 처리
+async function processHttpRequest(method, path, headers, body, query) {
+  try {
+    // 가상의 요청/응답 객체 생성
+    const req = {
+      method: method,
+      path: path,
+      url: path + (query ? '?' + new URLSearchParams(query).toString() : ''),
+      headers: headers || {},
+      body: body,
+      query: query || {},
+      params: {},
+      get: function(name) {
+        return this.headers[name.toLowerCase()];
+      }
+    };
+    
+    let responseData = null;
+    let statusCode = 200;
+    
+    const res = {
+      statusCode: 200,
+      locals: {},
+      json: function(data) {
+        responseData = data;
+        return this;
+      },
+      status: function(code) {
+        statusCode = code;
+        this.statusCode = code;
+        return this;
+      },
+      send: function(data) {
+        responseData = data;
+        return this;
+      },
+      end: function(data) {
+        if (data) responseData = data;
+        return this;
+      },
+      header: function() { return this; },
+      set: function() { return this; }
+    };
+    
+    // API 경로별 직접 처리
+    if (path === '/status' && method === 'GET') {
+      if (!protocol) {
+        return { status: 503, data: { error: '프로토콜이 초기화되지 않았습니다' } };
+      }
+      const status = await protocol.getStatus();
+      return { status: 200, data: status };
+    }
+    
+    if (path === '/protocol-status' && method === 'GET') {
+      if (!protocol) {
+        return { status: 503, data: { success: false, error: '프로토콜이 초기화되지 않았습니다' } };
+      }
+      return {
+        status: 200,
+        data: {
+          success: true,
+          status: 'active',
+          version: '1.0.0',
+          timestamp: Date.now()
+        }
+      };
+    }
+    
+    if (path === '/check-userid' && method === 'POST') {
+      const { userId } = body;
+      
+      if (!userId) {
+        return {
+          status: 400,
+          data: { success: false, error: '아이디가 필요합니다' }
+        };
+      }
+      
+      const reservedIds = ['founder', 'admin', 'system', 'operator', 'op', 'root', 'test'];
+      if (reservedIds.includes(userId.toLowerCase())) {
+        return {
+          status: 200,
+          data: { success: true, isDuplicate: true, reason: 'reserved' }
+        };
+      }
+      
+      const isDuplicate = await protocol.checkUserIdExists(userId);
+      return {
+        status: 200,
+        data: { success: true, isDuplicate: isDuplicate }
+      };
+    }
+    
+    // 이 register 처리는 중복이므로 제거됨 (아래 초대코드 처리 포함 버전 사용)
+    
+    if (path === '/login' && method === 'POST') {
+      const { username, password, deviceId } = body;
+      
+      if (!username || !password) {
+        return {
+          status: 400,
+          data: { success: false, error: '아이디와 비밀번호가 필요합니다' }
+        };
+      }
+      
+      const finalDeviceId = deviceId || headers['x-device-id'] || `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const result = await protocol.loginUser(username, password, finalDeviceId);
+      
+      // 로그인 성공 후 WebSocket으로 즉시 잔액 정보 전송
+      if (result.success && result.didHash) {
+        setTimeout(async () => {
+          try {
+            const wallet = await protocol.getUserWallet(result.didHash);
+            const poolStatus = protocol.components.storage.getValidatorPoolStatus();
+            
+            console.log(`💰 로그인 성공 후 지갑 정보 전송: ${result.didHash} -> B:${wallet.balances?.bToken || 0}`);
+            
+            broadcastStateUpdate(result.didHash, {
+              wallet: wallet,
+              validatorPool: poolStatus
+            });
+          } catch (error) {
+            console.error(`❌ 로그인 후 지갑 정보 전송 실패: ${result.didHash}`, error);
+          }
+        }, 1000); // 1초 후 전송 (WebSocket 연결 시간 고려)
+      }
+      
+      return { status: 200, data: result };
+    }
+    
+    // 회원가입 (초대코드 처리 포함)
+    if (path === '/register' && method === 'POST') {
+      try {
+        console.log('🔍 회원가입 요청 받음');
+        console.log('📦 요청 본문:', JSON.stringify(body, null, 2));
+        
+        // 두 가지 구조 모두 지원: { userData } 또는 직접 필드들
+        const userData = body.userData || body;
+        const { username, password, communicationAddress, inviteCode, deviceId } = userData;
+        
+        if (!username || !password) {
+          return {
+            status: 400,
+            data: { success: false, error: '아이디와 비밀번호가 필요합니다' }
+          };
+        }
+        
+        // 회원가입 처리
+        const finalDeviceId = deviceId || headers['x-device-id'] || `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // communicationAddress가 있으면 새 구조, 없으면 userData 전체 전달
+        let result;
+        if (communicationAddress) {
+          result = await protocol.registerUser(username, password, communicationAddress, inviteCode, finalDeviceId);
+        } else {
+          // userData 구조 사용
+          userData.deviceId = finalDeviceId;
+          result = await protocol.registerUser(userData);
+        }
+        
+        console.log('🎉 회원가입 결과:', result);
+        
+        // 초대코드 처리 로직 추가
+        if (result.success && userData.inviteCode) {
+          try {
+            console.log(`🔍 초대코드 처리 시작: ${userData.inviteCode} -> ${result.didHash}`);
+            const inviteResult = await processInviteCode(userData.inviteCode, result.didHash);
+            if (inviteResult.success) {
+              console.log(`🎉 초대코드 처리 완료: ${inviteResult.inviterDID} -> 30B, ${result.didHash} -> 20B`);
+              
+              // 결과에 초대 보상 정보 추가
+              result.inviteReward = inviteResult;
+              
+              // 사용자가 소속된 DAO 정보 업데이트
+              try {
+                const dashboard = await protocol.getUserDashboard(result.didHash);
+                const userDAOs = dashboard.daos || [];
+                
+                // 커뮤니티DAO가 이미 목록에 있는지 확인
+                const hasCommunityDAO = userDAOs.some(dao => dao.id === 'community-dao');
+                
+                if (!hasCommunityDAO) {
+                  userDAOs.push({
+                    id: 'community-dao',
+                    name: 'Community DAO',
+                    description: '백야 프로토콜 커뮤니티 관리를 담당하는 DAO',
+                    role: 'Member',
+                    joinedAt: Date.now(),
+                    contributions: 1,
+                    lastActivity: '오늘'
+                  });
+                  
+                  console.log(`✅ 초대받은 사용자 커뮤니티DAO 소속 정보 추가: ${result.didHash}`);
+                }
+                
+                result.daos = userDAOs;
+              } catch (error) {
+                console.error('DAO 정보 가져오기 실패:', error);
+              }
+              
+            } else {
+              console.log(`⚠️ 초대코드 처리 실패: ${inviteResult.error}`);
+            }
+          } catch (error) {
+            console.error(`❌ 초대코드 처리 중 오류:`, error);
+          }
+        }
+        
+        // 회원가입 성공 후 WebSocket으로 즉시 잔액 정보 전송
+        if (result.success && result.didHash) {
+          setTimeout(async () => {
+            try {
+              const wallet = await protocol.getUserWallet(result.didHash);
+              const poolStatus = protocol.components.storage.getValidatorPoolStatus();
+              
+              console.log(`💰 회원가입 성공 후 지갑 정보 전송: ${result.didHash} -> B:${wallet.balances?.bToken || 0}`);
+              
+              broadcastStateUpdate(result.didHash, {
+                wallet: wallet,
+                validatorPool: poolStatus
+              });
+            } catch (error) {
+              console.error(`❌ 회원가입 후 지갑 정보 전송 실패: ${result.didHash}`, error);
+            }
+          }, 2000); // 2초 후 전송 (초대코드 처리 완료 대기)
+        }
+        
+        return { status: 200, data: result };
+        
+      } catch (error) {
+        console.error('회원가입 실패:', error);
+        return {
+          status: 500,
+          data: { success: false, error: '회원가입 실패', details: error.message }
+        };
+      }
+    }
+    
+    // 초대코드 관련 API
+    if ((path === '/invite-code' || path === '/api/invite-code') && method === 'GET') {
+      const session = protocol.components.storage.validateSession(headers['x-session-id']);
+      if (!session) {
+        return { status: 401, data: { success: false, error: '인증이 필요합니다' } };
+      }
+      
+      try {
+        // 저장소에서 해당 사용자의 초대코드 조회
+        const inviteCode = protocol.components.storage.getUserInviteCode(session.did);
+        
+        if (inviteCode) {
+          return {
+            status: 200,
+            data: {
+              success: true,
+              inviteCode: inviteCode
+            }
+          };
+        } else {
+          return {
+            status: 200,
+            data: {
+              success: false,
+              message: '초대코드가 없습니다'
+            }
+          };
+        }
+      } catch (error) {
+        console.error('초대코드 조회 실패:', error);
+        return {
+          status: 500,
+          data: { success: false, error: '초대코드 조회 실패', details: error.message }
+        };
+      }
+    }
+    
+    if ((path === '/invite-code' || path === '/api/invite-code') && method === 'POST') {
+      // Authorization 헤더 또는 x-session-id 헤더를 통한 인증 확인
+      let session = null;
+      let userDID = null;
+      
+      if (headers['x-session-id']) {
+        session = protocol.components.storage.validateSession(headers['x-session-id']);
+        userDID = session?.didHash;
+      } else if (headers['authorization']) {
+        // Authorization: Bearer DID 형식
+        const authHeader = headers['authorization'];
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          userDID = authHeader.substring(7); // "Bearer " 제거
+          
+          // DID로 유효한 사용자인지 확인
+          const didInfo = protocol.components.authSystem.getDIDInfo(userDID);
+          if (didInfo) {
+            session = { didHash: userDID, ...didInfo };
+          }
+        }
+      }
+      
+      if (!session || !userDID) {
+        return { status: 401, data: { success: false, error: '인증이 필요합니다' } };
+      }
+      
+      try {
+        const { userDID, communicationAddress } = body;
+        const finalUserDID = userDID || session.didHash || session.did;
+        
+        if (!finalUserDID) {
+          return { status: 400, data: { success: false, error: '사용자 DID가 필요합니다' } };
+        }
+
+        console.log(`🔍 초대코드 생성 요청: ${finalUserDID.substring(0, 16)}...`);
+
+        // 기존 초대코드가 있는지 강화된 확인
+        let existingCode = protocol.components.storage.getUserInviteCode(finalUserDID);
+        
+        // 추가로 블록체인에서도 확인 (이미 등록된 초대코드가 있는지)
+        if (!existingCode) {
+          // 블록체인에서 해당 사용자의 초대코드 등록 트랜잭션 찾기
+          const blockchain = protocol.getBlockchain();
+          if (blockchain && blockchain.chain) {
+            for (const block of blockchain.chain) {
+              for (const tx of block.transactions) {
+                if (tx.fromDID === finalUserDID && 
+                    tx.data?.type === 'invite_code_registration' && 
+                    tx.data?.inviteCode) {
+                  existingCode = tx.data.inviteCode;
+                  // 로컬 저장소에도 저장
+                  protocol.components.storage.saveUserInviteCode(finalUserDID, existingCode);
+                  break;
+                }
+              }
+              if (existingCode) break;
+            }
+          }
+        }
+        
+        if (existingCode) {
+          console.log(`♻️ 기존 초대코드 반환: ${existingCode}`);
+          return { status: 200, data: { success: true, inviteCode: existingCode } };
+        }
+
+        // 해시 기반 영구 초대코드 생성
+        const inviteCode = generateHashBasedInviteCode(finalUserDID);
+        console.log(`🎫 새로운 초대코드 생성: ${inviteCode}`);
+
+        try {
+          const Transaction = require('./src/blockchain/Transaction');
+          
+          // 초대코드 등록 트랜잭션 생성
+          const inviteCodeTx = new Transaction(
+            finalUserDID,
+            'did:baekya:system0000000000000000000000000000000002', // 시스템 주소
+            0, // 금액 없음
+            'B-Token',
+            { 
+              type: 'invite_code_registration',
+              inviteCode: inviteCode,
+              communicationAddress: communicationAddress,
+              registrationDate: new Date().toISOString()
+            }
+          );
+          
+          inviteCodeTx.sign('test-key');
+          
+          // 블록체인에 트랜잭션 추가
+          const addResult = protocol.getBlockchain().addTransaction(inviteCodeTx);
+          
+          if (!addResult.success) {
+            throw new Error(addResult.error || '트랜잭션 추가 실패');
+          }
+          
+          console.log(`🎫 초대코드 트랜잭션 생성: ${inviteCode}`);
+          
+          // 저장소에 초대코드 저장
+          protocol.components.storage.saveUserInviteCode(finalUserDID, inviteCode);
+          
+          return {
+            status: 200,
+            data: {
+              success: true,
+              inviteCode: inviteCode,
+              message: '초대코드가 생성되었습니다. 검증자가 블록을 생성하면 영구 저장됩니다.',
+              transactionId: inviteCodeTx.hash,
+              status: 'pending'
+            }
+          };
+        } catch (error) {
+          console.error('초대코드 블록체인 등록 실패:', error);
+          
+          // 블록체인 등록에 실패해도 로컬에는 저장
+          protocol.components.storage.saveUserInviteCode(finalUserDID, inviteCode);
+          
+          return {
+            status: 200,
+            data: {
+              success: true,
+              inviteCode: inviteCode,
+              message: '초대코드가 생성되었습니다 (블록체인 등록 지연)'
+            }
+          };
+        }
+      } catch (error) {
+        console.error('초대코드 생성 실패:', error);
+        return {
+          status: 500,
+          data: { success: false, error: '초대코드 생성 실패', details: error.message }
+        };
+      }
+    }
+    
+    // 지갑 정보 조회
+    if (path.startsWith('/wallet/') && method === 'GET') {
+      const did = path.split('/wallet/')[1];
+      try {
+        const wallet = await protocol.getUserWallet(did);
+        return { status: 200, data: wallet };
+      } catch (error) {
+        return {
+          status: 500,
+          data: { success: false, error: '지갑 정보 조회 실패', details: error.message }
+        };
+      }
+    }
+    
+    // 기여 내역 조회
+    if (path.startsWith('/contributions/') && method === 'GET') {
+      const did = path.split('/contributions/')[1];
+      try {
+        const contributions = await protocol.getUserContributions(did);
+        return { status: 200, data: contributions };
+      } catch (error) {
+        return {
+          status: 500,
+          data: { success: false, error: '기여 내역 조회 실패', details: error.message }
+        };
+      }
+    }
+    
+    // DAO 목록 조회
+    if (path === '/daos' && method === 'GET') {
+      try {
+        const daos = protocol.getDAOs();
+        return { status: 200, data: daos };
+      } catch (error) {
+        return {
+          status: 500,
+          data: { success: false, error: 'DAO 목록 조회 실패', details: error.message }
+        };
+      }
+    }
+    
+    // DAO 생성
+    if (path === '/daos' && method === 'POST') {
+      const session = protocol.components.storage.validateSession(headers['x-session-id']);
+      if (!session) {
+        return { status: 401, data: { success: false, error: '인증이 필요합니다' } };
+      }
+      
+      try {
+        const { daoData } = body;
+        const result = await protocol.createDAO(session.did, daoData);
+        return { status: 200, data: result };
+      } catch (error) {
+        return {
+          status: 500,
+          data: { success: false, error: 'DAO 생성 실패', details: error.message }
+        };
+      }
+    }
+    
+    // 특정 DAO 정보 조회
+    if (path.startsWith('/daos/') && path.split('/').length === 3 && method === 'GET') {
+      const daoId = path.split('/daos/')[1];
+      try {
+        const dao = protocol.getDAO(daoId);
+        return { status: 200, data: dao };
+      } catch (error) {
+        return {
+          status: 500,
+          data: { success: false, error: 'DAO 정보 조회 실패', details: error.message }
+        };
+      }
+    }
+    
+    // DAO 가입
+    if (path.includes('/daos/') && path.endsWith('/join') && method === 'POST') {
+      const session = protocol.components.storage.validateSession(headers['x-session-id']);
+      if (!session) {
+        return { status: 401, data: { success: false, error: '인증이 필요합니다' } };
+      }
+      
+      const daoId = path.split('/daos/')[1].split('/join')[0];
+      try {
+        const result = await protocol.joinDAO(session.did, daoId);
+        return { status: 200, data: result };
+      } catch (error) {
+        return {
+          status: 500,
+          data: { success: false, error: 'DAO 가입 실패', details: error.message }
+        };
+      }
+    }
+    
+    // 토큰 전송
+    if (path === '/transfer' && method === 'POST') {
+      try {
+        console.log('🔍 토큰 전송 요청 받음');
+        console.log('📦 요청 본문:', JSON.stringify(body, null, 2));
+        console.log('🔐 헤더:', headers);
+        
+        const { fromDID, toAddress, amount, tokenType = 'B-Token', authData } = body;
+        
+        console.log('📋 파싱된 데이터:');
+        console.log(`  - fromDID: ${fromDID} (타입: ${typeof fromDID})`);
+        console.log(`  - toAddress: ${toAddress} (타입: ${typeof toAddress})`);
+        console.log(`  - amount: ${amount} (타입: ${typeof amount})`);
+        console.log(`  - tokenType: ${tokenType}`);
+        console.log(`  - authData: ${JSON.stringify(authData)}`);
+        
+        if (!fromDID || !toAddress || !amount || amount <= 0) {
+          console.log('❌ 파라미터 검증 실패:');
+          console.log(`  - fromDID 존재: ${!!fromDID}`);
+          console.log(`  - toAddress 존재: ${!!toAddress}`);
+          console.log(`  - amount 존재: ${!!amount}`);
+          console.log(`  - amount > 0: ${amount > 0}`);
+          
+          return {
+            status: 400,
+            data: {
+              success: false,
+              error: '발신자 DID, 받는 주소, 유효한 금액이 필요합니다'
+            }
+          };
+        }
+        
+        // toAddress가 DID인지, 통신주소인지, 아이디인지 확인하고 DID로 변환
+        let toDID = toAddress;
+        
+        if (!toAddress.startsWith('did:baekya:')) {
+          console.log('🔍 통신주소 또는 아이디로 DID 조회 시도:', toAddress);
+          
+          // 통신주소로 DID 찾기
+          const authSystem = protocol.components.authSystem;
+          const didResult = authSystem.getDIDByCommAddress(toAddress);
+          
+          if (didResult.success) {
+            toDID = didResult.did;
+            console.log('✅ 통신주소로 DID 찾음:', toDID);
+          } else {
+            // 아이디로 DID 찾기 시도
+            const userResult = authSystem.getUserByUsername(toAddress);
+            if (userResult.success) {
+              toDID = userResult.user.did;
+              console.log('✅ 아이디로 DID 찾음:', toDID);
+            } else {
+              console.log('❌ 받는 주소를 찾을 수 없음:', toAddress);
+              return {
+                status: 404,
+                data: {
+                  success: false,
+                  error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
+                }
+              };
+            }
+          }
+        }
+        
+        console.log('📤 최종 전송 정보:');
+        console.log(`  - From: ${fromDID}`);
+        console.log(`  - To: ${toDID}`);
+        console.log(`  - Amount: ${amount} ${tokenType}`);
+        
+        // 토큰 전송 실행
+        const result = await protocol.transferTokens(fromDID, toDID, amount, tokenType, authData);
+        
+        console.log('💸 토큰 전송 결과:', result);
+        
+        return { status: 200, data: result };
+        
+      } catch (error) {
+        console.error('토큰 전송 실패:', error);
+        return {
+          status: 500,
+          data: { success: false, error: '토큰 전송 실패', details: error.message }
+        };
+      }
+    }
+    
+    // 초대 생성
+    if (path === '/invite/create' && method === 'POST') {
+      try {
+        const { userDID, inviteCode } = body;
+        
+        if (!userDID || !inviteCode) {
+          return {
+            status: 400,
+            data: { success: false, error: '사용자 DID와 초대코드가 필요합니다' }
+          };
+        }
+        
+        const result = await protocol.createInvite(userDID, inviteCode);
+        return { status: 200, data: result };
+        
+      } catch (error) {
+        console.error('초대 생성 실패:', error);
+        return {
+          status: 500,
+          data: { success: false, error: '초대 생성 실패', details: error.message }
+        };
+      }
+    }
+    
+    // 다른 라우트들은 Express 앱을 통해 처리
+    return new Promise((resolve) => {
+      // Express의 next() 함수 시뮬레이션
+      const next = (err) => {
+        if (err) {
+          resolve({
+            status: 500,
+            data: { error: 'Internal server error', details: err.message }
+          });
+        }
+      };
+      
+      // Express 미들웨어 체인 실행 시뮬레이션
+      let middlewareIndex = 0;
+      
+      const runMiddleware = () => {
+        const layer = app._router.stack[middlewareIndex++];
+        if (!layer) {
+          resolve({
+            status: 404,
+            data: { error: 'Route not found' }
+          });
+          return;
+        }
+        
+        try {
+          if (layer.route && layer.route.path === path && layer.route.methods[method.toLowerCase()]) {
+            layer.route.stack[0].handle(req, res, next);
+            setTimeout(() => {
+              resolve({
+                status: statusCode,
+                data: responseData
+              });
+            }, 100);
+          } else {
+            runMiddleware();
+          }
+        } catch (error) {
+          next(error);
+        }
+      };
+      
+      runMiddleware();
+    });
+    
+  } catch (error) {
+    console.error('HTTP 요청 처리 오류:', error);
+    return {
+      status: 500,
+      data: { error: 'Internal server error', details: error.message }
+    };
   }
 }
 
@@ -821,8 +1726,28 @@ app.post('/api/invite-code', async (req, res) => {
       });
     }
 
-    // 기존 초대코드가 있는지 확인
-    const existingCode = protocol.components.storage.getUserInviteCode(userDID);
+    // 기존 초대코드가 있는지 강화된 확인
+    let existingCode = protocol.components.storage.getUserInviteCode(userDID);
+    
+    // 추가로 블록체인에서도 확인 (이미 등록된 초대코드가 있는지)
+    if (!existingCode) {
+      const blockchain = protocol.getBlockchain();
+      if (blockchain && blockchain.chain) {
+        for (const block of blockchain.chain) {
+          for (const tx of block.transactions) {
+            if (tx.fromDID === userDID && 
+                tx.data?.type === 'invite_code_registration' && 
+                tx.data?.inviteCode) {
+              existingCode = tx.data.inviteCode;
+              protocol.components.storage.saveUserInviteCode(userDID, existingCode);
+              break;
+            }
+          }
+          if (existingCode) break;
+        }
+      }
+    }
+    
     if (existingCode) {
       return res.json({
         success: true,
@@ -849,6 +1774,7 @@ app.post('/api/invite-code', async (req, res) => {
           registrationDate: new Date().toISOString()
         }
       );
+      
       inviteCodeTx.sign('test-key');
       
       // 블록체인에 트랜잭션 추가
@@ -858,24 +1784,21 @@ app.post('/api/invite-code', async (req, res) => {
         throw new Error(addResult.error || '트랜잭션 추가 실패');
       }
       
-      // 트랜잭션은 추가되었고 검증자가 블록을 생성할 예정
-      console.log(`🎫 초대코드 트랜잭션 추가됨 (대기 중), 코드: ${inviteCode}`);
+      console.log(`🎫 초대코드 트랜잭션 생성: ${inviteCode}`);
       
-      // 저장소에 초대코드 저장 (트랜잭션은 이미 추가됨)
-        protocol.components.storage.saveUserInviteCode(userDID, inviteCode);
+      // 저장소에 초대코드 저장
+      protocol.components.storage.saveUserInviteCode(userDID, inviteCode);
         
-      // 블록체인 등록 상태는 대기 중으로 표시
-      // protocol.components.storage.markInviteCodeRegistered(userDID); // 블록 생성 후 처리
-        
-        res.json({
-          success: true,
-          inviteCode: inviteCode,
+      res.json({
+        success: true,
+        inviteCode: inviteCode,
         message: '초대코드가 생성되었습니다. 검증자가 블록을 생성하면 영구 저장됩니다.',
-          transactionId: inviteCodeTx.hash,
+        transactionId: inviteCodeTx.hash,
         status: 'pending'
-        });
+      });
+      
     } catch (error) {
-      console.error('초대코드 블록체인 등록 실패:', error);
+      console.error('초대코드 블록체인 등록 실패:', error.message);
       
       // 블록체인 등록에 실패해도 로컬에는 저장
       protocol.components.storage.saveUserInviteCode(userDID, inviteCode);
@@ -887,7 +1810,7 @@ app.post('/api/invite-code', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('초대코드 생성 실패:', error);
+    console.error('초대코드 생성 실패:', error.message);
     res.status(500).json({ 
       success: false, 
       error: '초대코드 생성 실패', 
@@ -1057,45 +1980,69 @@ async function processInviteCode(inviteCode, newUserDID) {
         // 기여 내역 추가 실패해도 토큰 지급은 이미 완료되었으므로 계속 진행
       }
       
-      // 초대자에게 업데이트된 지갑 정보 전송
-      const inviterWallet = await protocol.getUserWallet(inviterDID);
-      if (inviterWallet.success) {
-        console.log(`💰 초대자 잔액 업데이트: ${inviterWallet.balances.bToken}B`);
-        
-        // 초대자에게 커뮤니티DAO 소속 정보와 함께 업데이트 전송
-        broadcastStateUpdate(inviterDID, {
-          wallet: { balances: { bToken: inviterWallet.balances.bToken, pToken: inviterWallet.balances.pToken || 0 } },
-          newContribution: {
-            dao: 'community-dao',
-            type: 'invite_activity',
-            title: '초대 활동',
-            bTokens: 30,
-            description: `새로운 사용자 초대 성공`,
-            date: new Date().toISOString().split('T')[0]
-          },
-          daoMembership: {
-            action: 'join',
-            dao: {
-              id: 'community-dao',
-              name: 'Community DAO',
-              icon: 'fa-users',
-              role: 'Member',
-              contributions: 1,
-              lastActivity: '오늘',
-              joinedAt: Date.now()
-            }
-          }
-        });
-      }
+      // 블록 생성을 기다린 후 잔액 조회 (트랜잭션이 체인에 포함되도록)
+      // 검증자가 30초마다 블록을 생성하므로, 즉시 조회하면 pending 상태
+      // 하지만 클라이언트 경험을 위해 예상 잔액을 먼저 전송
       
-      // 생성자에게 업데이트된 지갑 정보 전송
-      const newUserWallet = await protocol.getUserWallet(newUserDID);
-      if (newUserWallet.success) {
-        console.log(`💰 생성자 잔액 업데이트: ${newUserWallet.balances.bToken}B`);
-        broadcastStateUpdate(newUserDID, {
-          wallet: { balances: { bToken: newUserWallet.balances.bToken, pToken: newUserWallet.balances.pToken || 0 } }
-        });
-      }
+      // 현재 블록체인 잔액 조회 (트랜잭션 전)
+      const inviterCurrentBalance = protocol.getBlockchain().getBalance(inviterDID, 'B-Token');
+      const newUserCurrentBalance = protocol.getBlockchain().getBalance(newUserDID, 'B-Token');
+      
+      // 예상 잔액 계산 (현재 잔액 + 보상)
+      const inviterExpectedBalance = inviterCurrentBalance + 30;
+      const newUserExpectedBalance = newUserCurrentBalance + 20;
+      
+      console.log(`💰 초대자 예상 잔액: ${inviterExpectedBalance}B (현재: ${inviterCurrentBalance}B + 보상: 30B)`);
+      console.log(`💰 생성자 예상 잔액: ${newUserExpectedBalance}B (현재: ${newUserCurrentBalance}B + 보상: 20B)`);
+      
+      // 초대자에게 예상 잔액으로 즉시 업데이트 전송
+      broadcastStateUpdate(inviterDID, {
+        wallet: { balances: { bToken: inviterExpectedBalance, pToken: 0 } },
+        newContribution: {
+          dao: 'community-dao',
+          type: 'invite_activity',
+          title: '초대 활동',
+          bTokens: 30,
+          description: `새로운 사용자 초대 성공`,
+          date: new Date().toISOString().split('T')[0]
+        },
+        daoMembership: {
+          action: 'join',
+          dao: {
+            id: 'community-dao',
+            name: 'Community DAO',
+            icon: 'fa-users',
+            role: 'Member',
+            contributions: 1,
+            lastActivity: '오늘',
+            joinedAt: Date.now()
+          }
+        }
+      });
+      
+      // 생성자에게 예상 잔액으로 즉시 업데이트 전송
+      broadcastStateUpdate(newUserDID, {
+        wallet: { balances: { bToken: newUserExpectedBalance, pToken: 0 } }
+      });
+      
+      // 나중에 블록이 생성되면 실제 잔액으로 다시 업데이트
+      setTimeout(async () => {
+        const inviterWallet = await protocol.getUserWallet(inviterDID);
+        if (inviterWallet.success) {
+          console.log(`💰 초대자 실제 잔액 확인: ${inviterWallet.balances.bToken}B`);
+          broadcastStateUpdate(inviterDID, {
+            wallet: { balances: { bToken: inviterWallet.balances.bToken, pToken: inviterWallet.balances.pToken || 0 } }
+          });
+        }
+        
+        const newUserWallet = await protocol.getUserWallet(newUserDID);
+        if (newUserWallet.success) {
+          console.log(`💰 생성자 실제 잔액 확인: ${newUserWallet.balances.bToken}B`);
+          broadcastStateUpdate(newUserDID, {
+            wallet: { balances: { bToken: newUserWallet.balances.bToken, pToken: newUserWallet.balances.pToken || 0 } }
+          });
+        }
+      }, 35000); // 35초 후 (블록 생성 주기 30초 + 여유 5초)
       
       return {
         success: true,

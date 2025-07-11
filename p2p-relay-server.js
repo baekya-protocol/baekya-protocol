@@ -14,7 +14,8 @@ const wss = new WebSocket.Server({ server });
 
 // 등록된 풀노드들 관리
 const registeredNodes = new Map(); // nodeId -> { ws, info, lastPing }
-const userSessions = new Map(); // sessionId -> { nodeId, ws }
+const userSessions = new Map(); // sessionId -> { nodeId, ws, userDID }
+const usersByDID = new Map(); // userDID -> Set of sessionIds
 
 // CORS 설정
 app.use(cors({
@@ -156,6 +157,33 @@ wss.on('connection', (ws, req) => {
           // 사용자 연결
           connectionType = 'user';
           sessionId = data.sessionId || uuidv4();
+          const userDID = data.did; // 사용자 DID 저장
+          
+          // 이중 접속 방지: 기존 세션이 있으면 종료
+          if (userDID && usersByDID.has(userDID)) {
+            const existingSessions = usersByDID.get(userDID);
+            
+            // 기존 세션들에게 종료 메시지 전송
+            existingSessions.forEach(existingSessionId => {
+              const existingSession = userSessions.get(existingSessionId);
+              if (existingSession && existingSession.ws.readyState === WebSocket.OPEN) {
+                existingSession.ws.send(JSON.stringify({
+                  type: 'session_terminated',
+                  reason: '다른 기기에서 로그인했습니다.',
+                  newSession: sessionId
+                }));
+                existingSession.ws.close();
+              }
+              
+              // 기존 세션 정리
+              userSessions.delete(existingSessionId);
+            });
+            
+            // 기존 DID 매핑 정리
+            usersByDID.delete(userDID);
+            
+            console.log(`🔄 이중 접속 방지: ${userDID?.substring(0, 8)}... 기존 세션 ${existingSessions.size}개 종료`);
+          }
           
           // 사용 가능한 노드 찾기
           const availableNodes = Array.from(registeredNodes.keys())
@@ -166,8 +194,17 @@ wss.on('connection', (ws, req) => {
             
             userSessions.set(sessionId, {
               nodeId: assignedNodeId,
-              ws: ws
+              ws: ws,
+              userDID: userDID
             });
+            
+            // DID별 세션 추적
+            if (userDID) {
+              if (!usersByDID.has(userDID)) {
+                usersByDID.set(userDID, new Set());
+              }
+              usersByDID.get(userDID).add(sessionId);
+            }
             
             ws.send(JSON.stringify({
               type: 'user_connected',
@@ -176,7 +213,7 @@ wss.on('connection', (ws, req) => {
               success: true
             }));
             
-            console.log(`👤 사용자 연결됨: ${sessionId} -> 노드 ${assignedNodeId}`);
+            console.log(`👤 사용자 연결됨: ${sessionId} (DID: ${userDID?.substring(0, 8)}...) -> 노드 ${assignedNodeId}`);
           } else {
             ws.send(JSON.stringify({
               type: 'user_connect_failed',
@@ -227,6 +264,35 @@ wss.on('connection', (ws, req) => {
             }
           }
           break;
+          
+        case 'state_update':
+          // 풀노드에서 보낸 실시간 상태 업데이트를 해당 사용자에게 전달
+          if (data.userDID) {
+            broadcastToUser(data.userDID, {
+              type: 'state_update',
+              ...data.updateData
+            });
+            console.log(`📤 상태 업데이트 전달: ${data.userDID} -> ${JSON.stringify(data.updateData).substring(0, 100)}...`);
+          }
+          break;
+          
+        case 'pool_update':
+          // 검증자 풀 업데이트를 모든 사용자에게 브로드캐스트
+          broadcastToAllUsers({
+            type: 'pool_update',
+            validatorPool: data.validatorPool
+          });
+          console.log(`📤 검증자 풀 업데이트 전달: ${JSON.stringify(data.validatorPool)}`);
+          break;
+          
+        case 'dao_treasury_update':
+          // DAO 금고 업데이트를 모든 사용자에게 브로드캐스트
+          broadcastToAllUsers({
+            type: 'dao_treasury_update',
+            daoTreasuries: data.daoTreasuries
+          });
+          console.log(`📤 DAO 금고 업데이트 전달: ${JSON.stringify(data.daoTreasuries)}`);
+          break;
       }
     } catch (error) {
       console.error('WebSocket 메시지 처리 오류:', error);
@@ -247,8 +313,21 @@ wss.on('connection', (ws, req) => {
       }, nodeId);
       
     } else if (connectionType === 'user' && sessionId) {
+      const session = userSessions.get(sessionId);
+      
+      // DID별 세션 추적에서 제거
+      if (session && session.userDID) {
+        const userSessions = usersByDID.get(session.userDID);
+        if (userSessions) {
+          userSessions.delete(sessionId);
+          if (userSessions.size === 0) {
+            usersByDID.delete(session.userDID);
+          }
+        }
+      }
+      
       userSessions.delete(sessionId);
-      console.log(`👤 사용자 연결 종료: ${sessionId}`);
+      console.log(`👤 사용자 연결 종료: ${sessionId} (DID: ${session?.userDID?.substring(0, 8)}...)`);
     }
   });
 });
@@ -258,6 +337,28 @@ function broadcastToNodes(message, excludeNodeId = null) {
   registeredNodes.forEach((node, nodeId) => {
     if (nodeId !== excludeNodeId && node.ws.readyState === WebSocket.OPEN) {
       node.ws.send(JSON.stringify(message));
+    }
+  });
+}
+
+// 특정 사용자에게 메시지 전달
+function broadcastToUser(userDID, message) {
+  const sessionIds = usersByDID.get(userDID);
+  if (sessionIds) {
+    sessionIds.forEach(sessionId => {
+      const session = userSessions.get(sessionId);
+      if (session && session.ws.readyState === WebSocket.OPEN) {
+        session.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+}
+
+// 모든 사용자에게 메시지 브로드캐스트
+function broadcastToAllUsers(message) {
+  userSessions.forEach((session, sessionId) => {
+    if (session.ws.readyState === WebSocket.OPEN) {
+      session.ws.send(JSON.stringify(message));
     }
   });
 }

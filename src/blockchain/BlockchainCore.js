@@ -334,13 +334,8 @@ class BlockchainCore {
 
   // 트랜잭션을 풀에 추가 (보안 강화)
   addTransaction(transaction) {
-    console.log('🔍 BlockchainCore.addTransaction 디버깅 시작');
-    
     // 기본 필드 검증 먼저 (빈 DID 등)
-    console.log(`  - fromDID 존재: ${!!transaction.fromDID}`);
-    console.log(`  - toDID 존재: ${!!transaction.toDID}`);
     if (!transaction.fromDID || !transaction.toDID) {
-      console.error('❌ 기본 필드 검증 실패');
       return {
         success: false,
         error: '유효하지 않은 트랜잭션입니다'
@@ -349,9 +344,7 @@ class BlockchainCore {
 
     // 무결성 검증 (보안 강화)
     const integrityValid = transaction.verifyIntegrity();
-    console.log(`  - 무결성 검증: ${integrityValid}`);
     if (!integrityValid) {
-      console.error('❌ 무결성 검증 실패');
       return {
         success: false,
         error: '트랜잭션 무결성 검증 실패'
@@ -359,9 +352,7 @@ class BlockchainCore {
     }
 
     // 서명 검증
-    console.log(`  - 서명 존재: ${!!transaction.signature}`);
     if (!transaction.signature) {
-      console.error('❌ 서명 없음');
       return {
         success: false,
         error: '서명되지 않은 트랜잭션입니다'
@@ -369,8 +360,6 @@ class BlockchainCore {
     }
 
     // 금액 검증 - 특정 트랜잭션 타입은 0 금액 허용
-    console.log(`  - 금액 타입: ${typeof transaction.amount}, 값: ${transaction.amount}`);
-    
     // 금액이 0이어도 허용되는 트랜잭션 타입들
     const zeroAmountAllowedTypes = [
       'invite_code_registration',
@@ -384,7 +373,6 @@ class BlockchainCore {
     
     if (typeof transaction.amount !== 'number' || 
         (!isZeroAmountAllowed && transaction.amount <= 0)) {
-      console.error('❌ 금액 검증 실패');
       return {
         success: false,
         error: '유효하지 않은 금액입니다'
@@ -393,9 +381,7 @@ class BlockchainCore {
 
     // 최대 금액 제한 (보안)
     const maxAmount = 1000000000; // 10억 한도
-    console.log(`  - 최대 금액 검사: ${transaction.amount} <= ${maxAmount}`);
     if (transaction.amount > maxAmount) {
-      console.error('❌ 최대 금액 초과');
       return {
         success: false,
         error: `금액이 너무 큽니다 (최대: ${maxAmount})`
@@ -403,11 +389,8 @@ class BlockchainCore {
     }
 
     // 전체 유효성 검증 (DID 레지스트리 전달)
-    console.log(`  - DID 레지스트리 존재: ${!!this.didRegistry}`);
     const isValidResult = transaction.isValid(this.didRegistry);
-    console.log(`  - 전체 유효성 검증: ${isValidResult}`);
     if (!isValidResult) {
-      console.error('❌ 전체 유효성 검증 실패');
       return {
         success: false,
         error: '유효하지 않은 트랜잭션입니다'
