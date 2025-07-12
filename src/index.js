@@ -938,8 +938,8 @@ class BaekyaProtocol {
       // 수수료 계산 (0.001 B-Token)
       const fee = 0.001;
       const feeDistribution = {
-        validatorPool: fee * 0.6, // 60%는 검증자 풀로
-        dao: fee * 0.4 // 40%는 DAO들에게 분배
+        validatorPool: fee * 1.0, // 100%는 검증자 풀로
+        dao: fee * 0.0 // 0%는 DAO들에게 분배 (100% 검증자 풀로 변경)
       };
       
       // 수신자 정보 가져오기

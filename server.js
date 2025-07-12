@@ -4296,6 +4296,38 @@ async function generateBlock() {
         }
       });
       
+      // 블록에 포함된 모든 트랜잭션 관련 사용자에게 업데이트 브로드캐스트
+      const affectedUsers = new Set();
+      for (const tx of pendingTransactions) {
+        // 토큰 전송 트랜잭션인 경우
+        if (tx.data?.type === 'token_transfer') {
+          affectedUsers.add(tx.fromDID);
+          affectedUsers.add(tx.toDID);
+        }
+        // 기타 트랜잭션들도 추가 가능
+        else if (!tx.fromDID.includes('system') && !tx.fromDID.includes('genesis')) {
+          affectedUsers.add(tx.fromDID);
+        }
+        if (!tx.toDID.includes('system') && !tx.toDID.includes('genesis')) {
+          affectedUsers.add(tx.toDID);
+        }
+      }
+      
+      // 영향 받은 모든 사용자에게 업데이트된 지갑 정보 브로드캐스트
+      for (const userDID of affectedUsers) {
+        if (userDID !== validatorDID) { // 검증자는 이미 위에서 처리됨
+          const userWallet = await protocol.getUserWallet(userDID);
+          broadcastStateUpdate(userDID, {
+            wallet: userWallet,
+            blockUpdate: {
+              height: block.index,
+              transactionCount: pendingTransactions.length,
+              timestamp: block.timestamp
+            }
+          });
+        }
+      }
+      
       // 검증자 풀 상태 업데이트 브로드캐스트 (인센티브 지급으로 풀 잔액 변경)
       if (poolIncentive > 0) {
         const updatedPoolStatus = protocol.components.storage.getValidatorPoolStatus();
