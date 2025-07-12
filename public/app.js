@@ -3768,7 +3768,7 @@ class BaekyaProtocolDApp {
       }
       
       // 서버 API 호출
-      const response = await fetch('/api/transfer', {
+      const response = await fetch(`${this.apiBase}/transfer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
