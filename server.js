@@ -1114,6 +1114,217 @@ async function processHttpRequest(method, path, headers, body, query) {
       }
     }
     
+    // 검증자 풀 후원 (릴레이 서버 전용)
+    if (path === '/validator-pool/sponsor' && method === 'POST') {
+      try {
+        const { sponsorDID, amount } = body;
+        
+        if (!sponsorDID || !amount || amount <= 0) {
+          return {
+            status: 400,
+            data: { success: false, error: '후원자 DID와 유효한 금액이 필요합니다' }
+          };
+        }
+        
+        // 수수료 계산 (고정 0B - 수수료 없음)
+        const fee = 0;
+        const totalAmount = amount + fee;
+        
+        // B-토큰 차감
+        const currentBalance = protocol.getBlockchain().getBalance(sponsorDID, 'B-Token');
+        if (currentBalance < totalAmount) {
+          return {
+            status: 400,
+            data: { success: false, error: `B-토큰 잔액이 부족합니다 (필요: ${totalAmount}B, 보유: ${currentBalance}B)` }
+          };
+        }
+        
+        // 검증자 풀 후원 트랜잭션 생성
+        const Transaction = require('./src/blockchain/Transaction');
+        const validatorPoolSystemAddress = 'did:baekya:system0000000000000000000000000000000001';
+        
+        const poolTx = new Transaction(
+          sponsorDID,
+          validatorPoolSystemAddress,
+          totalAmount,
+          'B-Token',
+          { 
+            type: 'validator_pool_sponsor', 
+            actualSponsorAmount: amount,
+            validatorFee: fee,
+            daoFee: 0
+          }
+        );
+        poolTx.sign('test-key');
+        
+        // 블록체인에 트랜잭션 추가
+        const addResult = protocol.getBlockchain().addTransaction(poolTx);
+        if (!addResult.success) {
+          throw new Error(addResult.error || '트랜잭션 추가 실패');
+        }
+        
+        console.log(`💰 검증자 풀 후원 트랜잭션 추가됨: ${sponsorDID} -> ${amount}B`);
+        
+        // 약간의 지연을 두어 블록체인 업데이트 완료 대기
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // 최신 풀 상태 가져오기
+        const poolStatus = protocol.components.storage.getValidatorPoolStatus();
+        
+        // 모든 클라이언트에 검증자 풀 업데이트 브로드캐스트
+        broadcastPoolUpdate({
+          balance: poolStatus.totalStake,
+          contributions: poolStatus.contributions
+        });
+        
+        // 후원자에게 업데이트된 지갑 정보 전송
+        const updatedWallet = await protocol.getUserWallet(sponsorDID);
+        broadcastStateUpdate(sponsorDID, {
+          wallet: updatedWallet,
+          validatorPool: poolStatus
+        });
+        
+        return {
+          status: 200,
+          data: {
+            success: true,
+            message: `검증자 풀에 ${amount}B 후원 트랜잭션이 추가되었습니다`,
+            transactionId: poolTx.hash,
+            status: 'pending',
+            poolStatus: {
+              balance: poolStatus.totalStake,
+              contributions: poolStatus.contributions
+            }
+          }
+        };
+        
+      } catch (error) {
+        console.error('검증자 풀 후원 실패:', error);
+        return {
+          status: 500,
+          data: { success: false, error: '검증자 풀 후원 실패', details: error.message }
+        };
+      }
+    }
+    
+    // DAO 금고 후원 (릴레이 서버 전용)
+    if (path === '/dao/treasury/sponsor' && method === 'POST') {
+      try {
+        const { sponsorDID, daoId, amount } = body;
+        
+        if (!sponsorDID || !daoId || !amount || amount <= 0) {
+          return {
+            status: 400,
+            data: { success: false, error: '후원자 DID, DAO ID, 유효한 금액이 필요합니다' }
+          };
+        }
+        
+        // DAO 존재 여부 확인
+        const dao = protocol.getDAO(daoId);
+        if (!dao || !dao.dao) {
+          return {
+            status: 404,
+            data: { success: false, error: '존재하지 않는 DAO입니다' }
+          };
+        }
+        
+        // 수수료 계산 (고정 0.001B)
+        const fee = 0.001;
+        const totalAmount = amount + fee;
+        
+        // B-토큰 잔액 확인
+        const currentBalance = protocol.getBlockchain().getBalance(sponsorDID, 'B-Token');
+        if (currentBalance < totalAmount) {
+          return {
+            status: 400,
+            data: { success: false, error: `B-토큰 잔액이 부족합니다 (필요: ${totalAmount}B, 보유: ${currentBalance}B)` }
+          };
+        }
+        
+        // DAO 금고 후원 트랜잭션 생성
+        const Transaction = require('./src/blockchain/Transaction');
+        const daoTreasurySystemAddress = 'did:baekya:system0000000000000000000000000000000002';
+        
+        const treasuryTx = new Transaction(
+          sponsorDID,
+          daoTreasurySystemAddress,
+          totalAmount,
+          'B-Token',
+          { 
+            type: 'dao_treasury_sponsor',
+            targetDaoId: daoId,
+            targetDaoName: dao.dao.name,
+            actualSponsorAmount: amount,
+            validatorFee: fee,
+            daoFee: 0
+          }
+        );
+        treasuryTx.sign('test-key');
+        
+        // 블록체인에 트랜잭션 추가
+        const addResult = protocol.getBlockchain().addTransaction(treasuryTx);
+        if (!addResult.success) {
+          throw new Error(addResult.error || '트랜잭션 추가 실패');
+        }
+        
+        console.log(`🏛️ DAO 금고 후원 트랜잭션 추가됨: ${sponsorDID} -> ${dao.dao.name} (${amount}B)`);
+        
+        // 약간의 지연을 두어 블록체인 업데이트 완료 대기
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // 대상 DAO의 현재 잔액 가져오기
+        const targetDAOData = protocol.components.storage.getDAO(daoId);
+        const newTreasury = targetDAOData ? targetDAOData.treasury : 0;
+        const daoTreasuries = {};
+        daoTreasuries[daoId] = newTreasury;
+        
+        // 검증자 풀 상태 가져오기
+        const poolStatus = protocol.components.storage.getValidatorPoolStatus();
+        
+        // 모든 클라이언트에 브로드캐스트
+        broadcastDAOTreasuryUpdate(daoTreasuries);
+        broadcastPoolUpdate({
+          balance: poolStatus.totalStake,
+          contributions: poolStatus.contributions
+        });
+        
+        // 후원자에게 업데이트된 지갑 정보 전송
+        const updatedWallet = await protocol.getUserWallet(sponsorDID);
+        broadcastStateUpdate(sponsorDID, {
+          wallet: updatedWallet,
+          daoTreasuries: daoTreasuries
+        });
+        
+        return {
+          status: 200,
+          data: {
+            success: true,
+            message: `${dao.dao.name} 금고에 ${amount}B 후원 트랜잭션이 추가되었습니다`,
+            transactionId: treasuryTx.hash,
+            status: 'pending',
+            daoTreasury: {
+              daoId: daoId,
+              daoName: dao.dao.name,
+              newBalance: newTreasury,
+              contribution: amount
+            },
+            feeDistribution: {
+              validatorPool: fee,
+              daoFee: 0,
+              perDAO: 0
+            }
+          }
+        };
+        
+      } catch (error) {
+        console.error('DAO 금고 후원 실패:', error);
+        return {
+          status: 500,
+          data: { success: false, error: 'DAO 금고 후원 실패', details: error.message }
+        };
+      }
+    }
+    
     // 다른 라우트들은 Express 앱을 통해 처리
     return new Promise((resolve) => {
       // Express의 next() 함수 시뮬레이션

@@ -315,7 +315,8 @@
       "7a60d7d32436ef4ff537a077647d35cb157ae2b99460f2fc79da09cda6c46189": 30,
       "59bfe0bba018ec763434d280e68081f9f46151c634882305d6094d5a13aa3459": 30,
       "f8ffe8078b93f4ad5a2d3049b4fc81e9bc1cc35995eff258f908952d8eb7b302": 30,
-      "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e": 30
+      "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e": 35,
+      "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a": 35
     },
     "pTokenBalances": {}
   },
@@ -325,8 +326,8 @@
       "name": "Development DAO",
       "purpose": "Development",
       "description": "백야 프로토콜 개발을 담당하는 DAO",
-      "founderDID": "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e",
-      "operatorDID": "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e",
+      "founderDID": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a",
+      "operatorDID": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a",
       "createdAt": 1752143092891,
       "status": "active",
       "lastUpdated": 1752143092891
@@ -336,8 +337,8 @@
       "name": "Community DAO",
       "purpose": "Community Management",
       "description": "백야 프로토콜 커뮤니티 관리를 담당하는 DAO",
-      "founderDID": "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e",
-      "operatorDID": "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e",
+      "founderDID": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a",
+      "operatorDID": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a",
       "createdAt": 1752143092892,
       "status": "active",
       "lastUpdated": 1752143092892
@@ -1643,6 +1644,50 @@
             "description": "초대를 통해 커뮤니티에 참여"
           },
           "savedAt": 1752275828192
+        }
+      ]
+    },
+    "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e": {
+      "validator-dao": [
+        {
+          "id": "block_generation_109_1752278177357",
+          "type": "network_validation",
+          "title": "블록생성",
+          "dcaId": "block-generation",
+          "evidence": "Block 109 validated",
+          "description": "블록 #109 생성 및 검증",
+          "bValue": 5,
+          "verified": true,
+          "verifiedAt": 1752278177357,
+          "metadata": {
+            "blockIndex": 109,
+            "blockHash": "e8df8e7d20757cc06fd154c758725d08ce56d63b6ad2d80555fe2efe8f09e051",
+            "transactionCount": 2,
+            "completedAt": 1752278177357
+          },
+          "savedAt": 1752278177357
+        }
+      ]
+    },
+    "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a": {
+      "validator-dao": [
+        {
+          "id": "block_generation_111_1752278350788",
+          "type": "network_validation",
+          "title": "블록생성",
+          "dcaId": "block-generation",
+          "evidence": "Block 111 validated",
+          "description": "블록 #111 생성 및 검증",
+          "bValue": 5,
+          "verified": true,
+          "verifiedAt": 1752278350788,
+          "metadata": {
+            "blockIndex": 111,
+            "blockHash": "59a473e199f72f54970d06ff661c00938071efb11e7b4e60382a19e08c265d30",
+            "transactionCount": 2,
+            "completedAt": 1752278350788
+          },
+          "savedAt": 1752278350789
         }
       ]
     }
@@ -3475,6 +3520,52 @@
       "nonce": "40764a9a70f45939dcc948689a37d4c7",
       "signature": "founder-initial-grant",
       "hash": "11e44e8cd8261d79f94d3da476fe799c981f1dd938cd41cdff671ec8f4e86b66"
+    },
+    {
+      "fromDID": "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e",
+      "toDID": "did:baekya:system0000000000000000000000000000000002",
+      "amount": 0,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "invite_code_registration",
+        "inviteCode": "4OVOT8",
+        "communicationAddress": "010-4258-6642",
+        "registrationDate": "2025-07-11T23:55:54.417Z"
+      },
+      "timestamp": 1752278177348,
+      "nonce": "a912153f84e1c90b22387c267d5980a3",
+      "signature": "94833d176b443fbb288f6e6442ed61e3d7883edd2ef79ba72d5fa03ad511d0d0",
+      "hash": "c954062f3a24a17abf5d0c77c20195734df2dd9f02b706063e8e268b679f43c7"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752278284093,
+      "nonce": "945eadb5cb6c25e3f9d81e01e0d8f602",
+      "signature": "founder-initial-grant",
+      "hash": "9ee6f43fda2166fbb730e401e132a4f3d7de9224365821deaf0579a499aecd98"
+    },
+    {
+      "fromDID": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a",
+      "toDID": "did:baekya:system0000000000000000000000000000000002",
+      "amount": 0,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "invite_code_registration",
+        "inviteCode": "OPO83L",
+        "communicationAddress": "010-6297-5372",
+        "registrationDate": "2025-07-11T23:59:03.233Z"
+      },
+      "timestamp": 1752278350777,
+      "nonce": "85470a90161b87f05f9fd70268f6ebe8",
+      "signature": "4beddfe51b2daa46fdc941ddeab3ba82573b44e81ca8c631635751426d09f578",
+      "hash": "316193cdc390edb05ba891f107db32fef4ab009b2a435fb8bda0208ebcf43e00"
     }
   ],
   "blockchain": [
@@ -8145,9 +8236,130 @@
         }
       ],
       "previousHash": "00ba5e8d78bca4fdb412997b279a2b31f38ffc84dec7c0ebb27a01c4383b3bf7",
-      "hash": "009f7437e697b27dad2d89e0e9d667fa1b3e0cc0ea41d2df38a963be95621e5b",
+      "hash": "e7075bff6e5f345a8265eb4595f601c5735f7fdcc979ab4f6f301d599c70f75b",
       "nonce": 294,
       "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 109,
+      "timestamp": 1752278177337,
+      "transactions": [
+        {
+          "fromDID": "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e",
+          "toDID": "did:baekya:system0000000000000000000000000000000002",
+          "amount": 0,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "invite_code_registration",
+            "inviteCode": "4OVOT8",
+            "communicationAddress": "010-4258-6642",
+            "registrationDate": "2025-07-11T23:55:54.417Z"
+          },
+          "timestamp": 1752278154419,
+          "nonce": "a912153f84e1c90b22387c267d5980a3",
+          "signature": "94833d176b443fbb288f6e6442ed61e3d7883edd2ef79ba72d5fa03ad511d0d0",
+          "hash": "c954062f3a24a17abf5d0c77c20195734df2dd9f02b706063e8e268b679f43c7"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 109,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752278177357,
+          "nonce": "640d221bd05b3f84f8e1a054d605d450",
+          "signature": null,
+          "hash": "1403c1bab69aa5e4426f85b0354739ae198cfea586060507b5fcc7bae61ffc94"
+        }
+      ],
+      "previousHash": "e7075bff6e5f345a8265eb4595f601c5735f7fdcc979ab4f6f301d599c70f75b",
+      "hash": "007341deb4a340670e605f22180538725a8581fd19ac8745e68a53c467c4ee66",
+      "nonce": 52,
+      "validator": "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e"
+    },
+    {
+      "index": 110,
+      "timestamp": 1752278284086,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752278284085,
+          "nonce": "945eadb5cb6c25e3f9d81e01e0d8f602",
+          "signature": "founder-initial-grant",
+          "hash": "9ee6f43fda2166fbb730e401e132a4f3d7de9224365821deaf0579a499aecd98"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 110,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752278284105,
+          "nonce": "b1e681bfe328258f406abc91ab4bf22d",
+          "signature": null,
+          "hash": "9a78cbae9a8d5a19d8e2bfc6bc48fe9a7c0c67786c94ef7964ac77bae90ba5a4"
+        }
+      ],
+      "previousHash": "007341deb4a340670e605f22180538725a8581fd19ac8745e68a53c467c4ee66",
+      "hash": "a8ddb90777475d4d08e39ad6cc8cab234fd5760b8d8568b167c0e6596d80487d",
+      "nonce": 224,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 111,
+      "timestamp": 1752278350766,
+      "transactions": [
+        {
+          "fromDID": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a",
+          "toDID": "did:baekya:system0000000000000000000000000000000002",
+          "amount": 0,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "invite_code_registration",
+            "inviteCode": "OPO83L",
+            "communicationAddress": "010-6297-5372",
+            "registrationDate": "2025-07-11T23:59:03.233Z"
+          },
+          "timestamp": 1752278343233,
+          "nonce": "85470a90161b87f05f9fd70268f6ebe8",
+          "signature": "4beddfe51b2daa46fdc941ddeab3ba82573b44e81ca8c631635751426d09f578",
+          "hash": "316193cdc390edb05ba891f107db32fef4ab009b2a435fb8bda0208ebcf43e00"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 111,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752278350788,
+          "nonce": "5b457c5f9de3211c2880b644d0d46b51",
+          "signature": null,
+          "hash": "020a9f0ff800e0b31985a8b76275b22687e05d7e8014eec80da33b027ba2e2e7"
+        }
+      ],
+      "previousHash": "a8ddb90777475d4d08e39ad6cc8cab234fd5760b8d8568b167c0e6596d80487d",
+      "hash": "00735fc900ff4a47bfa638f4755d22e1eefd49c3b9e121459f1e0ea93ab296c8",
+      "nonce": 98,
+      "validator": "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a"
     }
   ],
   "inviteCodes": {
@@ -8284,6 +8496,16 @@
     "02322ed2a316132f1bd9628e091cee5492f6ac4d20ff2d32dcdcb7c2d7efaa6f": {
       "inviteCode": "M1LX7Z",
       "createdAt": 1752275632910,
+      "registeredOnChain": false
+    },
+    "56de422c5df84c5b7dc0c57b78cc9802ed48137d2433f5ff55f09d4bbfa1b20e": {
+      "inviteCode": "4OVOT8",
+      "createdAt": 1752278154422,
+      "registeredOnChain": false
+    },
+    "225f623c8d454f4128ccc4d984e92d4fb8bff21873e3d594a5b7a170acbf0b1a": {
+      "inviteCode": "OPO83L",
+      "createdAt": 1752278343237,
       "registeredOnChain": false
     }
   }
