@@ -1,13 +1,4 @@
 {
-  "06ac63e07c6792f25e5af1e5557afed4a98b9b6100caa3d0417e3b8ffe73ff1a_1752193959602_izd81jaap": {
-    "sessionId": "06ac63e07c6792f25e5af1e5557afed4a98b9b6100caa3d0417e3b8ffe73ff1a_1752193959602_izd81jaap",
-    "didHash": "06ac63e07c6792f25e5af1e5557afed4a98b9b6100caa3d0417e3b8ffe73ff1a",
-    "deviceId": "validator_1752193959509",
-    "createdAt": 1752193959602,
-    "lastActivity": 1752193959602,
-    "expiresAt": 1752280359602,
-    "metadata": {}
-  },
   "6fb83fd8af3df44af7adcf3462fc3079c69f17fd067a6005ce345cd281d1b759_1752200826576_nszcl34se": {
     "sessionId": "6fb83fd8af3df44af7adcf3462fc3079c69f17fd067a6005ce345cd281d1b759_1752200826576_nszcl34se",
     "didHash": "6fb83fd8af3df44af7adcf3462fc3079c69f17fd067a6005ce345cd281d1b759",
@@ -447,6 +438,42 @@
     "createdAt": 1752278335698,
     "lastActivity": 1752278335698,
     "expiresAt": 1752364735698,
+    "metadata": {}
+  },
+  "971d0409b5050ad4280b24ada32b0e3c50ae6da9cd366ebb76c460d07058a94c_1752279222583_chpujlj6v": {
+    "sessionId": "971d0409b5050ad4280b24ada32b0e3c50ae6da9cd366ebb76c460d07058a94c_1752279222583_chpujlj6v",
+    "didHash": "971d0409b5050ad4280b24ada32b0e3c50ae6da9cd366ebb76c460d07058a94c",
+    "deviceId": "web_1752279222487_ggq771zxi",
+    "createdAt": 1752279222583,
+    "lastActivity": 1752279222583,
+    "expiresAt": 1752365622583,
+    "metadata": {}
+  },
+  "416c813260bc99cbbccfafab2459a92a3102aa719804a0a41d5735157fd62484_1752280023619_nghcbsrir": {
+    "sessionId": "416c813260bc99cbbccfafab2459a92a3102aa719804a0a41d5735157fd62484_1752280023619_nghcbsrir",
+    "didHash": "416c813260bc99cbbccfafab2459a92a3102aa719804a0a41d5735157fd62484",
+    "deviceId": "web_1752280023523_hdqaa27qm",
+    "createdAt": 1752280023619,
+    "lastActivity": 1752280023619,
+    "expiresAt": 1752366423619,
+    "metadata": {}
+  },
+  "3a6151680275d0854f0290d9c910318808553a3849002348e81963d8b527a070_1752280176900_19ivwlf8u": {
+    "sessionId": "3a6151680275d0854f0290d9c910318808553a3849002348e81963d8b527a070_1752280176900_19ivwlf8u",
+    "didHash": "3a6151680275d0854f0290d9c910318808553a3849002348e81963d8b527a070",
+    "deviceId": "web_1752280176810_h8v85ncnx",
+    "createdAt": 1752280176900,
+    "lastActivity": 1752280176900,
+    "expiresAt": 1752366576900,
+    "metadata": {}
+  },
+  "ac5277fe6711b114932a542ccf872371b73c5a704ffee803c4c22ddd2b385300_1752280889568_8aief87m7": {
+    "sessionId": "ac5277fe6711b114932a542ccf872371b73c5a704ffee803c4c22ddd2b385300_1752280889568_8aief87m7",
+    "didHash": "ac5277fe6711b114932a542ccf872371b73c5a704ffee803c4c22ddd2b385300",
+    "deviceId": "web_1752280889471_ridtwax8f",
+    "createdAt": 1752280889568,
+    "lastActivity": 1752280889568,
+    "expiresAt": 1752367289568,
     "metadata": {}
   }
 }
