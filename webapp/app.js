@@ -510,21 +510,33 @@ class BaekyaProtocolDApp {
   handlePoolUpdate(poolData) {
     console.log('💰 검증자 풀 업데이트:', poolData);
     
-    if (poolData && poolData.balance !== undefined) {
+    // 서버에서 오는 데이터 형식 처리 (balance 또는 totalStake)
+    let balance = 0;
+    if (poolData) {
+      if (poolData.balance !== undefined) {
+        balance = poolData.balance;
+      } else if (poolData.totalStake !== undefined) {
+        balance = poolData.totalStake;
+      }
+    }
+    
+    if (balance !== undefined && balance !== null) {
       // localStorage 업데이트
-      localStorage.setItem('baekya_validator_pool', poolData.balance.toString());
+      localStorage.setItem('baekya_validator_pool', balance.toString());
       
       // UI 업데이트
       const validatorPool = document.getElementById('validatorPoolMain');
       if (validatorPool) {
-        validatorPool.textContent = `${poolData.balance.toFixed(3)} B`;
+        validatorPool.textContent = `${balance.toFixed(3)} B`;
       }
       
       // 대시보드의 검증자 풀 표시도 업데이트
       const validatorPoolDashboard = document.getElementById('validatorPool');
       if (validatorPoolDashboard) {
-        validatorPoolDashboard.textContent = `${poolData.balance.toFixed(3)} B`;
+        validatorPoolDashboard.textContent = `${balance.toFixed(3)} B`;
       }
+      
+      console.log(`💰 검증자 풀 UI 업데이트 완료: ${balance.toFixed(3)}B`);
     }
   }
   
@@ -1391,13 +1403,17 @@ class BaekyaProtocolDApp {
               // 검증자 풀 상태 업데이트
               if (result.protocolState.validatorPool !== undefined) {
                 localStorage.setItem('baekya_validator_pool', result.protocolState.validatorPool.toString());
-                console.log('🏦 검증자 풀 동기화:', result.protocolState.validatorPool);
+                console.log('🏦 검증자 풀 로그인 동기화:', result.protocolState.validatorPool);
+                // UI 업데이트
+                this.handlePoolUpdate({ balance: result.protocolState.validatorPool });
               }
               
               // DAO 금고 상태 업데이트
               if (result.protocolState.daoTreasuries) {
                 localStorage.setItem('baekya_dao_treasuries', JSON.stringify(result.protocolState.daoTreasuries));
                 console.log('💰 DAO 금고 동기화:', result.protocolState.daoTreasuries);
+                // DAO 금고 UI 업데이트
+                this.handleDAOTreasuryUpdate(result.protocolState.daoTreasuries);
               }
             }
             
@@ -27047,17 +27063,10 @@ if (storedAuth) {
     // 검증자 풀 데이터 복원
     const savedPoolAmount = localStorage.getItem('baekya_validator_pool');
     if (savedPoolAmount) {
-      // 초기화 후 UI 업데이트
+      console.log(`🏦 저장된 검증자 풀 잔액 복원: ${savedPoolAmount}B`);
+      // 초기화 후 UI 업데이트 - handlePoolUpdate 함수 사용
       setTimeout(() => {
-        const validatorPoolMain = document.getElementById('validatorPoolMain');
-        const validatorPoolDashboard = document.getElementById('validatorPool');
-        
-        if (validatorPoolMain) {
-          validatorPoolMain.textContent = `${parseFloat(savedPoolAmount).toFixed(6)} B`;
-        }
-        if (validatorPoolDashboard) {
-          validatorPoolDashboard.textContent = `${parseFloat(savedPoolAmount).toFixed(6)} B`;
-        }
+        dapp.handlePoolUpdate({ balance: parseFloat(savedPoolAmount) });
       }, 500);
     }
     

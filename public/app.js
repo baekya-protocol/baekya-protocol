@@ -419,21 +419,33 @@ class BaekyaProtocolDApp {
   handlePoolUpdate(poolData) {
     console.log('💰 검증자 풀 업데이트:', poolData);
     
-    if (poolData && poolData.balance !== undefined) {
+    // 서버에서 오는 데이터 형식 처리 (balance 또는 totalStake)
+    let balance = 0;
+    if (poolData) {
+      if (poolData.balance !== undefined) {
+        balance = poolData.balance;
+      } else if (poolData.totalStake !== undefined) {
+        balance = poolData.totalStake;
+      }
+    }
+    
+    if (balance !== undefined && balance !== null) {
       // localStorage 업데이트
-      localStorage.setItem('baekya_validator_pool', poolData.balance.toString());
+      localStorage.setItem('baekya_validator_pool', balance.toString());
       
       // UI 업데이트
       const validatorPool = document.getElementById('validatorPoolMain');
       if (validatorPool) {
-        validatorPool.textContent = `${poolData.balance.toFixed(3)} B`;
+        validatorPool.textContent = `${balance.toFixed(3)} B`;
       }
       
       // 대시보드의 검증자 풀 표시도 업데이트
       const validatorPoolDashboard = document.getElementById('validatorPool');
       if (validatorPoolDashboard) {
-        validatorPoolDashboard.textContent = `${poolData.balance.toFixed(3)} B`;
+        validatorPoolDashboard.textContent = `${balance.toFixed(3)} B`;
       }
+      
+      console.log(`💰 검증자 풀 UI 업데이트 완료: ${balance.toFixed(3)}B`);
     }
   }
   
