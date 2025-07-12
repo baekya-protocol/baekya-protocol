@@ -1052,9 +1052,9 @@ async function processHttpRequest(method, path, headers, body, query) {
             console.log('✅ 통신주소로 DID 찾음:', toDID);
           } else {
             // 아이디로 DID 찾기 시도
-            const userResult = authSystem.getUserByUsername(toAddress);
+            const userResult = authSystem.getDIDByUsername(toAddress);
             if (userResult.success) {
-              toDID = userResult.user.did;
+              toDID = userResult.didHash;
               console.log('✅ 아이디로 DID 찾음:', toDID);
             } else {
               console.log('❌ 받는 주소를 찾을 수 없음:', toAddress);
