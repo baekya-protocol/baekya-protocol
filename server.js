@@ -171,18 +171,18 @@ wss.on('connection', (ws) => {
           if (userDID) {
             console.log(`📋 상태 요청 처리: ${userDID}`);
             
-            protocol.getUserWallet(userDID).then(wallet => {
-              const poolStatus = protocol.components.storage.getValidatorPoolStatus();
-              
-              ws.send(JSON.stringify({
-                type: 'state_update',
-                wallet: wallet,
+          protocol.getUserWallet(userDID).then(wallet => {
+            const poolStatus = protocol.components.storage.getValidatorPoolStatus();
+            
+            ws.send(JSON.stringify({
+              type: 'state_update',
+              wallet: wallet,
                 validatorPool: poolStatus,
                 sessionId: sessionId
-              }));
+            }));
             }).catch(error => {
               console.error(`❌ 상태 요청 처리 실패: ${userDID}`, error);
-            });
+          });
           }
           break;
           
@@ -206,7 +206,7 @@ wss.on('connection', (ws) => {
       if (clients.get(userDID) === ws) {
         clients.delete(userDID);
         console.log(`🗑️ 클라이언트 맵에서 제거: ${userDID}`);
-      }
+    }
     }
     
     // 세션 정보 정리
@@ -229,16 +229,16 @@ function broadcastStateUpdate(userDID, updateData) {
     const ws = clients.get(userDID);
     if (ws && ws.readyState === WebSocket.OPEN) {
       const message = JSON.stringify({
-        type: 'state_update',
+          type: 'state_update',
         timestamp: Date.now(),
-        ...updateData
+          ...updateData
       });
       
       ws.send(message);
       console.log(`✅ 로컬 클라이언트에 전송 성공: ${userDID}`);
     } else {
       console.log(`⚠️ 로컬 클라이언트 연결 상태 불량: ${userDID}`);
-    }
+      }
   } else {
     console.log(`⚠️ 로컬 클라이언트 없음: ${userDID}`);
   }
@@ -272,10 +272,10 @@ function broadcastPoolUpdate(poolStatus) {
   clients.forEach((ws, did) => {
     totalCount++;
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(message);
+        ws.send(message);
       successCount++;
-    }
-  });
+      }
+    });
   
   console.log(`✅ 로컬 클라이언트 전송: ${successCount}/${totalCount}`);
   
@@ -307,10 +307,10 @@ function broadcastDAOTreasuryUpdate(daoTreasuries) {
   clients.forEach((ws, did) => {
     totalCount++;
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(message);
+        ws.send(message);
       successCount++;
-    }
-  });
+      }
+    });
   
   console.log(`✅ 로컬 클라이언트 전송: ${successCount}/${totalCount}`);
   
@@ -1037,34 +1037,46 @@ async function processHttpRequest(method, path, headers, body, query) {
           };
         }
         
+        // 원본 주소 저장 (거래내역 표시용)
+        const originalToAddress = toAddress;
+        
         // toAddress가 DID인지, 통신주소인지, 아이디인지 확인하고 DID로 변환
         let toDID = toAddress;
-        
         if (!toAddress.startsWith('did:baekya:')) {
-          console.log('🔍 통신주소 또는 아이디로 DID 조회 시도:', toAddress);
-          
-          // 통신주소로 DID 찾기
+          // 통신주소나 아이디로 DID 찾기
           const authSystem = protocol.components.authSystem;
-          const didResult = authSystem.getDIDByCommAddress(toAddress);
           
-          if (didResult.success) {
-            toDID = didResult.did;
-            console.log('✅ 통신주소로 DID 찾음:', toDID);
+          console.log(`🔍 주소 변환 시도: ${toAddress}`);
+          
+          // 하이픈 없는 전화번호 형식이면 하이픈 추가
+          let normalizedAddress = toAddress;
+          if (/^010\d{8}$/.test(toAddress)) {
+            // 01012345678 → 010-1234-5678
+            normalizedAddress = `${toAddress.slice(0, 3)}-${toAddress.slice(3, 7)}-${toAddress.slice(7)}`;
+            console.log(`📱 전화번호 형식 변환: ${toAddress} → ${normalizedAddress}`);
+          }
+          
+          // 먼저 통신주소로 시도
+          const byCommAddress = authSystem.getDIDByCommAddress(normalizedAddress);
+          console.log('통신주소 검색 결과:', byCommAddress);
+          
+          if (byCommAddress.success) {
+            toDID = byCommAddress.didHash;
+            console.log(`✅ 통신주소로 DID 찾기 성공: ${toDID}`);
           } else {
-            // 아이디로 DID 찾기 시도
-            const userResult = authSystem.getDIDByUsername(toAddress);
-            if (userResult.success) {
-              toDID = userResult.didHash;
-              console.log('✅ 아이디로 DID 찾음:', toDID);
+            // 아이디로 시도 (원래 주소 그대로 사용)
+            const byUserId = authSystem.getDIDByUsername(toAddress);
+            console.log('아이디 검색 결과:', byUserId);
+            
+            if (byUserId.success) {
+              toDID = byUserId.didHash;
+              console.log(`✅ 아이디로 DID 찾기 성공: ${toDID}`);
             } else {
-              console.log('❌ 받는 주소를 찾을 수 없음:', toAddress);
-              return {
-                status: 404,
-                data: {
-                  success: false,
-                  error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
-                }
-              };
+              console.log(`❌ 주소 찾기 실패: ${toAddress}`);
+              return res.status(404).json({
+                success: false,
+                error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
+              });
             }
           }
         }
@@ -1074,19 +1086,174 @@ async function processHttpRequest(method, path, headers, body, query) {
         console.log(`  - To: ${toDID}`);
         console.log(`  - Amount: ${amount} ${tokenType}`);
         
-        // 토큰 전송 실행
-        const result = await protocol.transferTokens(fromDID, toDID, amount, tokenType, authData);
+        // 통합 인증 검증 (SimpleAuth 사용)
+        const authResult = protocol.components.authSystem.verifyForAction(fromDID, authData, 'token_transfer');
+        if (!authResult.authorized) {
+          return res.status(401).json({ 
+            success: false, 
+            error: '인증 실패', 
+            details: authResult.message 
+          });
+        }
         
-        console.log('💸 토큰 전송 결과:', result);
+        // 수수료 계산 (0.1%)
+        const fee = amount * 0.001;
+        const totalAmount = amount + fee;
+        const feeToValidator = fee * 1.0; // 수수료의 100%는 검증자 풀로
+        const feeToDAO = fee * 0.0; // 수수료의 0%는 DAO 금고로
         
-        return { status: 200, data: result };
+        console.log('💰 수수료 계산:');
+        console.log(`  - 전송 금액: ${amount}B`);
+        console.log(`  - 수수료 (0.1%): ${fee}B`);
+        console.log(`  - 검증자 풀 (100%): ${feeToValidator}B`);
+        console.log(`  - DAO 분배 (0%): ${feeToDAO}B`);
+        console.log(`  - 사용자 총 지불액: ${totalAmount}B`);
         
+        // 잔액 확인
+        const currentBalance = protocol.getBlockchain().getBalance(fromDID, tokenType);
+        if (currentBalance < totalAmount) {
+          return res.status(400).json({
+            success: false,
+            error: `${tokenType} 잔액이 부족합니다 (필요: ${totalAmount}, 보유: ${currentBalance})`
+          });
+        }
+        
+        try {
+          const Transaction = require('./src/blockchain/Transaction');
+          
+          // 수수료 포함 토큰 전송 트랜잭션 생성 (발신자가 실제 지불하는 총액)
+          const transferTx = new Transaction(
+            fromDID,
+            toDID,
+            amount, // 받는 사람이 받을 실제 금액
+            tokenType,
+            { 
+              type: 'token_transfer',
+              fee: fee,
+              totalAmountPaid: totalAmount, // 발신자가 지불한 총액
+              validatorFee: feeToValidator,
+              daoFee: feeToDAO,
+              originalToAddress: originalToAddress, // 원본 주소 저장
+              memo: req.body.memo || ''
+            }
+          );
+          transferTx.sign('test-key');
+          
+          // 수수료 트랜잭션 생성 (시스템에서 검증자 풀로)
+          const feeTx = new Transaction(
+            'did:baekya:system0000000000000000000000000000000003', // 수수료 수집 주소
+            'did:baekya:system0000000000000000000000000000000001', // 검증자 풀 주소
+            fee,
+            tokenType,
+            { 
+              type: 'transfer_fee',
+              validatorFee: feeToValidator,
+              daoFee: feeToDAO,
+              originalTransfer: transferTx.hash,
+              fromUser: fromDID
+            }
+          );
+          feeTx.sign('test-key');
+          
+          // 블록체인에 트랜잭션 추가
+          const addResult1 = protocol.getBlockchain().addTransaction(transferTx);
+          const addResult2 = protocol.getBlockchain().addTransaction(feeTx);
+          
+          if (!addResult1.success || !addResult2.success) {
+            throw new Error('트랜잭션 추가 실패');
+          }
+          
+          // 트랜잭션은 추가되었고 검증자가 블록을 생성할 예정
+          console.log(`💸 토큰 전송 트랜잭션 추가됨 (대기 중)`);
+          
+          // 트랜잭션이 추가되었으므로 응답은 바로 처리
+          if (true) {
+            
+            // 검증자 풀 업데이트는 BlockchainCore의 updateStorageFromBlock에서 처리됨
+            // 직접 업데이트 제거
+            
+            // DAO 수수료 분배 - 100% 검증자 풀로 변경됨으로 제거됨
+            
+            // 업데이트된 지갑 정보 브로드캐스트
+            const updatedFromWallet = await protocol.getUserWallet(fromDID);
+            const updatedToWallet = await protocol.getUserWallet(toDID);
+            
+            // 발신자 정보 가져오기
+            const fromUserInfo = protocol.components.authSystem.getDIDInfo(fromDID);
+            const fromDisplayName = fromUserInfo?.didData?.username || fromUserInfo?.didData?.communicationAddress || fromDID.substring(0, 16) + '...';
+            
+            // 받는 사람 정보 가져오기
+            const toUserInfo = protocol.components.authSystem.getDIDInfo(toDID);
+            const toDisplayName = toUserInfo?.didData?.username || toUserInfo?.didData?.communicationAddress || toDID.substring(0, 16) + '...';
+            
+            broadcastStateUpdate(fromDID, { 
+              wallet: updatedFromWallet,
+              newTransaction: {
+                type: 'sent',
+                to: toDID,
+                toAddress: originalToAddress, // 원본 주소 표시
+                amount: amount,
+                fee: fee,
+                totalPaid: totalAmount,
+                tokenType: tokenType,
+                memo: req.body.memo || '',
+                timestamp: new Date().toISOString(),
+                transactionId: transferTx.hash,
+                status: 'pending'
+              }
+            });
+            
+            broadcastStateUpdate(toDID, { 
+              wallet: updatedToWallet,
+              newTransaction: {
+                type: 'received',
+                from: fromDID,
+                fromAddress: fromDisplayName,
+                amount: amount,
+                tokenType: tokenType,
+                memo: req.body.memo || '',
+                timestamp: new Date().toISOString(),
+                transactionId: transferTx.hash,
+                status: 'pending'
+              }
+            });
+            
+            res.json({
+              success: true,
+              message: `${amount} ${tokenType} 전송 트랜잭션이 추가되었습니다`,
+              transactionId: transferTx.hash,
+              status: 'pending',
+              amount: amount,
+              fee: fee,
+              totalPaid: totalAmount,
+              feeDistribution: {
+                validatorPool: feeToValidator,
+                dao: feeToDAO
+              },
+              recipient: {
+                did: toDID,
+                address: originalToAddress,
+                displayName: toDisplayName
+              }
+            });
+          } else {
+            throw new Error('블록 생성 실패');
+          }
+        } catch (error) {
+          console.error('💥 토큰 전송 실패:', error);
+          res.status(500).json({
+            success: false,
+            error: '토큰 전송 실패',
+            details: error.message
+          });
+        }
       } catch (error) {
-        console.error('토큰 전송 실패:', error);
-        return {
-          status: 500,
-          data: { success: false, error: '토큰 전송 실패', details: error.message }
-        };
+        console.error('❌ 토큰 전송 API 오류:', error);
+        res.status(500).json({
+          success: false,
+          error: '서버 오류',
+          details: error.message
+        });
       }
     }
     
@@ -1998,15 +2165,15 @@ app.post('/api/invite-code', async (req, res) => {
       console.log(`🎫 초대코드 트랜잭션 생성: ${inviteCode}`);
       
       // 저장소에 초대코드 저장
-      protocol.components.storage.saveUserInviteCode(userDID, inviteCode);
+        protocol.components.storage.saveUserInviteCode(userDID, inviteCode);
         
-      res.json({
-        success: true,
-        inviteCode: inviteCode,
+        res.json({
+          success: true,
+          inviteCode: inviteCode,
         message: '초대코드가 생성되었습니다. 검증자가 블록을 생성하면 영구 저장됩니다.',
-        transactionId: inviteCodeTx.hash,
+          transactionId: inviteCodeTx.hash,
         status: 'pending'
-      });
+        });
       
     } catch (error) {
       console.error('초대코드 블록체인 등록 실패:', error.message);
@@ -2205,31 +2372,31 @@ async function processInviteCode(inviteCode, newUserDID) {
       
       console.log(`💰 초대자 예상 잔액: ${inviterExpectedBalance}B (현재: ${inviterCurrentBalance}B + 보상: 30B)`);
       console.log(`💰 생성자 예상 잔액: ${newUserExpectedBalance}B (현재: ${newUserCurrentBalance}B + 보상: 20B)`);
-      
+        
       // 초대자에게 예상 잔액으로 즉시 업데이트 전송
-      broadcastStateUpdate(inviterDID, {
+        broadcastStateUpdate(inviterDID, {
         wallet: { balances: { bToken: inviterExpectedBalance, pToken: 0 } },
-        newContribution: {
-          dao: 'community-dao',
-          type: 'invite_activity',
-          title: '초대 활동',
-          bTokens: 30,
-          description: `새로운 사용자 초대 성공`,
-          date: new Date().toISOString().split('T')[0]
-        },
-        daoMembership: {
-          action: 'join',
-          dao: {
-            id: 'community-dao',
-            name: 'Community DAO',
-            icon: 'fa-users',
-            role: 'Member',
-            contributions: 1,
-            lastActivity: '오늘',
-            joinedAt: Date.now()
+          newContribution: {
+            dao: 'community-dao',
+            type: 'invite_activity',
+            title: '초대 활동',
+            bTokens: 30,
+            description: `새로운 사용자 초대 성공`,
+            date: new Date().toISOString().split('T')[0]
+          },
+          daoMembership: {
+            action: 'join',
+            dao: {
+              id: 'community-dao',
+              name: 'Community DAO',
+              icon: 'fa-users',
+              role: 'Member',
+              contributions: 1,
+              lastActivity: '오늘',
+              joinedAt: Date.now()
+            }
           }
-        }
-      });
+        });
       
       // 생성자에게 예상 잔액으로 즉시 업데이트 전송
       broadcastStateUpdate(newUserDID, {
@@ -2246,13 +2413,13 @@ async function processInviteCode(inviteCode, newUserDID) {
           });
         }
         
-        const newUserWallet = await protocol.getUserWallet(newUserDID);
-        if (newUserWallet.success) {
+      const newUserWallet = await protocol.getUserWallet(newUserDID);
+      if (newUserWallet.success) {
           console.log(`💰 생성자 실제 잔액 확인: ${newUserWallet.balances.bToken}B`);
-          broadcastStateUpdate(newUserDID, {
-            wallet: { balances: { bToken: newUserWallet.balances.bToken, pToken: newUserWallet.balances.pToken || 0 } }
-          });
-        }
+        broadcastStateUpdate(newUserDID, {
+          wallet: { balances: { bToken: newUserWallet.balances.bToken, pToken: newUserWallet.balances.pToken || 0 } }
+        });
+      }
       }, 35000); // 35초 후 (블록 생성 주기 30초 + 여유 5초)
       
       return {
@@ -2337,6 +2504,9 @@ app.post('/api/transfer', async (req, res) => {
       });
     }
     
+    // 원본 주소 저장 (거래내역 표시용)
+    const originalToAddress = toAddress;
+    
     // toAddress가 DID인지, 통신주소인지, 아이디인지 확인하고 DID로 변환
     let toDID = toAddress;
     if (!toAddress.startsWith('did:baekya:')) {
@@ -2389,7 +2559,7 @@ app.post('/api/transfer', async (req, res) => {
     }
     
     // 수수료 계산 (0.1%)
-    const fee = amount * 0.001; // 0.1%
+    const fee = amount * 0.001;
     const totalAmount = amount + fee;
     const feeToValidator = fee * 1.0; // 수수료의 100%는 검증자 풀로
     const feeToDAO = fee * 0.0; // 수수료의 0%는 DAO 금고로
@@ -2397,8 +2567,8 @@ app.post('/api/transfer', async (req, res) => {
     console.log('💰 수수료 계산:');
     console.log(`  - 전송 금액: ${amount}B`);
     console.log(`  - 수수료 (0.1%): ${fee}B`);
-          console.log(`  - 검증자 풀 (100%): ${feeToValidator}B`);
-      console.log(`  - DAO 분배 (0%): ${feeToDAO}B`);
+    console.log(`  - 검증자 풀 (100%): ${feeToValidator}B`);
+    console.log(`  - DAO 분배 (0%): ${feeToDAO}B`);
     console.log(`  - 사용자 총 지불액: ${totalAmount}B`);
     
     // 잔액 확인
@@ -2413,7 +2583,7 @@ app.post('/api/transfer', async (req, res) => {
     try {
       const Transaction = require('./src/blockchain/Transaction');
       
-      // 토큰 전송 트랜잭션 생성
+      // 수수료 포함 토큰 전송 트랜잭션 생성 (발신자가 실제 지불하는 총액)
       const transferTx = new Transaction(
         fromDID,
         toDID,
@@ -2422,24 +2592,27 @@ app.post('/api/transfer', async (req, res) => {
         { 
           type: 'token_transfer',
           fee: fee,
+          totalAmountPaid: totalAmount, // 발신자가 지불한 총액
           validatorFee: feeToValidator,
           daoFee: feeToDAO,
+          originalToAddress: originalToAddress, // 원본 주소 저장
           memo: req.body.memo || ''
         }
       );
       transferTx.sign('test-key');
       
-      // 수수료 트랜잭션 생성 (발신자 -> 시스템)
+      // 수수료 트랜잭션 생성 (발신자에서 검증자 풀로)
       const feeTx = new Transaction(
-        fromDID,
-        'did:baekya:system0000000000000000000000000000000003', // 수수료 수집 주소
+        fromDID, // 발신자가 수수료 지불
+        'did:baekya:system0000000000000000000000000000000001', // 검증자 풀 주소
         fee,
         tokenType,
         { 
           type: 'transfer_fee',
           validatorFee: feeToValidator,
           daoFee: feeToDAO,
-          originalTransfer: transferTx.hash
+          originalTransfer: transferTx.hash,
+          fromUser: fromDID
         }
       );
       feeTx.sign('test-key');
@@ -2471,7 +2644,27 @@ app.post('/api/transfer', async (req, res) => {
         const fromUserInfo = protocol.components.authSystem.getDIDInfo(fromDID);
         const fromDisplayName = fromUserInfo?.didData?.username || fromUserInfo?.didData?.communicationAddress || fromDID.substring(0, 16) + '...';
         
-        broadcastStateUpdate(fromDID, { wallet: updatedFromWallet });
+        // 받는 사람 정보 가져오기
+        const toUserInfo = protocol.components.authSystem.getDIDInfo(toDID);
+        const toDisplayName = toUserInfo?.didData?.username || toUserInfo?.didData?.communicationAddress || toDID.substring(0, 16) + '...';
+        
+        broadcastStateUpdate(fromDID, { 
+          wallet: updatedFromWallet,
+          newTransaction: {
+            type: 'sent',
+            to: toDID,
+            toAddress: originalToAddress, // 원본 주소 표시
+            amount: amount,
+            fee: fee,
+            totalPaid: totalAmount,
+            tokenType: tokenType,
+            memo: req.body.memo || '',
+            timestamp: new Date().toISOString(),
+            transactionId: transferTx.hash,
+            status: 'pending'
+          }
+        });
+        
         broadcastStateUpdate(toDID, { 
           wallet: updatedToWallet,
           newTransaction: {
@@ -2492,21 +2685,24 @@ app.post('/api/transfer', async (req, res) => {
           message: `${amount} ${tokenType} 전송 트랜잭션이 추가되었습니다`,
           transactionId: transferTx.hash,
           status: 'pending',
+          amount: amount,
           fee: fee,
+          totalPaid: totalAmount,
           feeDistribution: {
             validatorPool: feeToValidator,
             dao: feeToDAO
           },
           recipient: {
             did: toDID,
-            address: toAddress
+            address: originalToAddress,
+            displayName: toDisplayName
           }
         });
       } else {
         throw new Error('블록 생성 실패');
       }
     } catch (error) {
-      console.error('토큰 전송 블록 생성 실패:', error);
+      console.error('💥 토큰 전송 실패:', error);
       res.status(500).json({
         success: false,
         error: '토큰 전송 실패',
@@ -2514,11 +2710,11 @@ app.post('/api/transfer', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('토큰 전송 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '토큰 전송 실패', 
-      details: error.message 
+    console.error('❌ 토큰 전송 API 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '서버 오류',
+      details: error.message
     });
   }
 });

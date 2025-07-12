@@ -169,11 +169,11 @@ class BaekyaProtocolDApp {
           console.log('📤 로컬 서버 인증 메시지 전송:', this.currentUser.did);
         } else {
           // 릴레이 서버용 메시지
-          this.ws.send(JSON.stringify({
-            type: 'user_connect',
-            sessionId: this.generateSessionId(),
-            did: this.currentUser.did
-          }));
+        this.ws.send(JSON.stringify({
+          type: 'user_connect',
+          sessionId: this.generateSessionId(),
+          did: this.currentUser.did
+        }));
           console.log('📤 릴레이 서버 인증 메시지 전송:', this.currentUser.did);
         }
         
@@ -372,7 +372,7 @@ class BaekyaProtocolDApp {
       const walletData = data.wallet;
       
       // B-토큰 잔액 업데이트
-      const bTokenAmount = walletData.balances.bToken || 0;
+        const bTokenAmount = walletData.balances.bToken || 0;
       const pTokenAmount = walletData.balances.pToken || 0;
       
       // 이전 잔액 확인
@@ -381,13 +381,13 @@ class BaekyaProtocolDApp {
       
       console.log(`💰 지갑 잔액 업데이트: B-Token ${bTokenAmount}, P-Token ${pTokenAmount}`);
       
-      localStorage.setItem('currentBalance', bTokenAmount.toString());
-      
-      // userTokens 업데이트
-      if (!this.userTokens) {
-        this.userTokens = { B: 0, P: 0 };
-      }
-      this.userTokens.B = bTokenAmount;
+        localStorage.setItem('currentBalance', bTokenAmount.toString());
+        
+        // userTokens 업데이트
+        if (!this.userTokens) {
+          this.userTokens = { B: 0, P: 0 };
+        }
+        this.userTokens.B = bTokenAmount;
       this.userTokens.P = pTokenAmount;
       
       // currentUser 잔액도 업데이트
@@ -396,9 +396,9 @@ class BaekyaProtocolDApp {
         this.currentUser.pTokenBalance = pTokenAmount;
         localStorage.setItem('baekya_auth', JSON.stringify(this.currentUser));
       }
-      
-      // UI 업데이트
-      this.updateTokenBalances();
+        
+        // UI 업데이트
+        this.updateTokenBalances();
       
       // 실제 잔액 변경이 있을 때만 알림 표시
       if (bTokenAmount !== prevBTokenAmount || pTokenAmount !== prevPTokenAmount) {
@@ -420,18 +420,28 @@ class BaekyaProtocolDApp {
       console.log('💸 새로운 거래 수신:', tx);
       
       // 거래내역에 추가
-      this.addTransaction(
-        tx.type,
-        tx.fromAddress,
-        tx.amount,
-        tx.memo || '',
-        'confirmed',
-        tx.fromAddress,
-        tx.transactionId
-      );
-      
-      // 받은 거래인 경우 알림 표시
-      if (tx.type === 'received') {
+      if (tx.type === 'sent') {
+        this.addTransaction(
+          'sent',
+          tx.toAddress || tx.to, // 받는 사람의 원본 주소
+          tx.amount,
+          tx.memo || '',
+          'confirmed',
+          tx.toAddress || tx.to, // 통신주소로 표시
+          tx.transactionId
+        );
+      } else if (tx.type === 'received') {
+        this.addTransaction(
+          'received',
+          tx.fromAddress || tx.from, // 보낸 사람의 표시명
+          tx.amount,
+          tx.memo || '',
+          'confirmed',
+          tx.fromAddress || tx.from, // 통신주소로 표시
+          tx.transactionId
+        );
+        
+        // 받은 거래인 경우 알림 표시
         this.showSuccessMessage(
           `${tx.fromAddress}님으로부터 ${tx.amount} ${tx.tokenType}을 받았습니다.`
         );
@@ -3886,21 +3896,20 @@ class BaekyaProtocolDApp {
       if (result.success) {
         // 성공 메시지 표시
         this.showSuccessMessage(
-          `${amount.toFixed(3)} B-Token이 ${recipientAddress}로 전송되었습니다.\n` +
-          `수수료: ${fee.toFixed(3)} B (검증자 풀: ${result.feeDistribution.validatorPool.toFixed(3)}B, DAO: ${result.feeDistribution.dao.toFixed(3)}B)\n` +
-          `블록 #${result.blockNumber}`
+          `${result.amount.toFixed(3)} B-Token이 ${result.recipient?.displayName || recipientAddress}로 전송되었습니다.\n` +
+          `수수료: ${result.fee.toFixed(3)} B (검증자 풀: ${result.feeDistribution.validatorPool.toFixed(3)}B, DAO: ${result.feeDistribution.dao.toFixed(3)}B)\n` +
+          `총 지불액: ${result.totalPaid.toFixed(3)} B\n` +
+          `거래 ID: ${result.transactionId?.substring(0, 16)}...`
         );
         
-        // 거래내역에 기록
-        const recipientDisplay = result.recipient.address;
-        this.addTransaction('sent', recipientDisplay, amount, transferMemo, 'confirmed', recipientDisplay);
-    
-    // 폼 리셋
-    document.getElementById('transferForm').reset();
-    this.updateTransferSummary(0);
-    
+        // 거래내역은 WebSocket으로 전송되므로 여기서 중복 추가하지 않음
+        
+        // 폼 리셋
+        document.getElementById('transferForm').reset();
+        this.updateTransferSummary(0);
+        
         // 잔액 업데이트 (서버에서 받은 데이터로)
-      this.updateTokenBalances();
+        this.updateTokenBalances();
       } else {
         this.showErrorMessage(result.error || '토큰 전송에 실패했습니다.');
       }
@@ -9509,51 +9518,51 @@ class BaekyaProtocolDApp {
     if (confirm(`검증자 풀에 ${sponsorAmount}B를 후원하시겠습니까? (수수료 ${transactionFee}B 별도)`)) {
       try {
         // 서버 API로 검증자 풀 후원 요청
-        const sponsorResponse = await fetch(`${this.apiBase}/validator-pool/sponsor`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sponsorDID: this.currentUser.did,
+          const sponsorResponse = await fetch(`${this.apiBase}/validator-pool/sponsor`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sponsorDID: this.currentUser.did,
             amount: sponsorAmount
-          })
-        });
-        
-        if (sponsorResponse.ok) {
-          const result = await sponsorResponse.json();
+            })
+          });
           
-          if (result.success) {
-            // 검증자 풀 상태 업데이트
-            if (result.poolStatus) {
-              const validatorPool = document.getElementById('validatorPoolMain');
-              const newPool = result.poolStatus.balance || 0;
-              validatorPool.textContent = `${newPool.toFixed(6)} B`;
-              localStorage.setItem('baekya_validator_pool', newPool.toFixed(6));
-              
-              // 대시보드의 검증자 풀 표시도 업데이트
-              const validatorPoolDashboard = document.getElementById('validatorPool');
-              if (validatorPoolDashboard) {
-                validatorPoolDashboard.textContent = `${newPool.toFixed(6)} B`;
-              }
-            }
+          if (sponsorResponse.ok) {
+            const result = await sponsorResponse.json();
             
+            if (result.success) {
+              // 검증자 풀 상태 업데이트
+              if (result.poolStatus) {
+                const validatorPool = document.getElementById('validatorPoolMain');
+                const newPool = result.poolStatus.balance || 0;
+                validatorPool.textContent = `${newPool.toFixed(6)} B`;
+                localStorage.setItem('baekya_validator_pool', newPool.toFixed(6));
+                
+                // 대시보드의 검증자 풀 표시도 업데이트
+                const validatorPoolDashboard = document.getElementById('validatorPool');
+                if (validatorPoolDashboard) {
+                  validatorPoolDashboard.textContent = `${newPool.toFixed(6)} B`;
+                }
+              }
+              
             this.showSuccessMessage(`검증자 풀에 ${sponsorAmount}B를 성공적으로 후원했습니다!`);
             
             // 모달 닫기
             document.getElementById('validatorSponsorModal').remove();
             
+            } else {
+              throw new Error(result.error || '트랜잭션 처리 실패');
+            }
           } else {
-            throw new Error(result.error || '트랜잭션 처리 실패');
+            const errorData = await sponsorResponse.json();
+            throw new Error(errorData.error || '트랜잭션 처리 실패');
           }
-        } else {
-          const errorData = await sponsorResponse.json();
-          throw new Error(errorData.error || '트랜잭션 처리 실패');
-        }
       } catch (error) {
         console.error('검증자 풀 후원 오류:', error);
         this.showErrorMessage(`검증자 풀 후원 실패: ${error.message}`);
       }
-    }
-  }
+     }
+   }
 
    // DAO 금고 후원 모달 표시
    showDAOSponsorModal() {
