@@ -1139,9 +1139,9 @@ async function processHttpRequest(method, path, headers, body, query) {
           );
           transferTx.sign('test-key');
           
-          // 수수료 트랜잭션 생성 (시스템에서 검증자 풀로)
+          // 수수료 트랜잭션 생성 (발신자에서 검증자 풀로)
           const feeTx = new Transaction(
-            'did:baekya:system0000000000000000000000000000000003', // 수수료 수집 주소
+            fromDID, // 발신자가 수수료 지불
             'did:baekya:system0000000000000000000000000000000001', // 검증자 풀 주소
             fee,
             tokenType,
@@ -1159,8 +1159,18 @@ async function processHttpRequest(method, path, headers, body, query) {
           const addResult1 = protocol.getBlockchain().addTransaction(transferTx);
           const addResult2 = protocol.getBlockchain().addTransaction(feeTx);
           
-          if (!addResult1.success || !addResult2.success) {
-            throw new Error('트랜잭션 추가 실패');
+          console.log('🔍 트랜잭션 추가 결과:');
+          console.log('  - 전송 트랜잭션:', addResult1);
+          console.log('  - 수수료 트랜잭션:', addResult2);
+          
+          if (!addResult1.success) {
+            console.error('❌ 전송 트랜잭션 추가 실패:', addResult1.error);
+            throw new Error(`전송 트랜잭션 추가 실패: ${addResult1.error}`);
+          }
+          
+          if (!addResult2.success) {
+            console.error('❌ 수수료 트랜잭션 추가 실패:', addResult2.error);
+            throw new Error(`수수료 트랜잭션 추가 실패: ${addResult2.error}`);
           }
           
           // 트랜잭션은 추가되었고 검증자가 블록을 생성할 예정
