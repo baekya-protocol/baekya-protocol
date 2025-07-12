@@ -898,8 +898,19 @@ class BaekyaProtocol {
   }
 
   // 통합 토큰 전송 (생체인증 포함)
-  async transferTokens(fromDID, toDID, amount, tokenType = 'B') {
+  async transferTokens(fromDID, toDID, amount, tokenType = 'B-Token', authData = {}) {
     try {
+      console.log(`💸 토큰 전송 시작: ${fromDID} -> ${toDID} (${amount} ${tokenType})`);
+      
+      // 토큰 타입 정규화 (이미 -Token이 붙어있으면 그대로 사용)
+      const normalizedTokenType = tokenType.includes('-Token') ? tokenType : tokenType + '-Token';
+      
+      // 잔액 확인
+      const senderBalance = this.components.blockchain.getBalance(fromDID, normalizedTokenType);
+      if (senderBalance < amount) {
+        throw new Error(`잔액이 부족합니다. 현재 잔액: ${senderBalance} ${normalizedTokenType}, 필요 금액: ${amount} ${normalizedTokenType}`);
+      }
+      
       const Transaction = require('./blockchain/Transaction');
       
       // 블록체인 트랜잭션 생성
@@ -907,10 +918,14 @@ class BaekyaProtocol {
         fromDID, 
         toDID, 
         amount, 
-        tokenType + '-Token',
-        { type: 'transfer', purpose: '토큰 전송' }
+        normalizedTokenType,
+        { 
+          type: 'transfer', 
+          purpose: '토큰 전송',
+          memo: authData.memo || ''
+        }
       );
-      tx.signature = `${fromDID}-signature-${Date.now()}`;
+      tx.sign('test-key'); // 개발 환경용 테스트 키
       
       // 트랜잭션을 블록체인에 추가
       const addResult = this.components.blockchain.addTransaction(tx);
@@ -918,29 +933,36 @@ class BaekyaProtocol {
         throw new Error(addResult.error);
       }
       
-      // 즉시 블록 생성 (실제로는 주기적으로 하거나 일정 트랜잭션 수가 쌓이면 해야 함)
-      const blockResult = this.components.blockchain.mineBlock([tx], fromDID);
+      console.log(`✅ 토큰 전송 트랜잭션 추가됨: ${tx.hash}`);
       
-      // mineBlock은 성공시 블록 객체를, 실패시 {success: false, error: ...}를 반환
-      if (blockResult && blockResult.success === false) {
-        throw new Error(blockResult.error || '블록 생성 실패');
-      }
+      // 수수료 계산 (0.001 B-Token)
+      const fee = 0.001;
+      const feeDistribution = {
+        validatorPool: fee * 0.6, // 60%는 검증자 풀로
+        dao: fee * 0.4 // 40%는 DAO들에게 분배
+      };
       
-      const block = blockResult;
-      console.log(`⛓️ 블록 #${block.index}에 토큰 전송 기록됨`);
+      // 수신자 정보 가져오기
+      const recipient = {
+        did: toDID,
+        address: this.components.didSystem.generateCommunicationAddress(toDID)
+      };
       
       return {
         success: true,
         transactionId: tx.hash,
-        blockNumber: block.index,
+        blockNumber: this.components.blockchain.getLatestBlock().index + 1, // 다음 블록 번호
         fromDID,
         toDID,
         amount,
-        tokenType,
+        tokenType: normalizedTokenType,
         timestamp: Date.now(),
-        message: `${amount} ${tokenType}-Token이 성공적으로 전송되었습니다 (블록 #${block.index})`
+        feeDistribution,
+        recipient,
+        message: `${amount} ${normalizedTokenType}이 성공적으로 전송되었습니다`
       };
     } catch (error) {
+      console.error('토큰 전송 실패:', error);
       return {
         success: false,
         error: error.message
