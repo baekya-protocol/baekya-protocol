@@ -399,6 +399,14 @@
       "communicationAddress": "010-7500-1297",
       "createdAt": 1752369208783,
       "lastUpdated": 1752369208783
+    },
+    "422858982bb42f9ffcf940c47dcc0e6f86a5584d0ed4cbbe8a551ed7306ca669": {
+      "didHash": "422858982bb42f9ffcf940c47dcc0e6f86a5584d0ed4cbbe8a551ed7306ca669",
+      "username": "qzxv1971",
+      "name": "dd",
+      "communicationAddress": "010-4316-1745",
+      "createdAt": 1752370093874,
+      "lastUpdated": 1752370093874
     }
   },
   "tokens": {
@@ -559,7 +567,8 @@
       "3cab3f4e5c78d7867b7c1b8ad3f7c9accef9b6205e77a1261aad7a6006f89845": 30,
       "104b1735332c2fc8ef88f323dfd5fa105db5fceb413533af8e3d10f1d7ce0fd4": 30,
       "af50c4cb58293fbca932a036fe747709932772b670c9a3118d5a846e283e6a89": 70,
-      "812f10a9aebbc4618953546cdd1fab9d86d583bf12aaced94a5086cbe4958d8a": 20
+      "812f10a9aebbc4618953546cdd1fab9d86d583bf12aaced94a5086cbe4958d8a": 20,
+      "8a2c0104cda322805333c547360cb9a03840c3659a4361506ec3ddc1018d0552": 30
     },
     "pTokenBalances": {}
   },
@@ -569,8 +578,8 @@
       "name": "Development DAO",
       "purpose": "Development",
       "description": "백야 프로토콜 개발을 담당하는 DAO",
-      "founderDID": "af50c4cb58293fbca932a036fe747709932772b670c9a3118d5a846e283e6a89",
-      "operatorDID": "af50c4cb58293fbca932a036fe747709932772b670c9a3118d5a846e283e6a89",
+      "founderDID": "8a2c0104cda322805333c547360cb9a03840c3659a4361506ec3ddc1018d0552",
+      "operatorDID": "8a2c0104cda322805333c547360cb9a03840c3659a4361506ec3ddc1018d0552",
       "createdAt": 1752143092891,
       "status": "active",
       "lastUpdated": 1752143092891
@@ -580,8 +589,8 @@
       "name": "Community DAO",
       "purpose": "Community Management",
       "description": "백야 프로토콜 커뮤니티 관리를 담당하는 DAO",
-      "founderDID": "af50c4cb58293fbca932a036fe747709932772b670c9a3118d5a846e283e6a89",
-      "operatorDID": "af50c4cb58293fbca932a036fe747709932772b670c9a3118d5a846e283e6a89",
+      "founderDID": "8a2c0104cda322805333c547360cb9a03840c3659a4361506ec3ddc1018d0552",
+      "operatorDID": "8a2c0104cda322805333c547360cb9a03840c3659a4361506ec3ddc1018d0552",
       "createdAt": 1752143092892,
       "status": "active",
       "lastUpdated": 1752143092892
@@ -8047,6 +8056,20 @@
       "nonce": "97029e5c568f93384d71789addafe930",
       "signature": "8cabfea9bba8713c1f3a1f0de556af4799d9021246f328c50c4f3e06e80ec57b",
       "hash": "beb128daaa35df875efd342129a6d96a10f168ae77c20415957198dc93557938"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "8a2c0104cda322805333c547360cb9a03840c3659a4361506ec3ddc1018d0552",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752369999894,
+      "nonce": "8e604a75d59a08a967b8c31205d49df5",
+      "signature": "founder-initial-grant",
+      "hash": "4a2479628a234946b8b9d31c79a7d902a0cfaca86a893f49914afa6a5e7b5a19"
     }
   ],
   "blockchain": [
@@ -18099,6 +18122,45 @@
       "hash": "0099fbd536be586a2db465d33c9cd5f23ffaf632a128a0b4405b462e0220a212",
       "nonce": 63,
       "validator": "af50c4cb58293fbca932a036fe747709932772b670c9a3118d5a846e283e6a89"
+    },
+    {
+      "index": 219,
+      "timestamp": 1752369999885,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "8a2c0104cda322805333c547360cb9a03840c3659a4361506ec3ddc1018d0552",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752369999884,
+          "nonce": "8e604a75d59a08a967b8c31205d49df5",
+          "signature": "founder-initial-grant",
+          "hash": "4a2479628a234946b8b9d31c79a7d902a0cfaca86a893f49914afa6a5e7b5a19"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 219,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752369999912,
+          "nonce": "920ac8cf9644cda25067e3290f375c93",
+          "signature": null,
+          "hash": "89946db6e8bac38d1b72680046b6dc975580a7b2432c0b16d820f2158d939d9c"
+        }
+      ],
+      "previousHash": "0099fbd536be586a2db465d33c9cd5f23ffaf632a128a0b4405b462e0220a212",
+      "hash": "00ca900a8147ac1ba5ee43cd60779beee13bddbeaded327992a8e79e2e7fb72a",
+      "nonce": 209,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
     }
   ],
   "inviteCodes": {
