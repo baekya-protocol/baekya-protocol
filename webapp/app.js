@@ -4437,7 +4437,57 @@ class BaekyaProtocolDApp {
   }
 
     async processFirebaseGitHubIntegration(daoId) {
-    // 먼저 기존 연동 상태 확인 (모바일에서도 확인 가능)
+    // 먼저 Firebase Auth 상태 확인
+    const currentUser = window.firebaseAuth?.currentUser;
+    
+    if (currentUser) {
+      // 이미 Firebase Auth로 로그인되어 있으면 성공 모달 바로 표시
+      console.log('🔗 Firebase 사용자 이미 로그인됨:', currentUser.displayName || currentUser.email);
+      
+      const githubInfo = window.getGitHubInfoFromUser(currentUser);
+      
+      // 연동 상태를 localStorage에 저장
+      const integrationData = {
+        githubUsername: githubInfo.githubUsername,
+        displayName: githubInfo.displayName,
+        photoURL: githubInfo.photoURL,
+        targetRepository: 'baekya-protocol/baekya-protocol',
+        connectedAt: new Date().toISOString(),
+        uid: githubInfo.uid
+      };
+      
+      this.saveFirebaseGitHubIntegration(daoId, integrationData);
+      
+      // 성공 모달 표시
+      const result = {
+        user: {
+          displayName: githubInfo.displayName,
+          photoURL: githubInfo.photoURL,
+          reloadUserInfo: {
+            screenName: githubInfo.githubUsername
+          },
+          email: githubInfo.email
+        }
+      };
+      
+      this.showFirebaseGitHubIntegrationSuccess(result, daoId, true);
+      
+      // GitHub 연동 모달 닫기
+      const githubModal = document.querySelector('.modal');
+      if (githubModal) {
+        githubModal.remove();
+      }
+  
+      // DAO 참여 모달 닫기
+      const daoModal = document.querySelector('.dao-participate-modal');
+      if (daoModal) {
+        daoModal.closest('.modal').remove();
+      }
+      
+      return; // 이미 연동되어 있으므로 여기서 종료
+    }
+    
+    // Firebase Auth 상태가 없으면 localStorage에서 기존 연동 상태 확인
     const existingIntegration = await this.checkGitHubIntegrationStatus(daoId);
     
     if (existingIntegration) {
@@ -4966,13 +5016,47 @@ class BaekyaProtocolDApp {
     }
   }
 
-  // GitHub 연동 상태 확인
+  // GitHub 연동 상태 확인 (로컬 + 서버)
   async checkGitHubIntegrationStatus(daoId) {
     try {
+      // 1. 먼저 로컬 스토리지에서 확인
       const key = `github_integration_${this.currentUser.did}`;
-      const integrations = JSON.parse(localStorage.getItem(key) || '{}');
+      const localIntegrations = JSON.parse(localStorage.getItem(key) || '{}');
       
-      return integrations[daoId] ? integrations[daoId] : null;
+      if (localIntegrations[daoId]) {
+        console.log('🔗 로컬에서 GitHub 연동 상태 발견:', localIntegrations[daoId]);
+        return localIntegrations[daoId];
+      }
+      
+      // 2. 로컬에 없으면 서버에서 확인 (기기간 동기화)
+      try {
+        console.log('🔍 서버에서 GitHub 연동 상태 확인 중...');
+        const response = await fetch(`${this.apiBase}/github/integration-status`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.currentUser?.did}`
+          }
+        });
+        
+        if (response.ok) {
+          const serverData = await response.json();
+          if (serverData.success && serverData.integration) {
+            console.log('🔗 서버에서 GitHub 연동 상태 발견:', serverData.integration);
+            
+            // 서버에서 받은 연동 정보를 로컬에도 저장 (캐싱)
+            const localIntegrations = JSON.parse(localStorage.getItem(key) || '{}');
+            localIntegrations[daoId] = serverData.integration;
+            localStorage.setItem(key, JSON.stringify(localIntegrations));
+            
+            return serverData.integration;
+          }
+        }
+      } catch (serverError) {
+        console.log('⚠️  서버 연동 상태 확인 실패, 로컬만 사용:', serverError.message);
+      }
+      
+      return null;
     } catch (error) {
       console.error('GitHub 연동 상태 확인 실패:', error);
       return null;
@@ -11238,25 +11322,15 @@ class BaekyaProtocolDApp {
 
   // 백야 네트워크 사용자 검색
   async searchNetworkUsers() {
-    console.log('🔍 searchNetworkUsers 함수 시작');
-    console.log('🔍 현재 호스트명:', window.location.hostname);
-    console.log('🔍 전체 URL:', window.location.href);
-    console.log('🔍 isLocal 여부:', window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    
     const searchInput = document.getElementById('networkSearchInput');
     const searchTerm = searchInput ? searchInput.value.trim() : '';
     
-    console.log('🔍 검색어:', searchTerm);
-    console.log('🔍 검색 입력창 요소:', searchInput);
-    console.log('🔍 API 기본 URL:', this.apiBase);
-    
     if (!searchTerm) {
-      console.log('❌ 검색어가 비어있음');
       this.showErrorMessage('검색어를 입력해주세요');
       return;
     }
     
-    console.log('🔍 백야 네트워크 검색 시작:', searchTerm);
+    console.log('🔍 백야 네트워크 검색:', searchTerm);
     
     // UI 상태 업데이트
     this.showSearchStatus(true);
@@ -11289,23 +11363,14 @@ class BaekyaProtocolDApp {
   async simulateNetworkSearch(searchTerm) {
     try {
       console.log('🔍 서버 API 호출 시작:', searchTerm);
-      console.log('🔍 API URL:', `${this.apiBase}/p2p/find-contact/${encodeURIComponent(searchTerm)}`);
       
       // 실제 서버 API 호출
       const response = await fetch(`${this.apiBase}/p2p/find-contact/${encodeURIComponent(searchTerm)}`);
       
       console.log('📡 서버 응답 상태:', response.status);
-      console.log('📡 서버 응답 객체:', response);
-      
-      if (!response.ok) {
-        console.error('❌ HTTP 오류:', response.status, response.statusText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
       
       const result = await response.json();
       console.log('📋 서버 응답 데이터:', result);
-      console.log('📋 result.success:', result.success);
-      console.log('📋 result.found:', result.found);
       
       let networkUsers = [];
       
@@ -11344,8 +11409,8 @@ class BaekyaProtocolDApp {
       } else {
         console.log('❌ 사용자를 찾지 못함:', result.message || '알 수 없는 오류');
       }
-      
-      this.showSearchStatus(false);
+    
+    this.showSearchStatus(false);
       this.displaySearchResults(networkUsers);
       
       console.log('🎯 검색 결과 표시 완료, 결과 수:', networkUsers.length);
@@ -11359,34 +11424,21 @@ class BaekyaProtocolDApp {
   }
 
   displaySearchResults(results) {
-    console.log('🎯 displaySearchResults 호출됨, 결과 수:', results.length);
-    console.log('🎯 검색 결과 데이터:', results);
-    
     const searchResults = document.getElementById('searchResultsSection');
     const noResults = document.getElementById('noResults');
     const usersList = document.getElementById('networkUsersList');
     
-    console.log('🎯 DOM 요소들:', {
-      searchResults: !!searchResults,
-      noResults: !!noResults,
-      usersList: !!usersList
-    });
-    
     if (results.length === 0) {
-      console.log('❌ 검색 결과가 없음 - "검색 결과 없음" 화면 표시');
       if (searchResults) searchResults.style.display = 'none';
       if (noResults) noResults.style.display = 'block';
       return;
     }
     
-    console.log('✅ 검색 결과가 있음 - 결과 목록 표시');
     if (noResults) noResults.style.display = 'none';
     if (searchResults) searchResults.style.display = 'block';
     
     if (usersList) {
-      const html = results.map(user => this.generateNetworkUserHTML(user)).join('');
-      console.log('🎯 생성된 HTML:', html);
-      usersList.innerHTML = html;
+      usersList.innerHTML = results.map(user => this.generateNetworkUserHTML(user)).join('');
     }
   }
 

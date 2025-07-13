@@ -53,20 +53,7 @@
 
 
 
-                <!-- P2P 탭 헤더 -->
-                <div class="mobile-header-tab" id="mobile-header-p2p">
-                    <div class="mobile-header-p2p">
-                        <div class="mobile-p2p-title">
-                            <i class="fas fa-comments"></i>
-                            <span>P2P</span>
-                        </div>
-                        <div class="mobile-p2p-actions">
-                            <button class="mobile-p2p-btn" id="mobileP2PActionBtn" onclick="window.dapp.showAddContact()">
-                                <i class="fas fa-user-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
     </header>
@@ -92,11 +79,7 @@
                     <i class="fas fa-users"></i>
                     <span>DAO</span>
                 </button>
-                <button class="tab-btn" data-tab="p2p">
-                    <i class="fas fa-comments"></i>
-                    <span>P2P</span>
-                    <div class="tab-notification-badge" id="p2pNotificationBadge" style="display: none;"></div>
-                </button>
+
             </nav>
 
             <!-- 대시보드 탭 -->
@@ -484,345 +467,8 @@
             </div>
 
 
-            <div id="p2p" class="tab-content">
-                <div class="p2p-container">
-                    <div class="p2p-header">
-                        <h2><i class="fas fa-wifi"></i> P2P 통신</h2>
-                        <div class="p2p-actions">
-                            <button class="btn-secondary" onclick="window.dapp.showAddContact()" title="연락처 추가">
-                                <i class="fas fa-user-plus"></i> 연락처 추가
-                            </button>
-                            <button class="btn-secondary" onclick="window.dapp.showCreateGroupChat()" title="그룹채팅 생성">
-                                <i class="fas fa-users"></i> 그룹채팅
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- P2P 탭 네비게이션 -->
-                    <div class="p2p-tab-navigation">
-                        <button class="p2p-nav-tab active" data-tab="contacts" onclick="window.dapp.switchP2PTab('contacts')">
-                                    <i class="fas fa-address-book"></i>
-                                    <span>연락처</span>
-                                </button>
-                        <button class="p2p-nav-tab" data-tab="chats" onclick="window.dapp.switchP2PTab('chats')">
-                                    <i class="fas fa-comments"></i>
-                                    <span>채팅</span>
-                                </button>
-                        <button class="p2p-nav-tab" data-tab="public" onclick="window.dapp.switchP2PTab('public')">
-                                    <i class="fas fa-globe"></i>
-                                    <span>공개</span>
-                                </button>
-                            </div>
-                        
-                    <!-- 연락처 화면 -->
-                    <div id="contactsScreen" class="p2p-screen active">
-                    
-                    <!-- 연락처 검색창 -->
-                    <div class="p2p-search-section">
-                        <div class="search-input-wrapper">
-                            <input type="text" id="contactSearchInput" placeholder="연락처 검색..." oninput="window.dapp.searchContacts(this.value)">
-                            <button class="clear-search-btn" onclick="window.dapp.clearContactSearch()" style="display: none;" title="검색 초기화">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
 
 
-                    
-                    <div class="contact-list-full" id="contactsList">
-                                <!-- 연락처 목록이 동적으로 생성됩니다 -->
-                            </div>
-                        </div>
-                        
-                    <!-- 채팅 화면 -->
-                    <div id="chatsScreen" class="p2p-screen">
-                    
-                    <!-- 채팅방 검색창 -->
-                    <div class="p2p-search-section">
-                        <div class="search-input-wrapper">
-                            <input type="text" id="chatSearchInput" placeholder="채팅방 검색..." oninput="window.dapp.searchChats(this.value)">
-                            <button class="clear-search-btn" onclick="window.dapp.clearChatSearch()" style="display: none;" title="검색 초기화">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 채팅 필터 메뉴바 -->
-                    <div class="chat-filter-nav dao-nav-filter">
-                        <div class="dao-filter-scroll">
-                            <button class="dao-filter-btn active" onclick="window.dapp.filterChats('all')" data-filter="all">
-                                <i class="fas fa-comments"></i>
-                                <span>전체</span>
-                            </button>
-                            <button class="dao-filter-btn" onclick="window.dapp.filterChats('individual')" data-filter="individual">
-                                <i class="fas fa-user"></i>
-                                <span>개인</span>
-                            </button>
-                            <button class="dao-filter-btn" onclick="window.dapp.filterChats('group')" data-filter="group">
-                                <i class="fas fa-users"></i>
-                                <span>단체</span>
-                            </button>
-                            <button class="dao-filter-btn" onclick="window.dapp.filterChats('public')" data-filter="public">
-                                <i class="fas fa-globe"></i>
-                                <span>공개</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="chat-list-full" id="chatsList">
-                                <!-- 채팅방 목록이 동적으로 생성됩니다 -->
-                        </div>
-                    </div>
-                    
-                    <!-- 공개 채팅 화면 -->
-                    <div id="publicScreen" class="p2p-screen">
-                        <!-- 공개 채팅방 검색 및 생성 -->
-                        <div class="public-chat-header">
-                            <div class="public-search-section">
-                                <div class="search-input-wrapper">
-                                    <input type="text" id="publicChatSearchInput" placeholder="공개 채팅방 검색..." oninput="window.dapp.searchPublicChats(this.value)">
-                                    <button class="clear-search-btn" onclick="window.dapp.clearPublicChatSearch()" style="display: none;" title="검색 초기화">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <button class="create-public-chat-btn" onclick="window.dapp.showCreatePublicChatModal()">
-                                <i class="fas fa-plus"></i>
-                                <span>채팅방 만들기</span>
-                            </button>
-                        </div>
-
-
-                        
-                        <!-- 공개 채팅방 목록 -->
-                        <div class="public-chat-list" id="publicChatsList">
-                            <!-- 공개 채팅방 목록이 동적으로 생성됩니다 -->
-                        </div>
-                    </div>
-                    
-                <!-- 개별 채팅 화면 -->
-                <div id="chatScreen" class="p2p-screen chat-screen">
-                    <div class="chat-header">
-                        <button class="chat-back-btn" onclick="window.dapp.backToP2PList()">
-                            <i class="fas fa-arrow-left"></i>
-                        </button>
-                        <div class="chat-user-info" onclick="window.dapp.showChatRoomInfo()">
-                            <div class="chat-avatar">
-                                <i class="fas fa-user"></i>
-                            </div>
-                            <div class="chat-details">
-                                <h3 id="chatUserName">사용자</h3>
-                                <span id="chatUserStatus">온라인</span>
-                            </div>
-                        </div>
-                        <div class="chat-actions">
-                            <button class="chat-action-btn" onclick="window.dapp.confirmCall(window.dapp.currentChatId)" title="음성통화">
-                                <i class="fas fa-phone"></i>
-                            </button>
-                            <button class="chat-action-btn" onclick="window.dapp.confirmVideoCall(window.dapp.currentChatId)" title="영상통화">
-                                <i class="fas fa-video"></i>
-                            </button>
-                            <button class="chat-action-btn" onclick="window.dapp.openChatMenu()" title="채팅방 메뉴">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="chat-messages" id="chatMessages">
-                        <!-- 채팅 메시지들이 동적으로 생성됩니다 -->
-                    </div>
-                    <div class="chat-input-area">
-                        <div class="chat-input-container">
-                            <div class="input-attachments">
-                                <button class="attachment-btn" onclick="window.dapp.openAttachmentMenu()" title="첨부">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
-                            <div class="input-main">
-                                <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." onkeypress="if(event.key==='Enter') window.dapp.sendMessage()">
-                                <div class="input-extras">
-                                    <!-- 이모지 버튼 제거됨
-                                    <button class="input-extra-btn" onclick="window.dapp.openEmojiPicker()" title="이모지">
-                                        <i class="fas fa-smile"></i>
-                                    </button>
-                                    -->
-                                    <!-- 음성메시지 버튼 제거됨
-                                    <button class="input-extra-btn" onclick="window.dapp.toggleVoiceMessage()" title="음성메시지">
-                                        <i class="fas fa-microphone"></i>
-                                    </button>
-                                    -->
-                                </div>
-                            </div>
-                            <button class="send-btn" onclick="window.dapp.sendMessage()">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                    <!-- 인증 요구 상태 (비인증 사용자용) -->
-                    <div class="auth-required" id="p2pAuthRequired" style="display: none;">
-                        <i class="fas fa-lock"></i>
-                        <h3>P2P 통신을 위해 로그인이 필요합니다</h3>
-                        <button class="btn-primary" onclick="document.querySelector('[data-tab=wallet]').click()">
-                            <i class="fas fa-wallet"></i>
-                            지갑으로 이동
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 모달들 -->
-
-    <!-- 채팅방 메뉴 모달 -->
-    <div id="chatMenuModal" class="modal">
-        <div class="modal-content chat-menu-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-cog"></i> 채팅방 설정</h3>
-                <button class="modal-close" onclick="window.dapp.closeChatMenu()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="chat-menu-grid">
-                    <button class="chat-menu-item" onclick="window.dapp.showNotificationSettings()">
-                        <i class="fas fa-bell"></i>
-                        <span>알림설정</span>
-                    </button>
-                    <button class="chat-menu-item" onclick="window.dapp.showChatSchedule()">
-                        <i class="fas fa-calendar"></i>
-                        <span>일정</span>
-                    </button>
-                    <button class="chat-menu-item" onclick="window.dapp.showChatAnnouncement()">
-                        <i class="fas fa-bullhorn"></i>
-                        <span>공지사항</span>
-                    </button>
-                    <button class="chat-menu-item" onclick="window.dapp.showChatVote()">
-                        <i class="fas fa-vote-yea"></i>
-                        <span>투표</span>
-                    </button>
-                    <button class="chat-menu-item" onclick="window.dapp.showChatPhotos()">
-                        <i class="fas fa-images"></i>
-                        <span>사진/동영상</span>
-                    </button>
-                    <button class="chat-menu-item" onclick="window.dapp.showChatFiles()">
-                        <i class="fas fa-file"></i>
-                        <span>파일</span>
-                    </button>
-                    <button class="chat-menu-item" onclick="window.dapp.showChatLinks()">
-                        <i class="fas fa-link"></i>
-                        <span>링크</span>
-                    </button>
-                    <button class="chat-menu-item" onclick="window.dapp.showChatSearch()">
-                        <i class="fas fa-search"></i>
-                        <span>대화검색</span>
-                    </button>
-                    <button class="chat-menu-item danger" onclick="window.dapp.deleteChatHistory()">
-                        <i class="fas fa-trash"></i>
-                        <span>채팅방 삭제하기</span>
-                    </button>
-                    <button class="chat-menu-item danger" onclick="window.dapp.leaveChatRoom()">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>채팅방 나가기</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 첨부 메뉴 모달 -->
-    <div id="attachmentMenuModal" class="modal">
-        <div class="modal-content attachment-menu-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-paperclip"></i> 첨부하기</h3>
-                <button class="modal-close" onclick="window.dapp.closeAttachmentMenu()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="attachment-menu-grid">
-                    <button class="attachment-menu-item" onclick="window.dapp.attachPhoto()">
-                        <i class="fas fa-camera"></i>
-                        <span>사진</span>
-                    </button>
-                    <button class="attachment-menu-item" onclick="window.dapp.attachVideo()">
-                        <i class="fas fa-video"></i>
-                        <span>동영상</span>
-                    </button>
-                    <button class="attachment-menu-item" onclick="window.dapp.attachFile()">
-                        <i class="fas fa-file"></i>
-                        <span>파일</span>
-                    </button>
-                    <button class="attachment-menu-item" onclick="window.dapp.attachContact()">
-                        <i class="fas fa-user"></i>
-                        <span>연락처</span>
-                    </button>
-                    <button class="attachment-menu-item" onclick="window.dapp.attachLocation()">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>위치</span>
-                    </button>
-                    <button class="attachment-menu-item" onclick="window.dapp.attachMoney()">
-                        <i class="fas fa-coins"></i>
-                        <span>송금</span>
-                    </button>
-                    <button class="attachment-menu-item" onclick="window.dapp.attachVote()">
-                        <i class="fas fa-vote-yea"></i>
-                        <span>투표만들기</span>
-                    </button>
-                    <button class="attachment-menu-item" onclick="window.dapp.attachSchedule()">
-                        <i class="fas fa-calendar-plus"></i>
-                        <span>일정잡기</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 대화정보 모달 -->
-    <div id="chatInfoModal" class="modal">
-        <div class="modal-content chat-info-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-info-circle"></i> 대화정보</h3>
-                <button class="modal-close" onclick="window.dapp.closeChatInfo()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="chat-info-section">
-                    <div class="chat-info-profile">
-                        <div class="chat-info-avatar" id="chatInfoAvatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="chat-info-details">
-                            <h4 id="chatInfoName">사용자</h4>
-                            <p id="chatInfoStatus">온라인</p>
-                        </div>
-                    </div>
-                    
-                    <div class="chat-info-stats">
-                        <div class="chat-stat-item">
-                            <span class="stat-label">총 메시지</span>
-                            <span class="stat-value" id="totalMessages">127</span>
-                        </div>
-                        <div class="chat-stat-item">
-                            <span class="stat-label">첫 대화</span>
-                            <span class="stat-value" id="firstChatDate">2024.01.15</span>
-                        </div>
-                        <div class="chat-stat-item">
-                            <span class="stat-label">공유된 파일</span>
-                            <span class="stat-value" id="sharedFiles">8</span>
-                        </div>
-                    </div>
-
-                    <div class="chat-info-actions">
-                        <button class="chat-info-action-btn" onclick="window.dapp.blockUser()">
-                            <i class="fas fa-ban"></i>
-                            <span>차단하기</span>
-                        </button>
-                        <button class="chat-info-action-btn" onclick="window.dapp.reportUser()">
-                            <i class="fas fa-flag"></i>
-                            <span>신고하기</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- 이모지 피커 모달 -->
     <div id="emojiPickerModal" class="modal">
@@ -1929,8 +1575,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    
+    <!-- Firebase 설정 -->
+    <script src="firebase-config.js"></script>
+    
     <script src="app.js"></script>
-    <script src="app-additions.js"></script>
     <script src="ime-fix.js"></script>
     
     <!-- 서비스 워커 등록 -->

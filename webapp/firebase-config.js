@@ -22,6 +22,10 @@ try {
 const auth = firebase.auth();
 const githubProvider = new firebase.auth.GithubAuthProvider();
 
+// Firebase Auth 객체를 전역으로 내보내기
+window.firebaseAuth = auth;
+window.getGitHubInfoFromUser = getGitHubInfoFromUser;
+
 // GitHub 스코프 설정 (사용자 정보 및 public 저장소 접근)
 githubProvider.addScope('user');
 githubProvider.addScope('user:email');
@@ -36,6 +40,30 @@ githubProvider.setCustomParameters({
 auth.onAuthStateChanged((user) => {
   if (user) {
     console.log('🔥 Firebase 사용자 로그인됨:', user.displayName || user.email);
+    
+    // GitHub 연동 상태를 localStorage에 저장
+    const githubInfo = getGitHubInfoFromUser(user);
+    
+    if (window.dapp && window.dapp.currentUser && window.dapp.currentUser.did) {
+      // 연동 상태 저장
+      const integrationData = {
+        githubUsername: githubInfo.githubUsername,
+        displayName: githubInfo.displayName,
+        photoURL: githubInfo.photoURL,
+        targetRepository: 'baekya-protocol/baekya-protocol',
+        connectedAt: new Date().toISOString(),
+        uid: githubInfo.uid
+      };
+      
+      // dev-dao에 대한 연동 상태 저장
+      const key = `github_integration_${window.dapp.currentUser.did}`;
+      const existing = JSON.parse(localStorage.getItem(key) || '{}');
+      existing['dev-dao'] = integrationData;
+      localStorage.setItem(key, JSON.stringify(existing));
+      
+      console.log('🔗 Firebase GitHub 연동 상태 저장됨:', integrationData);
+    }
+    
     updateUIForAuthenticatedUser(user);
   } else {
     console.log('🔥 Firebase 사용자 로그아웃됨');
@@ -65,9 +93,23 @@ async function signInWithGitHub() {
     const result = await auth.signInWithPopup(githubProvider);
     const user = result.user;
     
-    // credential 안전 처리
-    const credential = firebase.auth.GithubAuthProvider.credentialFromResult(result);
-    const accessToken = credential ? credential.accessToken : null;
+    // credential 안전 처리 (Firebase v8 호환)
+    let credential = null;
+    let accessToken = null;
+    
+    try {
+      // result에서 직접 credential 가져오기 (Firebase v8/v9 호환)
+      credential = result.credential || null;
+      accessToken = credential?.accessToken || null;
+      
+      // 추가적으로 additionalUserInfo에서도 확인
+      if (!accessToken && result.additionalUserInfo) {
+        accessToken = result.additionalUserInfo.accessToken || null;
+      }
+    } catch (credentialError) {
+      console.log('⚠️ Credential 추출 실패 (무시하고 계속):', credentialError.message);
+      // credential 없이도 사용자 정보는 있으므로 계속 진행
+    }
     
     console.log('🔥 GitHub 로그인 성공:', user.displayName || user.email);
     console.log('🔑 Access Token 확인:', accessToken ? '있음' : '없음');
@@ -99,12 +141,43 @@ async function linkGitHubAccount(user, accessToken) {
   try {
     const idToken = await user.getIdToken();
     
-    // GitHub 사용자명 추출
-    const githubUsername = user.reloadUserInfo?.screenName || 
-                          user.providerData?.[0]?.displayName || 
-                          extractUsernameFromEmail(user.email);
+    // GitHub 사용자명 추출 (더 정확한 방식)
+    let githubUsername = null;
+    
+    // 1순위: reloadUserInfo에서 screenName
+    if (user.reloadUserInfo?.screenName) {
+      githubUsername = user.reloadUserInfo.screenName;
+    }
+    // 2순위: providerData에서 displayName 먼저 시도 (실제 사용자명)
+    else if (user.providerData && user.providerData.length > 0) {
+      const githubProvider = user.providerData.find(p => p.providerId === 'github.com');
+      if (githubProvider) {
+        // displayName이 실제 GitHub 사용자명인 경우가 많음
+        githubUsername = githubProvider.displayName || githubProvider.uid;
+        
+        // 숫자로만 이루어진 경우 GitHub ID이므로 이메일에서 추출 시도
+        if (githubUsername && /^\d+$/.test(githubUsername)) {
+          console.log(`⚠️ GitHub ID 감지 (${githubUsername}), 이메일에서 사용자명 추출 시도`);
+          githubUsername = null; // 이메일에서 추출하도록
+        }
+      }
+    }
+    // 3순위: 이메일에서 추출
+    if (!githubUsername && user.email) {
+      githubUsername = extractUsernameFromEmail(user.email);
+    }
+    
+    // 최종 검증: 여전히 숫자로만 이루어져 있으면 이메일에서 강제 추출
+    if (githubUsername && /^\d+$/.test(githubUsername) && user.email) {
+      console.log(`⚠️ 최종 검증: GitHub ID 발견, 이메일에서 강제 추출`);
+      githubUsername = extractUsernameFromEmail(user.email);
+    }
     
     console.log('🔗 GitHub 계정 연동 시도:', githubUsername);
+    console.log('🔍 사용자 정보 디버깅:');
+    console.log('  - reloadUserInfo:', user.reloadUserInfo);
+    console.log('  - providerData:', user.providerData);
+    console.log('  - email:', user.email);
     
     // 현재 백야 프로토콜 사용자 DID 가져오기
     const currentUser = window.dapp?.currentUser;
@@ -121,7 +194,26 @@ async function linkGitHubAccount(user, accessToken) {
       headers['Authorization'] = `Bearer ${userDID}`;
     }
     
-    const response = await fetch('/api/github/link-account', {
+    if (!githubUsername) {
+      throw new Error('GitHub 사용자명을 찾을 수 없습니다');
+    }
+
+    console.log('📡 서버에 GitHub 연동 요청 전송:', {
+      githubUsername,
+      userDID,
+      hasIdToken: !!idToken,
+      hasAccessToken: !!accessToken
+    });
+
+    // GitHub 연동은 풀노드에 직접 요청 (릴레이서버 우회)
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const githubApiUrl = isLocal 
+      ? '/api/github/link-account'  // 로컬에서는 상대 경로
+      : 'https://baekya-node-3000.loca.lt/api/github/link-account'; // 배포 환경에서는 풀노드 직접 호출
+    
+    console.log('📡 GitHub API 요청 URL:', githubApiUrl);
+    
+    const response = await fetch(githubApiUrl, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
@@ -132,9 +224,30 @@ async function linkGitHubAccount(user, accessToken) {
       })
     });
 
+    console.log('📡 서버 응답 상태:', response.status, response.statusText);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'GitHub 계정 연동 실패');
+      // 응답이 JSON인지 확인
+      const contentType = response.headers.get('content-type');
+      let errorMessage = 'GitHub 계정 연동 실패';
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('❌ JSON 파싱 실패:', parseError);
+          const errorText = await response.text();
+          console.error('❌ 서버 응답 텍스트:', errorText);
+          errorMessage = `서버 오류 (${response.status}): ${errorText.substring(0, 100)}`;
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('❌ 서버 HTML 응답:', errorText);
+        errorMessage = `서버 오류 (${response.status}): HTML 응답 수신`;
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
@@ -149,7 +262,14 @@ async function linkGitHubAccount(user, accessToken) {
 // 이메일에서 사용자명 추출 (fallback)
 function extractUsernameFromEmail(email) {
   if (!email) return 'unknown';
-  return email.split('@')[0];
+  
+  // 이메일에서 @ 앞의 사용자명 추출
+  const username = email.split('@')[0];
+  
+  // vialucis1597@gmail.com -> vialucis1597 (올바른 추출)
+  console.log(`📧 이메일에서 사용자명 추출: ${email} -> ${username}`);
+  
+  return username;
 }
 
 // 로그아웃 함수
@@ -209,6 +329,24 @@ function updateUIForUnauthenticatedUser() {
 // Firebase Auth 상태 확인 함수
 function getCurrentUser() {
   return auth.currentUser;
+}
+
+// Firebase Auth 사용자로부터 GitHub 정보 추출
+function getGitHubInfoFromUser(user) {
+  if (!user) return null;
+  
+  const githubUsername = user.reloadUserInfo?.screenName || 
+                        user.providerData?.[0]?.displayName || 
+                        extractUsernameFromEmail(user.email) || 
+                        'unknown';
+  
+  return {
+    githubUsername: githubUsername,
+    displayName: user.displayName || githubUsername,
+    photoURL: user.photoURL || '/icons/icon-192x192.png',
+    email: user.email,
+    uid: user.uid
+  };
 }
 
 // Firebase Auth 준비 상태 확인

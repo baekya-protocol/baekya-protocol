@@ -3813,21 +3813,24 @@ app.post('/api/github/simulate-pr', async (req, res) => {
 // Firebase Auth 토큰 검증 미들웨어
 const verifyFirebaseToken = async (req, res, next) => {
   try {
-    const { idToken } = req.body;
+    const { idToken, githubUsername } = req.body;
+    
+    console.log('🔐 Firebase 토큰 검증 시작:', { hasIdToken: !!idToken, githubUsername });
     
     // 개발 모드에서는 Firebase 검증 건너뛰기
     if (!admin.apps.length) {
       console.log('⚠️  개발 모드: Firebase 토큰 검증 건너뛰기');
       req.firebaseUser = {
         uid: 'dev_user',
-        email: 'dev@localhost',
-        name: req.body.githubUsername || 'dev_user'
+        email: githubUsername ? `${githubUsername}@github.local` : 'dev@localhost',
+        name: githubUsername || 'dev_user'
       };
       return next();
     }
     
     if (!idToken) {
-      return res.status(401).json({
+      console.log('❌ Firebase ID 토큰이 없습니다');
+      return res.status(400).json({
         success: false,
         error: 'Firebase ID 토큰이 필요합니다'
       });
@@ -3835,20 +3838,23 @@ const verifyFirebaseToken = async (req, res, next) => {
     
     try {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
+      console.log('✅ Firebase 토큰 검증 성공:', decodedToken.email);
       req.firebaseUser = decodedToken;
       next();
     } catch (error) {
-      console.error('Firebase 토큰 검증 실패:', error);
+      console.error('❌ Firebase 토큰 검증 실패:', error);
       return res.status(401).json({
         success: false,
-        error: 'Firebase 토큰 검증 실패'
+        error: 'Firebase 토큰 검증 실패',
+        details: error.message
       });
     }
   } catch (error) {
-    console.error('Firebase 토큰 검증 미들웨어 오류:', error);
+    console.error('❌ Firebase 토큰 검증 미들웨어 오류:', error);
     return res.status(500).json({
       success: false,
-      error: '토큰 검증 중 오류 발생'
+      error: '토큰 검증 중 오류 발생',
+      details: error.message
     });
   }
 };
@@ -3856,13 +3862,31 @@ const verifyFirebaseToken = async (req, res, next) => {
 // GitHub 계정 연동 설정 (Firebase Auth 방식)
 app.post('/api/github/link-account', verifyFirebaseToken, async (req, res) => {
   try {
+    console.log('🔗 GitHub 계정 연동 요청 수신');
     const { idToken, accessToken, githubUsername, userDID: clientUserDID } = req.body;
     const firebaseUser = req.firebaseUser;
     
+    console.log('📝 요청 데이터:', {
+      hasIdToken: !!idToken,
+      hasAccessToken: !!accessToken,
+      githubUsername,
+      clientUserDID,
+      firebaseUser: firebaseUser ? { uid: firebaseUser.uid, email: firebaseUser.email } : null
+    });
+    
     if (!githubUsername) {
+      console.log('❌ GitHub 사용자명이 없습니다');
       return res.status(400).json({
         success: false,
         error: 'githubUsername이 필요합니다'
+      });
+    }
+    
+    if (!firebaseUser) {
+      console.log('❌ Firebase 사용자 정보가 없습니다');
+      return res.status(401).json({
+        success: false,
+        error: 'Firebase 인증이 필요합니다'
       });
     }
     
@@ -4233,6 +4257,8 @@ async function startServer() {
       console.log(`🔐 통합 인증: http://localhost:${port}/api/auth/verify`);
       console.log(`🔌 WebSocket: ws://localhost:${port}`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+      
+
       
       // 자동 터널 생성 (GitHub 웹훅용)
       console.log('🚀 GitHub 웹훅 자동 터널 설정 시작...');
@@ -4759,6 +4785,7 @@ async function setupGitHubCentralWebhook() {
         console.log(`   4. Content type: application/json`);
         console.log(`   5. Events: Pull requests, Pull request reviews, Issues 선택`);
         console.log(`   6. Active 체크 후 "Add webhook" 클릭`);
+        console.log(`\n   ⚠️  중요: 웹훅 URL은 항상 ${centralWebhookUrl} 로 고정되어야 합니다!`);
       }
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else {
@@ -4774,6 +4801,7 @@ async function setupGitHubCentralWebhook() {
 let tunnelRetryCount = 0;
 const MAX_TUNNEL_RETRIES = 3;
 let tunnelSetupInProgress = false;
+let preferredWebhookUrl = null; // 선호하는 고정 웹훅 URL
 
 async function setupAutoTunnel() {
   // 이미 터널 설정이 진행 중이면 중복 실행 방지
@@ -4783,6 +4811,7 @@ async function setupAutoTunnel() {
   }
 
   tunnelSetupInProgress = true;
+  const port = process.env.PORT || 3000;
 
   try {
     console.log('🚇 GitHub 웹훅용 터널 생성 중...');
@@ -4792,33 +4821,42 @@ async function setupAutoTunnel() {
       try {
         tunnel.close();
         tunnel = null;
-        webhookUrl = null;
       } catch (err) {
         console.log('기존 터널 정리 중 오류 (무시됨):', err.message);
       }
     }
+
+    // 고정 웹훅 URL이 이미 설정되어 있으면 우선 사용
+    if (preferredWebhookUrl) {
+      console.log(`🔗 기존 웹훅 URL 재사용: ${preferredWebhookUrl}`);
+      webhookUrl = preferredWebhookUrl;
+      
+      // GitHub 중앙 웹훅 설정
+      await setupGitHubCentralWebhook();
+      tunnelSetupInProgress = false;
+      return webhookUrl;
+    }
     
-    // 노드별 고유 서브도메인 생성 (포트 기반)
-    const port = process.env.PORT || 3000;
-    const subdomain = `baekya-node-${port}`;
+    // localtunnel로 터널 생성 (고정 subdomain)
+    console.log('🔧 localtunnel 터널 생성 중...');
+    const fixedSubdomain = 'baekya-node-3000'; // 항상 고정된 subdomain 사용
     
-    // 터널 생성 시도
     tunnel = await localtunnel({
       port: port,
-      subdomain: subdomain
+      subdomain: fixedSubdomain
     });
     
-    webhookUrl = tunnel.url;
-    tunnelRetryCount = 0; // 성공 시 재시도 카운트 초기화
+    const tunnelUrl = tunnel.url;
     
-    console.log(`✅ 터널 생성 완료: ${webhookUrl}`);
-    console.log(`🔗 GitHub 중앙 웹훅 URL: ${webhookUrl}/api/webhook/github/central`);
+    // localtunnel URL이 예상과 다르면 에러 발생
+    if (!tunnelUrl.includes(fixedSubdomain)) {
+      throw new Error(`예상된 subdomain(${fixedSubdomain})과 다른 URL 할당됨: ${tunnelUrl}`);
+    }
     
-    // GitHub 중앙 웹훅 설정
-    await setupGitHubCentralWebhook();
+    console.log(`✅ localtunnel 터널 생성 완료: ${tunnelUrl}`);
     
-    // 터널 이벤트 리스너 설정 (한 번만)
-    tunnel.removeAllListeners(); // 기존 리스너 제거
+    // 터널 이벤트 리스너 설정
+    tunnel.removeAllListeners();
     
     tunnel.on('error', (err) => {
       console.error('❌ 터널 오류:', err.message);
@@ -4829,6 +4867,15 @@ async function setupAutoTunnel() {
       console.log('⚠️ 터널 연결이 종료되었습니다.');
       handleTunnelReconnect('연결 종료');
     });
+    
+    webhookUrl = tunnelUrl;
+    preferredWebhookUrl = tunnelUrl; // 성공한 URL을 선호 URL로 저장
+    tunnelRetryCount = 0;
+    
+    console.log(`🔗 GitHub 중앙 웹훅 URL: ${webhookUrl}/api/webhook/github/central`);
+    
+    // GitHub 중앙 웹훅 설정
+    await setupGitHubCentralWebhook();
     
     tunnelSetupInProgress = false;
     return webhookUrl;
@@ -4843,14 +4890,16 @@ async function setupAutoTunnel() {
       console.log(`🔄 터널 재시도 (${tunnelRetryCount}/${MAX_TUNNEL_RETRIES}) - 10초 후...`);
       setTimeout(setupAutoTunnel, 10000);
     } else {
-      console.log('⚠️ 터널 재시도 횟수 초과. 로컬 모드로 계속 진행합니다.');
-      console.log('💡 GitHub 웹훅을 사용하려면 수동으로 ngrok 등을 설정하세요.');
+      console.log('⚠️ 터널 재시도 횟수 초과.');
+      console.log('💡 GitHub 웹훅을 수동으로 설정하세요:');
+      console.log('   - Payload URL: https://baekya-node-3000.loca.lt/api/webhook/github/central');
       
-      // 로컬 모드 웹훅 URL 설정
-      webhookUrl = `http://localhost:${process.env.PORT || 3000}`;
+      // 최종 대안: 고정 URL로 설정
+      webhookUrl = 'https://baekya-node-3000.loca.lt';
+      preferredWebhookUrl = webhookUrl;
       await setupGitHubCentralWebhook();
       
-      // 30초 후 한 번 더 시도
+      // 30초 후 다시 한 번 시도
       setTimeout(() => {
         tunnelRetryCount = 0;
         setupAutoTunnel();

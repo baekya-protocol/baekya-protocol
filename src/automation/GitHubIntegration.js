@@ -29,22 +29,34 @@ class GitHubIntegration {
    * @param {string} githubUsername 
    */
   setupUserGitHubMapping(userDID, githubUsername) {
+    if (!githubUsername || !userDID) {
+      console.error('❌ GitHub 연동 실패: 사용자명 또는 DID가 없습니다', { githubUsername, userDID });
+      return {
+        success: false,
+        error: '사용자명 또는 DID가 없습니다'
+      };
+    }
+
     // 기존 매핑이 있으면 제거
     for (const [username, did] of this.githubUserMappings.entries()) {
       if (did === userDID) {
+        console.log(`🔄 기존 매핑 제거: ${username} -> ${did}`);
         this.githubUserMappings.delete(username);
         break;
       }
     }
 
-    // 새로운 매핑 설정
-    this.githubUserMappings.set(githubUsername.toLowerCase(), userDID);
+    // 새로운 매핑 설정 (소문자로 정규화)
+    const normalizedUsername = githubUsername.toLowerCase();
+    this.githubUserMappings.set(normalizedUsername, userDID);
 
-    console.log(`✅ GitHub 계정 연동 완료: ${githubUsername} -> ${userDID}`);
+    console.log(`✅ GitHub 계정 연동 완료: ${githubUsername} (${normalizedUsername}) -> ${userDID}`);
+    console.log(`📋 현재 저장된 모든 매핑:`, Array.from(this.githubUserMappings.entries()));
     
     return {
       success: true,
       githubUsername,
+      normalizedUsername,
       userDID,
       message: 'GitHub 계정 연동이 완료되었습니다'
     };
@@ -168,10 +180,31 @@ class GitHubIntegration {
       return { success: false, message: 'No author information' };
     }
 
-    const userDID = this.githubUserMappings.get(githubUsername.toLowerCase());
+    console.log(`🔍 GitHub 사용자 매핑 검색: ${githubUsername}`);
+    console.log(`📋 현재 저장된 GitHub 매핑들:`, Array.from(this.githubUserMappings.entries()));
+    
+    // 대소문자 구분 없이 사용자 검색
+    let userDID = this.githubUserMappings.get(githubUsername.toLowerCase());
     if (!userDID) {
-      console.log(`연동되지 않은 GitHub 사용자: ${githubUsername}`);
-      return { success: false, message: 'GitHub user not linked' };
+      // 추가 검색 시도 (다양한 형태로)
+      for (const [storedUsername, storedDID] of this.githubUserMappings.entries()) {
+        if (storedUsername.toLowerCase() === githubUsername.toLowerCase()) {
+          userDID = storedDID;
+          break;
+        }
+      }
+      
+      if (!userDID) {
+        console.log(`❌ 연동되지 않은 GitHub 사용자: ${githubUsername}`);
+        console.log(`📋 저장된 사용자 목록: [${Array.from(this.githubUserMappings.keys()).join(', ')}]`);
+        return { success: false, message: 'GitHub user not linked' };
+      }
+      
+      console.log(`✅ 대체 검색으로 사용자 발견: ${githubUsername} -> ${userDID}`);
+      // 정확한 키로 다시 저장
+      this.githubUserMappings.set(githubUsername.toLowerCase(), userDID);
+    } else {
+      console.log(`✅ GitHub 사용자 매핑 발견: ${githubUsername} -> ${userDID}`);
     }
 
     const contributionId = `pr_${pullRequest.id}_${Date.now()}`;
