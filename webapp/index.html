@@ -24,7 +24,6 @@
                             <i class="fas fa-tachometer-alt"></i>
                             <span>대시보드</span>
                         </div>
-                        <div class="connection-status" id="connectionStatus">🟡 연결 중...</div>
                     </div>
                 </div>
 
@@ -118,6 +117,7 @@
                     <div class="status-card" data-card="profile">
                         <div class="card-header">
                             <h3><i class="fas fa-user-circle"></i> 내 프로필</h3>
+                            <div class="profile-connection-status" id="profileConnectionStatus">🟡 연결 중...</div>
                         </div>
                         <div class="card-content">
                             <div class="profile-section">
@@ -140,7 +140,6 @@
                                         <label>이름</label>
                                         <span id="userName">미설정</span>
                                     </div>
-                                    <!-- 생년월일 항목 제거됨 -->
                                     <div class="info-row">
                                         <label>상태메시지</label>
                                         <span id="userStatusMessage" style="color: var(--text-secondary); font-style: italic;">상태메시지를 설정해보세요</span>
@@ -148,14 +147,6 @@
                                 </div>
 
                                 <div class="profile-actions">
-                                    <button class="btn-secondary comm-btn" onclick="window.dapp.showCommunicationAddressModal()" id="commAddressButton" style="display: none;">
-                                        <i class="fas fa-phone"></i>
-                                        통신주소
-                                    </button>
-                                    <button class="btn-secondary p2p-btn" onclick="window.dapp.switchToP2P()" id="p2pButton" style="display: none;">
-                                        <i class="fas fa-comments"></i>
-                                        P2P 통신
-                                    </button>
                                     <span class="badge" id="verificationBadge">인증 대기</span>
                                 </div>
                             </div>
@@ -359,9 +350,9 @@
                                     </div>
                                     <form id="transferForm">
                                         <div class="form-group">
-                                            <label for="recipientAddress">받는 주소 (통신주소 또는 아이디)</label>
+                                            <label for="recipientAddress">받는 주소 (아이디)</label>
                                             <div class="address-input-group">
-                                            <input type="text" id="recipientAddress" placeholder="010-1234-5678 또는 아이디">
+                                            <input type="text" id="recipientAddress" placeholder="아이디 입력">
                                                 <!-- QR 스캔 버튼은 모바일 앱에서만 사용 가능 -->
                                                 <div class="web-qr-notice">
                                                     <i class="fas fa-mobile-alt"></i>

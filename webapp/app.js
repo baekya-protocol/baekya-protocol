@@ -237,16 +237,25 @@ class BaekyaProtocolDApp {
   // 연결 상태 업데이트
   updateConnectionStatus(status) {
     const statusElements = document.querySelectorAll('.connection-status');
+    const profileStatusElement = document.getElementById('profileConnectionStatus');
+    
     const statusText = {
       'connected': '🟢 실시간 연결',
       'connecting': '🟡 연결 중...',
       'disconnected': '🔴 연결 끊김'
     };
     
+    // 기존 연결상태 표시 요소들 업데이트
     statusElements.forEach(element => {
       element.textContent = statusText[status] || '❓ 알 수 없음';
       element.className = `connection-status ${status}`;
     });
+    
+    // 프로필 카드의 연결상태 표시 요소 업데이트
+    if (profileStatusElement) {
+      profileStatusElement.textContent = statusText[status] || '❓ 알 수 없음';
+      profileStatusElement.className = `profile-connection-status ${status}`;
+    }
     
     // 상태에 따른 추가 안내 메시지
     if (status === 'connected') {
