@@ -330,12 +330,12 @@ class BaekyaProtocolDApp {
       
       // 거래내역에 추가
       if (tx.type === 'sent') {
-        this.addTransaction(
+      this.addTransaction(
           'sent',
           tx.toAddress || tx.to, // 받는 사람의 원본 주소
-          tx.amount,
-          tx.memo || '',
-          'confirmed',
+        tx.amount,
+        tx.memo || '',
+        'confirmed',
           tx.toAddress || tx.to, // 통신주소로 표시
           tx.transactionId
         );
@@ -347,10 +347,10 @@ class BaekyaProtocolDApp {
           tx.memo || '',
           'confirmed',
           tx.fromAddress || tx.from, // 통신주소로 표시
-          tx.transactionId
-        );
-        
-        // 받은 거래인 경우 알림 표시
+        tx.transactionId
+      );
+      
+      // 받은 거래인 경우 알림 표시
         this.showSuccessMessage(
           `${tx.fromAddress}님으로부터 ${tx.amount} ${tx.tokenType}을 받았습니다.`
         );
@@ -389,6 +389,12 @@ class BaekyaProtocolDApp {
         
         existingContributions.push(contributionRecord);
         localStorage.setItem(contributionsKey, JSON.stringify(existingContributions));
+        
+        // 기여 개수 캐시 무효화
+        if (this.contributionCountCache) {
+          const cacheKey = `${this.currentUser.did}_${contribution.dao}`;
+          delete this.contributionCountCache[cacheKey];
+        }
         
         console.log('✅ 새로운 기여 내역 저장 완료:', contributionRecord);
       }
@@ -3091,11 +3097,19 @@ class BaekyaProtocolDApp {
     
     // 서버에 통신주소 업데이트 요청
     if (this.currentUser.did) {
-      fetch('/api/update-communication-address', {
+      console.log('🔄 통신주소 변경 요청 시작:', { 
+        didHash: this.currentUser.did, 
+        newAddress: newAddress,
+        apiBase: this.apiBase
+      });
+      
+      fetch(`${this.apiBase}/update-communication-address`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.sessionId}`
+          'Authorization': `Bearer ${this.sessionId}`,
+          'X-Session-ID': this.sessionId,
+          'X-Device-ID': this.getDeviceId()
         },
         body: JSON.stringify({
           didHash: this.currentUser.did,
@@ -3808,13 +3822,13 @@ class BaekyaProtocolDApp {
         );
         
         // 거래내역은 WebSocket으로 전송되므로 여기서 중복 추가하지 않음
-        
-        // 폼 리셋
-        document.getElementById('transferForm').reset();
-        this.updateTransferSummary(0);
-        
+    
+    // 폼 리셋
+    document.getElementById('transferForm').reset();
+    this.updateTransferSummary(0);
+    
         // 잔액 업데이트 (서버에서 받은 데이터로)
-        this.updateTokenBalances();
+      this.updateTokenBalances();
       } else {
         this.showErrorMessage(result.error || '토큰 전송에 실패했습니다.');
       }
@@ -5555,17 +5569,37 @@ class BaekyaProtocolDApp {
     }
   }
 
-  // DAO별 기여 건수 조회
+  // DAO별 기여 건수 조회 (캐시 적용)
   getDAOContributionCount(daoId) {
     if (!this.currentUser || !this.currentUser.did) {
       return 0;
     }
     
+    // 캐시가 있으면 재사용
+    if (!this.contributionCountCache) {
+      this.contributionCountCache = {};
+    }
+    
+    const cacheKey = `${this.currentUser.did}_${daoId}`;
+    const cacheTime = 5000; // 5초 캐시
+    
+    if (this.contributionCountCache[cacheKey] && 
+        Date.now() - this.contributionCountCache[cacheKey].timestamp < cacheTime) {
+      return this.contributionCountCache[cacheKey].count;
+    }
+    
     // 로컬 스토리지에서 직접 기여 내역 확인
     const contributions = this.getUserContributions();
     const daoContributions = contributions.filter(contrib => contrib.dao === daoId);
+    const count = daoContributions.length;
     
-    return daoContributions.length;
+    // 캐시에 저장
+    this.contributionCountCache[cacheKey] = {
+      count: count,
+      timestamp: Date.now()
+    };
+    
+    return count;
   }
   
   // 최근 활동 시간 계산
@@ -5622,9 +5656,11 @@ class BaekyaProtocolDApp {
         if (!this.contributionCache) this.contributionCache = {};
         this.contributionCache[daoId] = result.contributions;
         
-        // UI 업데이트
-        this.loadMyDAOs();
-        this.loadPTokenDetails();
+        // 기여 개수 캐시 무효화 (순환 호출 방지를 위해 loadMyDAOs 호출 제거)
+        if (this.contributionCountCache) {
+          const cacheKey = `${this.currentUser.did}_${daoId}`;
+          delete this.contributionCountCache[cacheKey];
+        }
       }
     } catch (error) {
       console.error(`DAO ${daoId} 기여 데이터 로드 실패:`, error);
@@ -5635,7 +5671,7 @@ class BaekyaProtocolDApp {
   async loadUserContributions() {
     if (!this.currentUser || !this.currentUser.did) return;
     
-    const daoIds = ['community-dao', 'dev-dao', 'ops-dao', 'political-dao'];
+    const daoIds = ['community-dao', 'dev-dao', 'ops-dao', 'political-dao', 'validator-dao'];
     
     // 병렬로 모든 DAO의 기여 데이터 로드
     await Promise.all(daoIds.map(daoId => this.loadContributionData(daoId)));
@@ -16712,7 +16748,7 @@ class BaekyaProtocolDApp {
   }
 
   getDAOContributionsData(daoId) {
-    // 캐시된 기여 데이터 반환
+    // 캐시된 기여 데이터 반환 (캐시가 없으면 빈 배열 반환, 자동 로드하지 않음)
     if (this.contributionCache && this.contributionCache[daoId]) {
       return this.contributionCache[daoId].map(contribution => ({
         id: contribution.id,
@@ -16721,9 +16757,6 @@ class BaekyaProtocolDApp {
         value: contribution.bValue || 0
       }));
     }
-    
-    // 캐시가 없으면 서버에서 로드
-    this.loadContributionData(daoId);
     
     return [];
   }

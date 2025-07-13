@@ -421,12 +421,12 @@ class BaekyaProtocolDApp {
       
       // 거래내역에 추가
       if (tx.type === 'sent') {
-        this.addTransaction(
+      this.addTransaction(
           'sent',
           tx.toAddress || tx.to, // 받는 사람의 원본 주소
-          tx.amount,
-          tx.memo || '',
-          'confirmed',
+        tx.amount,
+        tx.memo || '',
+        'confirmed',
           tx.toAddress || tx.to, // 통신주소로 표시
           tx.transactionId
         );
@@ -438,10 +438,10 @@ class BaekyaProtocolDApp {
           tx.memo || '',
           'confirmed',
           tx.fromAddress || tx.from, // 통신주소로 표시
-          tx.transactionId
-        );
-        
-        // 받은 거래인 경우 알림 표시
+        tx.transactionId
+      );
+      
+      // 받은 거래인 경우 알림 표시
         this.showSuccessMessage(
           `${tx.fromAddress}님으로부터 ${tx.amount} ${tx.tokenType}을 받았습니다.`
         );
@@ -480,6 +480,12 @@ class BaekyaProtocolDApp {
         
         existingContributions.push(contributionRecord);
         localStorage.setItem(contributionsKey, JSON.stringify(existingContributions));
+        
+        // 기여 개수 캐시 무효화
+        if (this.contributionCountCache) {
+          const cacheKey = `${this.currentUser.did}_${contribution.dao}`;
+          delete this.contributionCountCache[cacheKey];
+        }
         
         console.log('✅ 새로운 기여 내역 저장 완료:', contributionRecord);
       }
@@ -3186,11 +3192,19 @@ class BaekyaProtocolDApp {
     
     // 서버에 통신주소 업데이트 요청
     if (this.currentUser.did) {
-      fetch('/api/update-communication-address', {
+      console.log('🔄 통신주소 변경 요청 시작:', { 
+        didHash: this.currentUser.did, 
+        newAddress: newAddress,
+        apiBase: this.apiBase
+      });
+      
+      fetch(`${this.apiBase}/update-communication-address`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.sessionId}`
+          'Authorization': `Bearer ${this.sessionId}`,
+          'X-Session-ID': this.sessionId,
+          'X-Device-ID': this.getDeviceId()
         },
         body: JSON.stringify({
           didHash: this.currentUser.did,
@@ -3903,13 +3917,13 @@ class BaekyaProtocolDApp {
         );
         
         // 거래내역은 WebSocket으로 전송되므로 여기서 중복 추가하지 않음
-        
-        // 폼 리셋
-        document.getElementById('transferForm').reset();
-        this.updateTransferSummary(0);
-        
+    
+    // 폼 리셋
+    document.getElementById('transferForm').reset();
+    this.updateTransferSummary(0);
+    
         // 잔액 업데이트 (서버에서 받은 데이터로)
-        this.updateTokenBalances();
+      this.updateTokenBalances();
       } else {
         this.showErrorMessage(result.error || '토큰 전송에 실패했습니다.');
       }
@@ -5650,17 +5664,37 @@ class BaekyaProtocolDApp {
     }
   }
 
-  // DAO별 기여 건수 조회
+  // DAO별 기여 건수 조회 (캐시 적용)
   getDAOContributionCount(daoId) {
     if (!this.currentUser || !this.currentUser.did) {
       return 0;
     }
     
+    // 캐시가 있으면 재사용
+    if (!this.contributionCountCache) {
+      this.contributionCountCache = {};
+    }
+    
+    const cacheKey = `${this.currentUser.did}_${daoId}`;
+    const cacheTime = 5000; // 5초 캐시
+    
+    if (this.contributionCountCache[cacheKey] && 
+        Date.now() - this.contributionCountCache[cacheKey].timestamp < cacheTime) {
+      return this.contributionCountCache[cacheKey].count;
+    }
+    
     // 로컬 스토리지에서 직접 기여 내역 확인
     const contributions = this.getUserContributions();
     const daoContributions = contributions.filter(contrib => contrib.dao === daoId);
+    const count = daoContributions.length;
     
-    return daoContributions.length;
+    // 캐시에 저장
+    this.contributionCountCache[cacheKey] = {
+      count: count,
+      timestamp: Date.now()
+    };
+    
+    return count;
   }
   
   // 최근 활동 시간 계산
@@ -5717,9 +5751,11 @@ class BaekyaProtocolDApp {
         if (!this.contributionCache) this.contributionCache = {};
         this.contributionCache[daoId] = result.contributions;
         
-        // UI 업데이트
-        this.loadMyDAOs();
-        this.loadPTokenDetails();
+        // 기여 개수 캐시 무효화 (순환 호출 방지를 위해 loadMyDAOs 호출 제거)
+        if (this.contributionCountCache) {
+          const cacheKey = `${this.currentUser.did}_${daoId}`;
+          delete this.contributionCountCache[cacheKey];
+        }
       }
     } catch (error) {
       console.error(`DAO ${daoId} 기여 데이터 로드 실패:`, error);
@@ -5730,7 +5766,7 @@ class BaekyaProtocolDApp {
   async loadUserContributions() {
     if (!this.currentUser || !this.currentUser.did) return;
     
-    const daoIds = ['community-dao', 'dev-dao', 'ops-dao', 'political-dao'];
+    const daoIds = ['community-dao', 'dev-dao', 'ops-dao', 'political-dao', 'validator-dao'];
     
     // 병렬로 모든 DAO의 기여 데이터 로드
     await Promise.all(daoIds.map(daoId => this.loadContributionData(daoId)));
@@ -9515,7 +9551,7 @@ class BaekyaProtocolDApp {
       return;
     }
 
-    if (confirm(`검증자 풀에 ${sponsorAmount}B를 후원하시겠습니까? (수수료 ${transactionFee}B 별도)`)) {
+    if (confirm(`검증자 풀에 ${sponsorAmount}B를 후원하시겠습니까?`)) {
       try {
         // 서버 API로 검증자 풀 후원 요청
           const sponsorResponse = await fetch(`${this.apiBase}/validator-pool/sponsor`, {
@@ -11202,15 +11238,25 @@ class BaekyaProtocolDApp {
 
   // 백야 네트워크 사용자 검색
   async searchNetworkUsers() {
+    console.log('🔍 searchNetworkUsers 함수 시작');
+    console.log('🔍 현재 호스트명:', window.location.hostname);
+    console.log('🔍 전체 URL:', window.location.href);
+    console.log('🔍 isLocal 여부:', window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    
     const searchInput = document.getElementById('networkSearchInput');
     const searchTerm = searchInput ? searchInput.value.trim() : '';
     
+    console.log('🔍 검색어:', searchTerm);
+    console.log('🔍 검색 입력창 요소:', searchInput);
+    console.log('🔍 API 기본 URL:', this.apiBase);
+    
     if (!searchTerm) {
+      console.log('❌ 검색어가 비어있음');
       this.showErrorMessage('검색어를 입력해주세요');
       return;
     }
     
-    console.log('🔍 백야 네트워크 검색:', searchTerm);
+    console.log('🔍 백야 네트워크 검색 시작:', searchTerm);
     
     // UI 상태 업데이트
     this.showSearchStatus(true);
@@ -11243,14 +11289,23 @@ class BaekyaProtocolDApp {
   async simulateNetworkSearch(searchTerm) {
     try {
       console.log('🔍 서버 API 호출 시작:', searchTerm);
+      console.log('🔍 API URL:', `${this.apiBase}/p2p/find-contact/${encodeURIComponent(searchTerm)}`);
       
       // 실제 서버 API 호출
       const response = await fetch(`${this.apiBase}/p2p/find-contact/${encodeURIComponent(searchTerm)}`);
       
       console.log('📡 서버 응답 상태:', response.status);
+      console.log('📡 서버 응답 객체:', response);
+      
+      if (!response.ok) {
+        console.error('❌ HTTP 오류:', response.status, response.statusText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       
       const result = await response.json();
       console.log('📋 서버 응답 데이터:', result);
+      console.log('📋 result.success:', result.success);
+      console.log('📋 result.found:', result.found);
       
       let networkUsers = [];
       
@@ -11289,8 +11344,8 @@ class BaekyaProtocolDApp {
       } else {
         console.log('❌ 사용자를 찾지 못함:', result.message || '알 수 없는 오류');
       }
-    
-    this.showSearchStatus(false);
+      
+      this.showSearchStatus(false);
       this.displaySearchResults(networkUsers);
       
       console.log('🎯 검색 결과 표시 완료, 결과 수:', networkUsers.length);
@@ -11304,21 +11359,34 @@ class BaekyaProtocolDApp {
   }
 
   displaySearchResults(results) {
+    console.log('🎯 displaySearchResults 호출됨, 결과 수:', results.length);
+    console.log('🎯 검색 결과 데이터:', results);
+    
     const searchResults = document.getElementById('searchResultsSection');
     const noResults = document.getElementById('noResults');
     const usersList = document.getElementById('networkUsersList');
     
+    console.log('🎯 DOM 요소들:', {
+      searchResults: !!searchResults,
+      noResults: !!noResults,
+      usersList: !!usersList
+    });
+    
     if (results.length === 0) {
+      console.log('❌ 검색 결과가 없음 - "검색 결과 없음" 화면 표시');
       if (searchResults) searchResults.style.display = 'none';
       if (noResults) noResults.style.display = 'block';
       return;
     }
     
+    console.log('✅ 검색 결과가 있음 - 결과 목록 표시');
     if (noResults) noResults.style.display = 'none';
     if (searchResults) searchResults.style.display = 'block';
     
     if (usersList) {
-      usersList.innerHTML = results.map(user => this.generateNetworkUserHTML(user)).join('');
+      const html = results.map(user => this.generateNetworkUserHTML(user)).join('');
+      console.log('🎯 생성된 HTML:', html);
+      usersList.innerHTML = html;
     }
   }
 
@@ -16803,7 +16871,7 @@ class BaekyaProtocolDApp {
   }
 
   getDAOContributionsData(daoId) {
-    // 캐시된 기여 데이터 반환
+    // 캐시된 기여 데이터 반환 (캐시가 없으면 빈 배열 반환, 자동 로드하지 않음)
     if (this.contributionCache && this.contributionCache[daoId]) {
       return this.contributionCache[daoId].map(contribution => ({
         id: contribution.id,
@@ -16812,9 +16880,6 @@ class BaekyaProtocolDApp {
         value: contribution.bValue || 0
       }));
     }
-    
-    // 캐시가 없으면 서버에서 로드
-    this.loadContributionData(daoId);
     
     return [];
   }
@@ -27215,6 +27280,25 @@ window.searchContacts = (searchTerm) => dapp.searchContacts(searchTerm);
 window.clearContactSearch = () => dapp.clearContactSearch();
 window.searchChats = (searchTerm) => dapp.searchChats(searchTerm);
 window.clearChatSearch = () => dapp.clearChatSearch();
+
+// 백야 네트워크 친구 검색 전역 함수
+window.searchNetworkUsers = function() {
+  if (window.dapp) {
+    window.dapp.searchNetworkUsers();
+  }
+};
+
+window.addNetworkFriend = function(networkUserId) {
+  if (window.dapp) {
+    window.dapp.addNetworkFriend(networkUserId);
+  }
+};
+
+window.closeFriendSearchModal = function() {
+  if (window.dapp) {
+    window.dapp.closeFriendSearchModal();
+  }
+};
 
 // P2P 필터링 전역 함수
   window.filterChats = (filterType) => dapp.filterChats(filterType);

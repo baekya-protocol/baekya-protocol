@@ -595,23 +595,32 @@ class DataStorage {
     if (!this.data.contributions[userDID]) this.data.contributions[userDID] = {};
     if (!this.data.contributions[userDID][daoId]) this.data.contributions[userDID][daoId] = [];
     
-    this.data.contributions[userDID][daoId].push({
+    const savedContribution = {
       ...contribution,
       savedAt: Date.now()
-    });
+    };
+    
+    this.data.contributions[userDID][daoId].push(savedContribution);
     
     this.saveData();
-    console.log(`💾 기여 내역 저장: ${userDID} → ${daoId} → ${contribution.type}`);
+    console.log(`💾 기여 내역 저장 완료: ${userDID} → ${daoId} → ${contribution.type}`);
+    console.log(`📋 저장된 기여 내역:`, JSON.stringify(savedContribution, null, 2));
+    console.log(`🔍 현재 사용자의 총 기여 내역: ${this.data.contributions[userDID][daoId].length}건`);
   }
 
   // 사용자의 DAO 기여 내역 조회
-  getUserContributions(userDID, daoId = null) {
+  getUserContributions(userDID, daoId = null, logDetails = false) {
     if (!this.data.contributions || !this.data.contributions[userDID]) {
       return [];
     }
     
     if (daoId) {
-      return this.data.contributions[userDID][daoId] || [];
+      const daoContributions = this.data.contributions[userDID][daoId] || [];
+      // 로그는 상세 조회시에만 출력 (기여 개수 조회시에는 출력 안함)
+      if (logDetails && daoContributions.length > 0) {
+        console.log(`📋 ${daoId} 기여 내역 상세 조회: ${daoContributions.length}건`);
+      }
+      return daoContributions;
     }
     
     // 모든 DAO의 기여 내역 반환
