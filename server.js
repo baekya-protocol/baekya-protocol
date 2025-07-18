@@ -1012,7 +1012,7 @@ async function processHttpRequest(method, path, headers, body, query) {
         console.log('📦 요청 본문:', JSON.stringify(body, null, 2));
         console.log('🔐 헤더:', headers);
         
-        const { fromDID, toAddress, amount, tokenType = 'B-Token', authData } = body;
+        const { fromDID, toAddress, amount, tokenType = 'B-Token', authData, governanceData } = body;
         
         console.log('📋 파싱된 데이터:');
         console.log(`  - fromDID: ${fromDID} (타입: ${typeof fromDID})`);
@@ -1020,6 +1020,7 @@ async function processHttpRequest(method, path, headers, body, query) {
         console.log(`  - amount: ${amount} (타입: ${typeof amount})`);
         console.log(`  - tokenType: ${tokenType}`);
         console.log(`  - authData: ${JSON.stringify(authData)}`);
+        console.log(`  - governanceData: ${JSON.stringify(governanceData)}`);
         
         if (!fromDID || !toAddress || !amount || amount <= 0) {
           console.log('❌ 파라미터 검증 실패:');
@@ -1043,40 +1044,49 @@ async function processHttpRequest(method, path, headers, body, query) {
         // toAddress가 DID인지, 통신주소인지, 아이디인지 확인하고 DID로 변환
         let toDID = toAddress;
         if (!toAddress.startsWith('did:baekya:')) {
-          // 통신주소나 아이디로 DID 찾기
-          const authSystem = protocol.components.authSystem;
-          
-          console.log(`🔍 주소 변환 시도: ${toAddress}`);
-          
-          // 하이픈 없는 전화번호 형식이면 하이픈 추가
-          let normalizedAddress = toAddress;
-          if (/^010\d{8}$/.test(toAddress)) {
-            // 01012345678 → 010-1234-5678
-            normalizedAddress = `${toAddress.slice(0, 3)}-${toAddress.slice(3, 7)}-${toAddress.slice(7)}`;
-            console.log(`📱 전화번호 형식 변환: ${toAddress} → ${normalizedAddress}`);
-          }
-          
-          // 먼저 통신주소로 시도
-          const byCommAddress = authSystem.getDIDByCommAddress(normalizedAddress);
-          console.log('통신주소 검색 결과:', byCommAddress);
-          
-          if (byCommAddress.success) {
-            toDID = byCommAddress.didHash;
-            console.log(`✅ 통신주소로 DID 찾기 성공: ${toDID}`);
+          // 거버넌스 풀 주소 처리
+          if (toAddress === 'GOVERNANCE_POOL') {
+            toDID = 'did:baekya:governance0000000000000000000000000000001'; // 거버넌스 풀 전용 DID
+            console.log(`🏛️ 거버넌스 풀 주소 변환: ${toAddress} → ${toDID}`);
           } else {
-            // 아이디로 시도 (원래 주소 그대로 사용)
-            const byUserId = authSystem.getDIDByUsername(toAddress);
-            console.log('아이디 검색 결과:', byUserId);
+            // 통신주소나 아이디로 DID 찾기
+            const authSystem = protocol.components.authSystem;
             
-            if (byUserId.success) {
-              toDID = byUserId.didHash;
-              console.log(`✅ 아이디로 DID 찾기 성공: ${toDID}`);
+            console.log(`🔍 주소 변환 시도: ${toAddress}`);
+            
+            // 하이픈 없는 전화번호 형식이면 하이픈 추가
+            let normalizedAddress = toAddress;
+            if (/^010\d{8}$/.test(toAddress)) {
+              // 01012345678 → 010-1234-5678
+              normalizedAddress = `${toAddress.slice(0, 3)}-${toAddress.slice(3, 7)}-${toAddress.slice(7)}`;
+              console.log(`📱 전화번호 형식 변환: ${toAddress} → ${normalizedAddress}`);
+            }
+            
+            // 먼저 통신주소로 시도
+            const byCommAddress = authSystem.getDIDByCommAddress(normalizedAddress);
+            console.log('통신주소 검색 결과:', byCommAddress);
+            
+            if (byCommAddress.success) {
+              toDID = byCommAddress.didHash;
+              console.log(`✅ 통신주소로 DID 찾기 성공: ${toDID}`);
             } else {
-              console.log(`❌ 주소 찾기 실패: ${toAddress}`);
-              return res.status(404).json({
-                success: false,
-                error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
-              });
+              // 아이디로 시도 (원래 주소 그대로 사용)
+              const byUserId = authSystem.getDIDByUsername(toAddress);
+              console.log('아이디 검색 결과:', byUserId);
+              
+              if (byUserId.success) {
+                toDID = byUserId.didHash;
+                console.log(`✅ 아이디로 DID 찾기 성공: ${toDID}`);
+              } else {
+                console.log(`❌ 주소 찾기 실패: ${toAddress}`);
+                return {
+                  status: 404,
+                  data: {
+                    success: false,
+                    error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
+                  }
+                };
+              }
             }
           }
         }
@@ -1121,6 +1131,9 @@ async function processHttpRequest(method, path, headers, body, query) {
         try {
           const Transaction = require('./src/blockchain/Transaction');
           
+          // 거버넌스 트랜잭션인지 확인
+          const isGovernanceTransaction = governanceData && governanceData.type;
+          
           // 수수료 포함 토큰 전송 트랜잭션 생성 (발신자가 실제 지불하는 총액)
           const transferTx = new Transaction(
             fromDID,
@@ -1128,13 +1141,14 @@ async function processHttpRequest(method, path, headers, body, query) {
             amount, // 받는 사람이 받을 실제 금액
             tokenType,
             { 
-              type: 'token_transfer',
+              type: isGovernanceTransaction ? 'governance_transaction' : 'token_transfer',
               fee: fee,
               totalAmountPaid: totalAmount, // 발신자가 지불한 총액
               validatorFee: feeToValidator,
               daoFee: feeToDAO,
               originalToAddress: originalToAddress, // 원본 주소 저장
-              memo: req.body.memo || ''
+              memo: req.body.memo || '',
+              governanceData: governanceData // 거버넌스 데이터 포함
             }
           );
           transferTx.sign('test-key');
@@ -1165,18 +1179,60 @@ async function processHttpRequest(method, path, headers, body, query) {
           
           if (!addResult1.success) {
             console.error('❌ 전송 트랜잭션 추가 실패:', addResult1.error);
-            throw new Error(`전송 트랜잭션 추가 실패: ${addResult1.error}`);
+            return {
+              status: 400,
+              data: {
+                success: false,
+                error: `전송 트랜잭션 추가 실패: ${addResult1.error}`
+              }
+            };
           }
           
           if (!addResult2.success) {
             console.error('❌ 수수료 트랜잭션 추가 실패:', addResult2.error);
-            throw new Error(`수수료 트랜잭션 추가 실패: ${addResult2.error}`);
+            return {
+              status: 400,
+              data: {
+                success: false,
+                error: `수수료 트랜잭션 추가 실패: ${addResult2.error}`
+              }
+            };
           }
           
           // 트랜잭션은 추가되었고 검증자가 블록을 생성할 예정
-          console.log(`💸 토큰 전송 트랜잭션 추가됨 (대기 중)`);
+          if (isGovernanceTransaction) {
+            console.log(`🏛️ 거버넌스 트랜잭션 추가됨 (대기 중): ${governanceData.type}`);
+          } else {
+            console.log(`💸 토큰 전송 트랜잭션 추가됨 (대기 중)`);
+          }
           
-          // 트랜잭션이 추가되었으므로 응답은 바로 처리
+          // 즉시 블록 생성 시도 (동기적으로 처리)
+          console.log('⛏️ 블록 생성 시도...');
+          console.log('📋 대기 중인 트랜잭션 수:', protocol.getBlockchain().pendingTransactions.length);
+          
+          let mineResult;
+          if (protocol.getBlockchain().pendingTransactions.length === 0) {
+            console.log('⚠️ 대기 중인 트랜잭션이 없습니다. 트랜잭션 추가 후 즉시 블록 생성...');
+            // 트랜잭션이 방금 추가되었으므로 강제로 블록 생성
+            mineResult = protocol.getBlockchain().mineBlock([transferTx, feeTx]);
+          } else {
+            mineResult = protocol.getBlockchain().mineBlock();
+          }
+          
+          console.log('⛏️ 블록 생성 결과:', mineResult);
+          
+          if (!mineResult.success) {
+            console.error('❌ 블록 생성 실패:', mineResult.error);
+            return {
+              status: 500,
+              data: {
+                success: false,
+                error: `블록 생성 실패: ${mineResult.error}`
+              }
+            };
+          }
+          
+          // 블록 생성 성공 시 응답 처리
           if (true) {
             
             // 검증자 풀 업데이트는 BlockchainCore의 updateStorageFromBlock에서 처리됨

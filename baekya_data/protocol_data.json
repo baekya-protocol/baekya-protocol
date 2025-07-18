@@ -661,7 +661,28 @@
       "aab41d96ca681381256836bc3f0340142d32878c08244d3edc7c91391e9b5b36": 30,
       "1a612f215dbc3656ae0d92ca29bf1db4f0eb21659f6068b33a3080a6bac4e7da": 30,
       "4d0d9b02c2e7fed8d42f37e42e9c7fe8af36fbe8f2e4402f338abfda57749fcd": 30,
-      "be22bb63a27129460dc8308463f803b0d329ed26315fca3452ae1b61cb4305e3": 30
+      "be22bb63a27129460dc8308463f803b0d329ed26315fca3452ae1b61cb4305e3": 30,
+      "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b": 30.25,
+      "58ff13a3f82606d1b94c1cff17769228d64cbca12968fd28b59fc643ce2c334e": 30,
+      "86bac332c70558108241d93759630bb075b00457ce50aeca911543fd3ea0be4a": 30,
+      "5cbac86792cb4b770b435034187ad24fd167e950377007780ea9e04b83f84f04": 30,
+      "464d9751aa59fb827093a6de5094888a85916da6efcbf0d9327324d830a46a3d": 30,
+      "ec98f2fa14d91d4917e3ebe1915118d6f2fb68fabb188c782507335b7fe68f2a": 30,
+      "9521a9c7db920dc9853de61b1f6bb196f06575fb22942d7d3bfb1a9110e9c3ef": 30,
+      "710b30f993ac083507c8f14626131dae36dd34ec7fd2e9528552159546d1046b": 30,
+      "4a0c4cd40eb96eca5474d7e27b9ce115a8235585a00f96d22fe788ac95d9b1d5": 30,
+      "20cbeb54508d1c3277cf92509b3c19934c80f0ecb18eb5dc145f5b9ba7145f03": 30,
+      "635ac3eb626d825e3aefcd7985904749e1e8608efe0d55f7a03a762518aff1dd": 30,
+      "cbee460b984364bdd71742c7f2317c96a227ee8d13a2975d93a5beb0786d5b07": 30,
+      "223551498c09dc17295ffb9d8489ca6d050cc252e3d1bc959da47b6b1cdd1c78": 30,
+      "88bf1129a95966fd223ffe7a21aaf50f52bed12ef1d59f556d9791c1c3ef173c": 30,
+      "90db3fd19a7b05c935c379593ee2462c29808c0e8154994bfdcc696e217f3343": 30,
+      "adf42e42b62a754c6634921adb63183a0252c73bc9eab1953e5c913a5a952ea7": 30,
+      "e4221a49e2420aea55cd4ff0cb81973b845e79f8634434f98b5d2e138efd58e0": 30,
+      "2f849d1b57d4583297e96dc854ca5ab0dc28752219873720e1da65bf8e62a422": 30,
+      "e110a63a92b0ea738b49f2751704bdf1784b323e9fb620a4446a10fe40b16791": 30,
+      "129ad0f4bb5e31fc687fd58596f5d8298be772dd85d95dcf5ddd8a22c637c4ed": 30,
+      "045b5365c80f72351e19d03398216b9dc5bda08e9c6151cf0b963b0181a32dfa": 30
     },
     "pTokenBalances": {}
   },
@@ -671,8 +692,8 @@
       "name": "Development DAO",
       "purpose": "Development",
       "description": "백야 프로토콜 개발을 담당하는 DAO",
-      "founderDID": "be22bb63a27129460dc8308463f803b0d329ed26315fca3452ae1b61cb4305e3",
-      "operatorDID": "be22bb63a27129460dc8308463f803b0d329ed26315fca3452ae1b61cb4305e3",
+      "founderDID": "045b5365c80f72351e19d03398216b9dc5bda08e9c6151cf0b963b0181a32dfa",
+      "operatorDID": "045b5365c80f72351e19d03398216b9dc5bda08e9c6151cf0b963b0181a32dfa",
       "createdAt": 1752143092891,
       "status": "active",
       "lastUpdated": 1752143092891
@@ -682,8 +703,8 @@
       "name": "Community DAO",
       "purpose": "Community Management",
       "description": "백야 프로토콜 커뮤니티 관리를 담당하는 DAO",
-      "founderDID": "be22bb63a27129460dc8308463f803b0d329ed26315fca3452ae1b61cb4305e3",
-      "operatorDID": "be22bb63a27129460dc8308463f803b0d329ed26315fca3452ae1b61cb4305e3",
+      "founderDID": "045b5365c80f72351e19d03398216b9dc5bda08e9c6151cf0b963b0181a32dfa",
+      "operatorDID": "045b5365c80f72351e19d03398216b9dc5bda08e9c6151cf0b963b0181a32dfa",
       "createdAt": 1752143092892,
       "status": "active",
       "lastUpdated": 1752143092892
@@ -4511,6 +4532,46 @@
             "description": "초대를 통해 커뮤니티에 참여"
           },
           "savedAt": 1752425686933
+        }
+      ]
+    },
+    "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b": {
+      "validator-dao": [
+        {
+          "id": "block_generation_263_1752501016701",
+          "type": "network_validation",
+          "title": "블록생성",
+          "dcaId": "block-generation",
+          "evidence": "Block 263 validated",
+          "description": "블록 #263 생성 및 검증",
+          "bValue": 5,
+          "verified": true,
+          "verifiedAt": 1752501016701,
+          "metadata": {
+            "blockIndex": 263,
+            "blockHash": "da3b3bfaf0bbde1482a89378d5c116da8dcd554e0ae96d9e4ff1ea03d1b5210a",
+            "transactionCount": 2,
+            "completedAt": 1752501016701
+          },
+          "savedAt": 1752501016702
+        },
+        {
+          "id": "block_generation_264_1752501046744",
+          "type": "network_validation",
+          "title": "블록생성",
+          "dcaId": "block-generation",
+          "evidence": "Block 264 validated",
+          "description": "블록 #264 생성 및 검증",
+          "bValue": 5,
+          "verified": true,
+          "verifiedAt": 1752501046744,
+          "metadata": {
+            "blockIndex": 264,
+            "blockHash": "cff0af9dc9cb49ee0d8bc3c29a114c9d7b371f5188eb8db504d120817ca1cb4a",
+            "transactionCount": 3,
+            "completedAt": 1752501046744
+          },
+          "savedAt": 1752501046744
         }
       ]
     }
@@ -9151,6 +9212,332 @@
       "nonce": "c88e98c7c23c47404935a5c907ec8449",
       "signature": "founder-initial-grant",
       "hash": "97006787957ebb5443142ebf802eaedf4dec51f1f559dc9da6adb7aff98d0340"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752500946111,
+      "nonce": "a98ca8c84cffb5c619168cfb97dd1c1c",
+      "signature": "founder-initial-grant",
+      "hash": "13b51c8f5e9ffdd88c195caa49c64158249403d0f248257606b90e17b342b11f"
+    },
+    {
+      "fromDID": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b",
+      "toDID": "did:baekya:system0000000000000000000000000000000002",
+      "amount": 0,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "invite_code_registration",
+        "inviteCode": "W30GWY",
+        "communicationAddress": "010-2801-5402",
+        "registrationDate": "2025-07-14T13:50:15.781Z"
+      },
+      "timestamp": 1752501016682,
+      "nonce": "d23d32cabbbbcdadab78571162e786a5",
+      "signature": "fe0fce18aa8fc7569f9c9da54a7bf547232c496339c7f7cd66fe82e8b486345a",
+      "hash": "1e27ef08cc22839b92f0584db4ea84303af8d6f392be072a87006420d57b1b5f"
+    },
+    {
+      "fromDID": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b",
+      "toDID": "did:baekya:system0000000000000000000000000000000001",
+      "amount": 10,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "validator_pool_sponsor",
+        "actualSponsorAmount": 10,
+        "validatorFee": 0,
+        "daoFee": 0
+      },
+      "timestamp": 1752501046703,
+      "nonce": "cd41bd4e86dc08a197b195d9b5e850fa",
+      "signature": "6132a93600002ef251a35a7614ae8092544cd154a78ef3d116effdb4a41fae5c",
+      "hash": "6f82939fa9a5b9c96d740dbe490fd5c4c8fdadd9f33c6a458d99eb6c26f29144"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "58ff13a3f82606d1b94c1cff17769228d64cbca12968fd28b59fc643ce2c334e",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752508219944,
+      "nonce": "1315ad2eb4dcda76c64b443e355af24d",
+      "signature": "founder-initial-grant",
+      "hash": "2db4d02cfa3c9c5bf23f2e1d9c7c4c983113c89f639ea43ec34c14f99c8fcfa7"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "86bac332c70558108241d93759630bb075b00457ce50aeca911543fd3ea0be4a",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752523804802,
+      "nonce": "b9ed30949e56fb23f589beab03ad1a96",
+      "signature": "founder-initial-grant",
+      "hash": "252eb898a169fd7724f09051940d021e4f03fea305d14a3affd402653795a753"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "5cbac86792cb4b770b435034187ad24fd167e950377007780ea9e04b83f84f04",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752523962625,
+      "nonce": "ac0f4efab6562c6ec1465ec174067aed",
+      "signature": "founder-initial-grant",
+      "hash": "9469956ba1c5255d6a065162b16c0b183e80d2249960ae668931228893db72d1"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "464d9751aa59fb827093a6de5094888a85916da6efcbf0d9327324d830a46a3d",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752526730281,
+      "nonce": "2ae1de165759de25b9c055a05104f10f",
+      "signature": "founder-initial-grant",
+      "hash": "768d90ac026fb76f1336b2875ff78ffa4c1176ba0436323ad7e51023c22eaba5"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "ec98f2fa14d91d4917e3ebe1915118d6f2fb68fabb188c782507335b7fe68f2a",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752534787629,
+      "nonce": "f0b59d3eaa730ddfc4381ebee84f7cce",
+      "signature": "founder-initial-grant",
+      "hash": "ff7509bd0f057635d0a844da65d9415f06483729adef1fe988cfe3ab31d9245b"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "9521a9c7db920dc9853de61b1f6bb196f06575fb22942d7d3bfb1a9110e9c3ef",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752797682976,
+      "nonce": "278c618cb40ef5e303bc57d60918b82d",
+      "signature": "founder-initial-grant",
+      "hash": "92dcd6d030b09887124257c7b3f596edaafad7ed1fa65e5bb217b04d9a52f11a"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "710b30f993ac083507c8f14626131dae36dd34ec7fd2e9528552159546d1046b",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752803221269,
+      "nonce": "b011d840bdb9f6153cfddf6b4e1c5965",
+      "signature": "founder-initial-grant",
+      "hash": "6d5fd1c10bb53420ca561ec7c2591f89e5c320bf9566d88ce835051b31d0e727"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "4a0c4cd40eb96eca5474d7e27b9ce115a8235585a00f96d22fe788ac95d9b1d5",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752803932416,
+      "nonce": "a839de3356ef96bf0572f44a8c0540cf",
+      "signature": "founder-initial-grant",
+      "hash": "ed793bb0d433952fab27773d2be2c9ac891a09018d81bbc8dc17d7f2e209ae26"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "20cbeb54508d1c3277cf92509b3c19934c80f0ecb18eb5dc145f5b9ba7145f03",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752804596027,
+      "nonce": "80d50742f91428544b8eb32a221fe683",
+      "signature": "founder-initial-grant",
+      "hash": "0bfbe5cb2843b7c9784a08ae223c13b0f1794daee4b0cc61d5938946b63b77e5"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "635ac3eb626d825e3aefcd7985904749e1e8608efe0d55f7a03a762518aff1dd",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752806916630,
+      "nonce": "e7b332acd5b40a2e5c57b32744fead72",
+      "signature": "founder-initial-grant",
+      "hash": "608e010c98eb79cc24c08cdaa2cb37bc29d1269e08573f6b825ecd539262f35d"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "cbee460b984364bdd71742c7f2317c96a227ee8d13a2975d93a5beb0786d5b07",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752807493954,
+      "nonce": "6d7cf89e6f07d8cc07c4d7e93f321cd7",
+      "signature": "founder-initial-grant",
+      "hash": "3f33200d23b4ca13a95f4aa97a226a262162c551458d852950524de2b61f42b0"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "223551498c09dc17295ffb9d8489ca6d050cc252e3d1bc959da47b6b1cdd1c78",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752808079160,
+      "nonce": "cec9a80d0695348487286bbffd44f884",
+      "signature": "founder-initial-grant",
+      "hash": "75ff2fcc883942dd371deba996469137e7e54cfc4f0da64e1a543200fb9dff6c"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "88bf1129a95966fd223ffe7a21aaf50f52bed12ef1d59f556d9791c1c3ef173c",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752808671874,
+      "nonce": "a8ff4dbcc3f6409776dccffeab80c711",
+      "signature": "founder-initial-grant",
+      "hash": "ea905852328e7cefa6d6fd81ece6fe3d26d99710fb0a96591de81b27de57b284"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "90db3fd19a7b05c935c379593ee2462c29808c0e8154994bfdcc696e217f3343",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752808904519,
+      "nonce": "22c387edb50e15d06dd5dbacbc5eff47",
+      "signature": "founder-initial-grant",
+      "hash": "f6398ef022f5d513bdc7f136c8f3ca450f94dcc09faf22eaff1f5373c2109133"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "adf42e42b62a754c6634921adb63183a0252c73bc9eab1953e5c913a5a952ea7",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752809013312,
+      "nonce": "2b28a7fdc5808ab763efd7472934712f",
+      "signature": "founder-initial-grant",
+      "hash": "399d0978e64d7ebe7726af2239c9b5f6854b8182c5b6b748a446a77afd2a01b8"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "e4221a49e2420aea55cd4ff0cb81973b845e79f8634434f98b5d2e138efd58e0",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752809188902,
+      "nonce": "e71ee6a1c44cf4367dbcf1b25f4d4f66",
+      "signature": "founder-initial-grant",
+      "hash": "e72814cc0c15c878697e06f8c3cf81870e1b4d6d5f1963de1faaf100c7a32f19"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "2f849d1b57d4583297e96dc854ca5ab0dc28752219873720e1da65bf8e62a422",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752810459409,
+      "nonce": "2f9dac2a5cb83404b746bb78a9e9297b",
+      "signature": "founder-initial-grant",
+      "hash": "594a622492a6809dec5cbf7fe98c9438cb8a704fb3a29457f0c296dc736ebf8a"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "e110a63a92b0ea738b49f2751704bdf1784b323e9fb620a4446a10fe40b16791",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752810882682,
+      "nonce": "4abd601a632df3c1e73207ac279ad562",
+      "signature": "founder-initial-grant",
+      "hash": "61497eee52201e11d7ed5fb0dfdad0ac6107b302f274730cef955a247d2e19ca"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "129ad0f4bb5e31fc687fd58596f5d8298be772dd85d95dcf5ddd8a22c637c4ed",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752811524159,
+      "nonce": "5020dcec316ad85d2da10d3bc97eeb56",
+      "signature": "founder-initial-grant",
+      "hash": "9b7dc8bf724730c04beae4b1db19dc4bfd53113e5b4ae51daff335c77c9d74ee"
+    },
+    {
+      "fromDID": "did:baekya:system000000000000000000000000000000000",
+      "toDID": "045b5365c80f72351e19d03398216b9dc5bda08e9c6151cf0b963b0181a32dfa",
+      "amount": 30,
+      "tokenType": "B-Token",
+      "data": {
+        "type": "founder_initial",
+        "reason": "founder_account_creation"
+      },
+      "timestamp": 1752813203280,
+      "nonce": "17d798c9e28667899b6f943e79f0bdb5",
+      "signature": "founder-initial-grant",
+      "hash": "511b65effee73345a34bc12ffda8d77903b86ebf176eceaac5f38f4c63a8009a"
     }
   ],
   "blockchain": [
@@ -20950,6 +21337,924 @@
       "hash": "0044aa3722bce1f1797eb56fa82a42ce099cca1b6177a20ecacf9abba8c85e47",
       "nonce": 113,
       "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 262,
+      "timestamp": 1752500946100,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752500946099,
+          "nonce": "a98ca8c84cffb5c619168cfb97dd1c1c",
+          "signature": "founder-initial-grant",
+          "hash": "13b51c8f5e9ffdd88c195caa49c64158249403d0f248257606b90e17b342b11f"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 262,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752500946130,
+          "nonce": "40a7c7c7e16c978a9fe27f554ced4641",
+          "signature": null,
+          "hash": "816a206c6de8ea4be8d732598f8696175030545518b50822eaa18229b2d9bfd0"
+        }
+      ],
+      "previousHash": "0044aa3722bce1f1797eb56fa82a42ce099cca1b6177a20ecacf9abba8c85e47",
+      "hash": "c36fea662d37ee2a9f3e7527bcdf06552ca5146ea2784c8bed278f0f7bcec44f",
+      "nonce": 231,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 263,
+      "timestamp": 1752501016666,
+      "transactions": [
+        {
+          "fromDID": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b",
+          "toDID": "did:baekya:system0000000000000000000000000000000002",
+          "amount": 0,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "invite_code_registration",
+            "inviteCode": "W30GWY",
+            "communicationAddress": "010-2801-5402",
+            "registrationDate": "2025-07-14T13:50:15.781Z"
+          },
+          "timestamp": 1752501015785,
+          "nonce": "d23d32cabbbbcdadab78571162e786a5",
+          "signature": "fe0fce18aa8fc7569f9c9da54a7bf547232c496339c7f7cd66fe82e8b486345a",
+          "hash": "1e27ef08cc22839b92f0584db4ea84303af8d6f392be072a87006420d57b1b5f"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 263,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752501016701,
+          "nonce": "3a17577ad50936e465c2e7866f62fce8",
+          "signature": null,
+          "hash": "0dfe22f9fb5e876a3a1845fe3612e1a98bf864edcaaaaa95d87967fc7c64b936"
+        }
+      ],
+      "previousHash": "c36fea662d37ee2a9f3e7527bcdf06552ca5146ea2784c8bed278f0f7bcec44f",
+      "hash": "da3b3bfaf0bbde1482a89378d5c116da8dcd554e0ae96d9e4ff1ea03d1b5210a",
+      "nonce": 320,
+      "validator": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b"
+    },
+    {
+      "index": 264,
+      "timestamp": 1752501046667,
+      "transactions": [
+        {
+          "fromDID": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b",
+          "toDID": "did:baekya:system0000000000000000000000000000000001",
+          "amount": 10,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_pool_sponsor",
+            "actualSponsorAmount": 10,
+            "validatorFee": 0,
+            "daoFee": 0
+          },
+          "timestamp": 1752501038730,
+          "nonce": "cd41bd4e86dc08a197b195d9b5e850fa",
+          "signature": "6132a93600002ef251a35a7614ae8092544cd154a78ef3d116effdb4a41fae5c",
+          "hash": "6f82939fa9a5b9c96d740dbe490fd5c4c8fdadd9f33c6a458d99eb6c26f29144"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 264,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752501046735,
+          "nonce": "dbcb93e2aa824320a31576318fe8b5fe",
+          "signature": null,
+          "hash": "acb7f957e581abfd80c4df6faed00e11dee0e64fcba8aae4232319533539b1c9"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000001",
+          "toDID": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b",
+          "amount": 0.25,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_pool_incentive",
+            "blockIndex": 264,
+            "description": "검증자 풀 인센티브 (블록 #264)",
+            "poolBalanceBefore": 10,
+            "poolBalanceAfter": 9.75
+          },
+          "timestamp": 1752501046743,
+          "nonce": "4a20bef646b898f7e755c46f43a1915c",
+          "signature": null,
+          "hash": "f38363732bb1264b0a6126230410551909ffd81a471385dfc13e8b807a604e9b"
+        }
+      ],
+      "previousHash": "da3b3bfaf0bbde1482a89378d5c116da8dcd554e0ae96d9e4ff1ea03d1b5210a",
+      "hash": "00f8be5ff784a3931e55bebf44570f11d114b4fb734c0766b93e6b637d654b30",
+      "nonce": 168,
+      "validator": "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b"
+    },
+    {
+      "index": 265,
+      "timestamp": 1752508219935,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "58ff13a3f82606d1b94c1cff17769228d64cbca12968fd28b59fc643ce2c334e",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752508219934,
+          "nonce": "1315ad2eb4dcda76c64b443e355af24d",
+          "signature": "founder-initial-grant",
+          "hash": "2db4d02cfa3c9c5bf23f2e1d9c7c4c983113c89f639ea43ec34c14f99c8fcfa7"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 265,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752508219957,
+          "nonce": "425f8a5f1cbe6d65705f584ce0870998",
+          "signature": null,
+          "hash": "d40951cb25350726c44c540d84c0569974a2a4a03513e6bc061e0ee8867c07ba"
+        }
+      ],
+      "previousHash": "00f8be5ff784a3931e55bebf44570f11d114b4fb734c0766b93e6b637d654b30",
+      "hash": "00533f0793be2ae64f7907c07c266dc81f0580d9d92ffcd85baa7123b5ec5928",
+      "nonce": 364,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 266,
+      "timestamp": 1752523804794,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "86bac332c70558108241d93759630bb075b00457ce50aeca911543fd3ea0be4a",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752523804793,
+          "nonce": "b9ed30949e56fb23f589beab03ad1a96",
+          "signature": "founder-initial-grant",
+          "hash": "252eb898a169fd7724f09051940d021e4f03fea305d14a3affd402653795a753"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 266,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752523804815,
+          "nonce": "d7351c1c85d99ec77abedec265e9a1d9",
+          "signature": null,
+          "hash": "6d779a4dd4c846a6cc97e76673a1cee8e65376382a19d9985a98329797ab91e0"
+        }
+      ],
+      "previousHash": "00533f0793be2ae64f7907c07c266dc81f0580d9d92ffcd85baa7123b5ec5928",
+      "hash": "00ab0464be23ba9c55443023742bce18b738f9a6b7b2ffe7a4a05ce953cafc05",
+      "nonce": 89,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 267,
+      "timestamp": 1752523962616,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "5cbac86792cb4b770b435034187ad24fd167e950377007780ea9e04b83f84f04",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752523962615,
+          "nonce": "ac0f4efab6562c6ec1465ec174067aed",
+          "signature": "founder-initial-grant",
+          "hash": "9469956ba1c5255d6a065162b16c0b183e80d2249960ae668931228893db72d1"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 267,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752523962638,
+          "nonce": "7a6d498a0d335149a0c0f63ef8ab1d59",
+          "signature": null,
+          "hash": "7f3a7f7ac0c4801878cc1b89416c5d0306844f18ec2cd6a2f66a9269fba14a31"
+        }
+      ],
+      "previousHash": "00ab0464be23ba9c55443023742bce18b738f9a6b7b2ffe7a4a05ce953cafc05",
+      "hash": "000a1304c237fbd9ba6893495321be904d30e9caa4d33c43c8a7fa2305c24bd2",
+      "nonce": 249,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 268,
+      "timestamp": 1752526730273,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "464d9751aa59fb827093a6de5094888a85916da6efcbf0d9327324d830a46a3d",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752526730273,
+          "nonce": "2ae1de165759de25b9c055a05104f10f",
+          "signature": "founder-initial-grant",
+          "hash": "768d90ac026fb76f1336b2875ff78ffa4c1176ba0436323ad7e51023c22eaba5"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 268,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752526730295,
+          "nonce": "0e508772be0791862405dba3507641d4",
+          "signature": null,
+          "hash": "d5fcf1d71ae070e2f3374a9476440b4b056c87c412189b02286135069bf5b475"
+        }
+      ],
+      "previousHash": "000a1304c237fbd9ba6893495321be904d30e9caa4d33c43c8a7fa2305c24bd2",
+      "hash": "00d464a0b55164317fcafe8ea3b22f45f9091428fc61c02bcac3b02772dfcb04",
+      "nonce": 144,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 269,
+      "timestamp": 1752534787621,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "ec98f2fa14d91d4917e3ebe1915118d6f2fb68fabb188c782507335b7fe68f2a",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752534787620,
+          "nonce": "f0b59d3eaa730ddfc4381ebee84f7cce",
+          "signature": "founder-initial-grant",
+          "hash": "ff7509bd0f057635d0a844da65d9415f06483729adef1fe988cfe3ab31d9245b"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 269,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752534787642,
+          "nonce": "d8b02a417981036d450f54400a0a3ab4",
+          "signature": null,
+          "hash": "2cf1e2990e4fcd44357b9e1c292c3f4728df7dc135ccba3adc766b314292a260"
+        }
+      ],
+      "previousHash": "00d464a0b55164317fcafe8ea3b22f45f9091428fc61c02bcac3b02772dfcb04",
+      "hash": "007d27b45af3086c1c7fe0e14d98a5c40c761503abf09f5466544815cd0ca83e",
+      "nonce": 213,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 270,
+      "timestamp": 1752797682968,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "9521a9c7db920dc9853de61b1f6bb196f06575fb22942d7d3bfb1a9110e9c3ef",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752797682968,
+          "nonce": "278c618cb40ef5e303bc57d60918b82d",
+          "signature": "founder-initial-grant",
+          "hash": "92dcd6d030b09887124257c7b3f596edaafad7ed1fa65e5bb217b04d9a52f11a"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 270,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752797682989,
+          "nonce": "d7406c449372cdf5dd104f09887da6d5",
+          "signature": null,
+          "hash": "1864a9ec149483b2ac19f467e12e7523a8352528ef72635db17ec7366aafdc98"
+        }
+      ],
+      "previousHash": "007d27b45af3086c1c7fe0e14d98a5c40c761503abf09f5466544815cd0ca83e",
+      "hash": "00435ade74535444843ad953019333dd649278ad81ae66c5a6fca1a5737f53b8",
+      "nonce": 14,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 271,
+      "timestamp": 1752803221261,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "710b30f993ac083507c8f14626131dae36dd34ec7fd2e9528552159546d1046b",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752803221260,
+          "nonce": "b011d840bdb9f6153cfddf6b4e1c5965",
+          "signature": "founder-initial-grant",
+          "hash": "6d5fd1c10bb53420ca561ec7c2591f89e5c320bf9566d88ce835051b31d0e727"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 271,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752803221282,
+          "nonce": "05e8174ace4f7db3b2310eb1188e4436",
+          "signature": null,
+          "hash": "908fdb7fb80f467a0ce1387052e09c300824250bd75d4dd274c09641451f613f"
+        }
+      ],
+      "previousHash": "00435ade74535444843ad953019333dd649278ad81ae66c5a6fca1a5737f53b8",
+      "hash": "007eabdd6f6c4245895f5b5940fa34d2fba8c1d1bd408418130119b98dc5ff70",
+      "nonce": 4,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 272,
+      "timestamp": 1752803932408,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "4a0c4cd40eb96eca5474d7e27b9ce115a8235585a00f96d22fe788ac95d9b1d5",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752803932408,
+          "nonce": "a839de3356ef96bf0572f44a8c0540cf",
+          "signature": "founder-initial-grant",
+          "hash": "ed793bb0d433952fab27773d2be2c9ac891a09018d81bbc8dc17d7f2e209ae26"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 272,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752803932431,
+          "nonce": "4eb110fd00637be677ee3a8249d16b06",
+          "signature": null,
+          "hash": "0e984c1635990002bb1fee893dbbea499cab791ff200a27b878f03ba70db460d"
+        }
+      ],
+      "previousHash": "007eabdd6f6c4245895f5b5940fa34d2fba8c1d1bd408418130119b98dc5ff70",
+      "hash": "002d737717d2a942737bbbbf0d65fa00e606e3b4a7e949d615e67ada799e13a6",
+      "nonce": 45,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 273,
+      "timestamp": 1752804596016,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "20cbeb54508d1c3277cf92509b3c19934c80f0ecb18eb5dc145f5b9ba7145f03",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752804596016,
+          "nonce": "80d50742f91428544b8eb32a221fe683",
+          "signature": "founder-initial-grant",
+          "hash": "0bfbe5cb2843b7c9784a08ae223c13b0f1794daee4b0cc61d5938946b63b77e5"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 273,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752804596040,
+          "nonce": "d9723e8eb254f95a1eb02dcd00f2be34",
+          "signature": null,
+          "hash": "32ad745e8aad6f4db7e639f1195ee86505232ee1916a318e65ae85a8207ec1eb"
+        }
+      ],
+      "previousHash": "002d737717d2a942737bbbbf0d65fa00e606e3b4a7e949d615e67ada799e13a6",
+      "hash": "005d4a2097ea2a16fd587db9be4e0329107f50835af9d6ada756a798bde6543b",
+      "nonce": 447,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 274,
+      "timestamp": 1752806916623,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "635ac3eb626d825e3aefcd7985904749e1e8608efe0d55f7a03a762518aff1dd",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752806916622,
+          "nonce": "e7b332acd5b40a2e5c57b32744fead72",
+          "signature": "founder-initial-grant",
+          "hash": "608e010c98eb79cc24c08cdaa2cb37bc29d1269e08573f6b825ecd539262f35d"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 274,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752806916643,
+          "nonce": "c589421b95f13aaaabe133d14297eb83",
+          "signature": null,
+          "hash": "0b82a6492b8e1bdc065100f2709a1d6119ffce9b7768b2c87efea1a2cf3d09bc"
+        }
+      ],
+      "previousHash": "005d4a2097ea2a16fd587db9be4e0329107f50835af9d6ada756a798bde6543b",
+      "hash": "00e606265a018bc768e814eeee203fa326b4165d0d2d0ea2cad53b83c851f0a2",
+      "nonce": 7,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 275,
+      "timestamp": 1752807493942,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "cbee460b984364bdd71742c7f2317c96a227ee8d13a2975d93a5beb0786d5b07",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752807493941,
+          "nonce": "6d7cf89e6f07d8cc07c4d7e93f321cd7",
+          "signature": "founder-initial-grant",
+          "hash": "3f33200d23b4ca13a95f4aa97a226a262162c551458d852950524de2b61f42b0"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 275,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752807493968,
+          "nonce": "96bc3dc7a9016731185adb9ed6bc494a",
+          "signature": null,
+          "hash": "f4fbf3509c1fe4f5b0685b4c26c3e118e249d15ca43f942c0eca55f83b4f9a91"
+        }
+      ],
+      "previousHash": "00e606265a018bc768e814eeee203fa326b4165d0d2d0ea2cad53b83c851f0a2",
+      "hash": "00abad78dbb340e780cb0d0d954398f5297b9d82713d58ec00ba076404bb4ddb",
+      "nonce": 1317,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 276,
+      "timestamp": 1752808079150,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "223551498c09dc17295ffb9d8489ca6d050cc252e3d1bc959da47b6b1cdd1c78",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752808079149,
+          "nonce": "cec9a80d0695348487286bbffd44f884",
+          "signature": "founder-initial-grant",
+          "hash": "75ff2fcc883942dd371deba996469137e7e54cfc4f0da64e1a543200fb9dff6c"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 276,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752808079174,
+          "nonce": "19286052bba63d3fbb1a18de7f3e3c2d",
+          "signature": null,
+          "hash": "0d14a2c598f8049c76c5c0bd8173d1521095b931aa5dad54479313d81ed6e02f"
+        }
+      ],
+      "previousHash": "00abad78dbb340e780cb0d0d954398f5297b9d82713d58ec00ba076404bb4ddb",
+      "hash": "00ef5b5cc549113e7f79d53379284e005514c8728b95e44f2de7482d4bacb6f3",
+      "nonce": 183,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 277,
+      "timestamp": 1752808671866,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "88bf1129a95966fd223ffe7a21aaf50f52bed12ef1d59f556d9791c1c3ef173c",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752808671865,
+          "nonce": "a8ff4dbcc3f6409776dccffeab80c711",
+          "signature": "founder-initial-grant",
+          "hash": "ea905852328e7cefa6d6fd81ece6fe3d26d99710fb0a96591de81b27de57b284"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 277,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752808671887,
+          "nonce": "f23b3013290d332d222b38ad5d1a4fe0",
+          "signature": null,
+          "hash": "1f68a6d8fd9f4503155266c5c85904c818e4ef040237b9d5b298a35d612c8cfb"
+        }
+      ],
+      "previousHash": "00ef5b5cc549113e7f79d53379284e005514c8728b95e44f2de7482d4bacb6f3",
+      "hash": "00fa5e1b5fe704f4e8ec6a40c00873cc444fbe33e122df5f7dca9dda93ef5b0a",
+      "nonce": 141,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 278,
+      "timestamp": 1752808904511,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "90db3fd19a7b05c935c379593ee2462c29808c0e8154994bfdcc696e217f3343",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752808904510,
+          "nonce": "22c387edb50e15d06dd5dbacbc5eff47",
+          "signature": "founder-initial-grant",
+          "hash": "f6398ef022f5d513bdc7f136c8f3ca450f94dcc09faf22eaff1f5373c2109133"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 278,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752808904532,
+          "nonce": "17c7037784c9054087c29dfdfa370fe9",
+          "signature": null,
+          "hash": "08ca728d5fc9ee7dec1efa8814ab5eab7f1242b35bd194b4369e89a8282adbed"
+        }
+      ],
+      "previousHash": "00fa5e1b5fe704f4e8ec6a40c00873cc444fbe33e122df5f7dca9dda93ef5b0a",
+      "hash": "00249778db81c4580bf8f6f1112c70d02aa3dde9d6a254b457b1b35699eef01b",
+      "nonce": 146,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 279,
+      "timestamp": 1752809013303,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "adf42e42b62a754c6634921adb63183a0252c73bc9eab1953e5c913a5a952ea7",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752809013303,
+          "nonce": "2b28a7fdc5808ab763efd7472934712f",
+          "signature": "founder-initial-grant",
+          "hash": "399d0978e64d7ebe7726af2239c9b5f6854b8182c5b6b748a446a77afd2a01b8"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 279,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752809013325,
+          "nonce": "e16b09d809b8839e6d3a72e326374525",
+          "signature": null,
+          "hash": "d418b07b34f957f1417f06a22aa7d4dbf42d552ccce55f68bba42329ea813ba2"
+        }
+      ],
+      "previousHash": "00249778db81c4580bf8f6f1112c70d02aa3dde9d6a254b457b1b35699eef01b",
+      "hash": "00016fd4494f1ae26047ea9ca74806130575aa3d3a0c936a48d4a5e65a515f45",
+      "nonce": 468,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 280,
+      "timestamp": 1752809188893,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "e4221a49e2420aea55cd4ff0cb81973b845e79f8634434f98b5d2e138efd58e0",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752809188891,
+          "nonce": "e71ee6a1c44cf4367dbcf1b25f4d4f66",
+          "signature": "founder-initial-grant",
+          "hash": "e72814cc0c15c878697e06f8c3cf81870e1b4d6d5f1963de1faaf100c7a32f19"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 280,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752809188917,
+          "nonce": "a6f16f900fe400a265e19b189edc0f06",
+          "signature": null,
+          "hash": "7712be98302a5591dab91017fdc2a003e0a2af45f70c2a7aa0fb5e59e0f74b95"
+        }
+      ],
+      "previousHash": "00016fd4494f1ae26047ea9ca74806130575aa3d3a0c936a48d4a5e65a515f45",
+      "hash": "00f8738ff2a982b51f71ce4531b84857ddad5b89e0a981ac4c31741500882811",
+      "nonce": 291,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 281,
+      "timestamp": 1752810459401,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "2f849d1b57d4583297e96dc854ca5ab0dc28752219873720e1da65bf8e62a422",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752810459400,
+          "nonce": "2f9dac2a5cb83404b746bb78a9e9297b",
+          "signature": "founder-initial-grant",
+          "hash": "594a622492a6809dec5cbf7fe98c9438cb8a704fb3a29457f0c296dc736ebf8a"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 281,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752810459423,
+          "nonce": "13a051986e8286f2b779344fd1ac7926",
+          "signature": null,
+          "hash": "b443ae31b0ae6e54c70c53fc2289f3bd12dc670a57e4a7e0e806f38600d2a6f8"
+        }
+      ],
+      "previousHash": "00f8738ff2a982b51f71ce4531b84857ddad5b89e0a981ac4c31741500882811",
+      "hash": "00082fac3f42b705bf40b02d5bc504b203a368a812d17552b350d22b03b25180",
+      "nonce": 152,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 282,
+      "timestamp": 1752810882672,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "e110a63a92b0ea738b49f2751704bdf1784b323e9fb620a4446a10fe40b16791",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752810882671,
+          "nonce": "4abd601a632df3c1e73207ac279ad562",
+          "signature": "founder-initial-grant",
+          "hash": "61497eee52201e11d7ed5fb0dfdad0ac6107b302f274730cef955a247d2e19ca"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 282,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752810882695,
+          "nonce": "523e66719efa850483b525abf9dc4697",
+          "signature": null,
+          "hash": "39e3e11e04d7b220987dd5900437cb2fd89254e93ad9f9df02c7a98498db663d"
+        }
+      ],
+      "previousHash": "00082fac3f42b705bf40b02d5bc504b203a368a812d17552b350d22b03b25180",
+      "hash": "00c1d54b436d779584bafd8378e9de73ba7a73b7a11c535164b9f18c3e60bd34",
+      "nonce": 754,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 283,
+      "timestamp": 1752811524152,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "129ad0f4bb5e31fc687fd58596f5d8298be772dd85d95dcf5ddd8a22c637c4ed",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752811524151,
+          "nonce": "5020dcec316ad85d2da10d3bc97eeb56",
+          "signature": "founder-initial-grant",
+          "hash": "9b7dc8bf724730c04beae4b1db19dc4bfd53113e5b4ae51daff335c77c9d74ee"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 283,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752811524173,
+          "nonce": "557f1fc67bc8a31686bad9562e7127ba",
+          "signature": null,
+          "hash": "6b0995759afd335b28be0ae65b0c99c3162914a545487f763bde2dd3bd4eef86"
+        }
+      ],
+      "previousHash": "00c1d54b436d779584bafd8378e9de73ba7a73b7a11c535164b9f18c3e60bd34",
+      "hash": "00104ca22951e73cf3d5647e37a30e6b796a76282cf87bb2048ab7caca4adf83",
+      "nonce": 4,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
+    },
+    {
+      "index": 284,
+      "timestamp": 1752813203271,
+      "transactions": [
+        {
+          "fromDID": "did:baekya:system000000000000000000000000000000000",
+          "toDID": "045b5365c80f72351e19d03398216b9dc5bda08e9c6151cf0b963b0181a32dfa",
+          "amount": 30,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "founder_initial",
+            "reason": "founder_account_creation"
+          },
+          "timestamp": 1752813203270,
+          "nonce": "17d798c9e28667899b6f943e79f0bdb5",
+          "signature": "founder-initial-grant",
+          "hash": "511b65effee73345a34bc12ffda8d77903b86ebf176eceaac5f38f4c63a8009a"
+        },
+        {
+          "fromDID": "did:baekya:system0000000000000000000000000000000000000000",
+          "toDID": "did:baekya:system_validator_000000000000000000000000",
+          "amount": 5,
+          "tokenType": "B-Token",
+          "data": {
+            "type": "validator_reward",
+            "blockIndex": 284,
+            "description": "블록 생성 기여가치 (Validator DAO DCA)"
+          },
+          "timestamp": 1752813203294,
+          "nonce": "e035b715ece29f2271a19c77a9db8816",
+          "signature": null,
+          "hash": "263c96d385a1be84db7745a4de9ee230b6dccf9138f1927cdd1d75a2186fc03f"
+        }
+      ],
+      "previousHash": "00104ca22951e73cf3d5647e37a30e6b796a76282cf87bb2048ab7caca4adf83",
+      "hash": "003bcd4a1459a7e406898d523eada1ea113567e8086c7315537929a3387d6f91",
+      "nonce": 440,
+      "validator": "did:baekya:system_validator_000000000000000000000000"
     }
   ],
   "inviteCodes": {
@@ -21251,6 +22556,11 @@
     "3a941dad0af13473c1013dee7a71e364f85a0018dbdfeb78738c302db42ffc32": {
       "inviteCode": "3I2FY1",
       "createdAt": 1752425623608,
+      "registeredOnChain": false
+    },
+    "8f15e3b01f44e55a0192f2fd5e19bc40ea562b7d71f619ad638595863962115b": {
+      "inviteCode": "W30GWY",
+      "createdAt": 1752501015790,
       "registeredOnChain": false
     }
   }

@@ -849,7 +849,9 @@ class BaekyaProtocolDApp {
       case 'dao':
         this.loadDAOs();
         break;
-
+      case 'governance':
+        this.loadGovernance();
+        break;
       case 'p2p':
         this.loadP2P();
         break;
@@ -1241,7 +1243,7 @@ class BaekyaProtocolDApp {
                       // 짧은 ID 생성
                       let shortId = 'ops-dao';
                       if (dao.name.includes('Operations')) shortId = 'ops-dao';
-                      else if (dao.name.includes('Development')) shortId = 'dev-dao';
+                      else if (dao.name.includes('Governance')) shortId = 'governance-dao';
                       else if (dao.name.includes('Community')) shortId = 'community-dao';
                       else if (dao.name.includes('Political')) shortId = 'political-dao';
                       
@@ -4176,9 +4178,9 @@ class BaekyaProtocolDApp {
     // 기본 DAO 데이터 (커뮤니티와 개발 DAO, 검증자 DAO)
     const defaultDAOs = [
       {
-        id: 'dev-dao',
-        name: 'Development DAO',
-        description: '프로토콜 개발 및 개선을 담당하는 거버넌스형 컨소시엄',
+        id: 'governance-dao',
+        name: 'Governance DAO',
+        description: '제안/협업/평가를 통한 탈중앙화 의사결정 컨소시엄',
         memberCount: 28,
         totalContributions: 456,
         isDefault: true
@@ -4295,8 +4297,8 @@ class BaekyaProtocolDApp {
   // DAO별 참여 안내문 가져오기
   getDAOJoinGuideText(daoId) {
     switch(daoId) {
-      case 'dev-dao':
-        return '개발DAO는 누구나 접근가능한 이슈리폿(안건제안)과 PR(피드백)을 지원함으로써 탈중앙화 거버넌스를 실현합니다.';
+      case 'governance-dao':
+        return '거버넌스DAO는 제안/협업/평가 단계를 통해 탈중앙화 의사결정을 실현하며, 누구나 시스템 개선에 참여할 수 있습니다.';
       case 'community-dao':
         return '사용자 네트워크 형성 기여에 필수적인 탈중앙화 조직으로, 누구나 아래의 지정기여활동(DCA)에 따라 기여할 수 있습니다.';
       case 'validator-dao':
@@ -4316,7 +4318,7 @@ class BaekyaProtocolDApp {
     // 모든 DAO 목록에서 현재 DAO 찾기
     const allDAOs = [...this.loadUserCreatedDAOs()];
     const defaultDAOs = {
-      'dev-dao': 'Development DAO',
+      'governance-dao': 'Governance DAO',
       'community-dao': 'Community DAO',
       'validator-dao': 'Validator DAO'
     };
@@ -4843,15 +4845,30 @@ class BaekyaProtocolDApp {
 
   // 기여 가이드 열기
   openContributionGuide(daoId) {
-    if (daoId === 'dev-dao') {
-      // 새 탭에서 DevDAO 기여 가이드 열기 (GitHub 저장소)
-      window.open('https://github.com/baekya-protocol/baekya-protocol/blob/main/docs/devdao-contribution-guide.md', '_blank');
+    if (daoId === 'governance-dao') {
+      // 거버넌스 페이지로 이동
+      window.location.href = 'governance.html';
     }
   }
 
-  // 기여 활동 섹션 렌더링
-  renderContributionActions(daoId) {
-    if (daoId === 'dev-dao') {
+  // 기여 활동 섹션 렌더링 (구버전 - 삭제 예정)
+  renderContributionActionsOld(daoId) {
+    if (daoId === 'governance-dao') {
+      // 거버넌스 DAO 기여 활동
+      return `
+        <div class="contribution-action-box">
+          <div class="action-header">
+            <h4><i class="fas fa-university"></i> 거버넌스 참여</h4>
+          </div>
+          <div class="action-content">
+            <p>거버넌스 페이지에서 제안, 협업, 평가 활동에 참여하세요.</p>
+            <button class="action-button primary" onclick="window.location.href='governance.html'">
+              <i class="fas fa-external-link-alt"></i> 거버넌스 페이지로 이동
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (daoId === 'dev-dao') {
       // GitHub 연동 상태 확인
       const integrationStatus = this.checkGitHubIntegrationStatus(daoId);
       
@@ -5248,12 +5265,12 @@ class BaekyaProtocolDApp {
 
     // DCA 데이터 가져오기 (330B 예시에 맞춘 DCA 구성)
   getDCAData(daoId) {
-    // 기본 DAO의 DCA (개발DAO, 커뮤니티DAO, 검증자DAO)
+    // 기본 DAO의 DCA (거버넌스DAO, 커뮤니티DAO, 검증자DAO)
     const defaultDCAs = {
-      'dev-dao': [
-        { id: 'dca1', title: 'Pull Request (자기 이슈)', criteria: 'Closed(merged)', value: '250' },
-        { id: 'dca2', title: 'Pull Request (남의 이슈)', criteria: 'Closed(merged)', value: '280' },
-        { id: 'dca3', title: 'Issue Report', criteria: 'Closed(merged)', value: '80' }
+      'governance-dao': [
+        { id: 'dca1', title: '제안활동', criteria: '협업대기탭 진입', value: '120' },
+        { id: 'dca2', title: '협업활동', criteria: 'None Good PR보다 많은 vote', value: '250' },
+        { id: 'dca3', title: '평가활동', criteria: 'None Good Feedback보다 많은 vote', value: '80' }
       ],
       'community-dao': [
         { id: 'dca1', title: '초대 활동', criteria: '초대 받은 사용자가 DID생성', value: '50' }
@@ -5464,6 +5481,24 @@ class BaekyaProtocolDApp {
 
   // 기여하러가기 액션 렌더링
   renderContributionActions(daoId) {
+    // 거버넌스 DAO 처리
+    if (daoId === 'governance-dao') {
+      return `
+        <div class="contribution-actions">
+          <h4><i class="fas fa-rocket"></i> 기여하러가기</h4>
+          <div class="join-options">
+            <div class="option-card">
+              <h4><i class="fas fa-university"></i> 거버넌스 참여</h4>
+              <p>거버넌스 페이지에서 제안, 협업, 평가 활동에 참여하세요.</p>
+              <button class="btn-primary" onclick="window.location.href='governance.html'">
+                <i class="fas fa-external-link-alt"></i> 거버넌스 페이지로 이동
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
     // 기본 DAO들의 액션
     if (daoId === 'ops-dao') {
       return `
@@ -5885,9 +5920,9 @@ class BaekyaProtocolDApp {
           joinedAt: Date.now()
         },
         {
-          id: 'dev-dao',
-          name: 'Development DAO',
-          icon: 'fa-code',
+          id: 'governance-dao',
+          name: 'Governance DAO',
+          icon: 'fa-university',
           role: 'OP',
           contributions: 0,
           lastActivity: '방금',
@@ -6147,8 +6182,8 @@ class BaekyaProtocolDApp {
           abstentions: 2,
           votingStartDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3일 전
           votingEndDate: '2024-01-25',
-          daoName: 'Development DAO',
-          daoId: 'dev-dao'
+          daoName: 'Governance DAO',
+          daoId: 'governance-dao'
         },
         {
           id: 'dev-prop-2',
@@ -6161,8 +6196,8 @@ class BaekyaProtocolDApp {
           abstentions: 6,
           votingStartDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1일 전
           votingEndDate: '2024-01-22',
-          daoName: 'Development DAO',
-          daoId: 'dev-dao'
+          daoName: 'Governance DAO',
+          daoId: 'governance-dao'
         },
         {
           id: 'dev-prop-3',
@@ -6176,8 +6211,8 @@ class BaekyaProtocolDApp {
           votingStartDate: '2024-01-01',
           votingEndDate: '2024-01-15',
           reviewStartDate: '2024-01-16',
-          daoName: 'Development DAO',
-          daoId: 'dev-dao',
+          daoName: 'Governance DAO',
+          daoId: 'governance-dao',
           reviewStage: 'dao-op', // dao-op, ops-dao-objection, top-op
           opDecision: null, // null, approved, rejected
           opReviewComment: null, // OP 검토 중이므로 아직 의견 없음
@@ -6194,8 +6229,8 @@ class BaekyaProtocolDApp {
           proposalTarget: 45,
           proposalStartDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           proposalEndDate: '2024-01-30',
-          daoName: 'Development DAO',
-          daoId: 'dev-dao'
+          daoName: 'Governance DAO',
+          daoId: 'governance-dao'
         }
       ],
       'community-dao': [
@@ -27957,4 +27992,509 @@ function openPlayStore() {
 function openAppStore() {
   // 추후 앱 스토어 출시 시 링크 업데이트
   alert('곧 앱 스토어에서 만나보실 수 있습니다!');
+} 
+
+// ==========================================
+// 간소화된 거버넌스 시스템 관련 함수들
+// ==========================================
+
+// 거버넌스 탭 전환
+BaekyaProtocolDApp.prototype.switchGovernanceTab = function(tabName) {
+  console.log('🏛️ 거버넌스 탭 전환:', tabName);
+  
+  // 모든 거버넌스 탭 비활성화
+  const allTabs = document.querySelectorAll('.governance-tab-content');
+  allTabs.forEach(tab => tab.classList.remove('active'));
+  
+  // 모든 거버넌스 네비게이션 버튼 비활성화
+  const allNavBtns = document.querySelectorAll('.dashboard-filter-btn[data-gov-tab]');
+  allNavBtns.forEach(btn => btn.classList.remove('active'));
+  
+  // 선택된 탭 활성화
+  const selectedTab = document.getElementById(`gov-${tabName}`);
+  if (selectedTab) {
+    selectedTab.classList.add('active');
+  }
+  
+  // 선택된 네비게이션 버튼 활성화
+  const selectedNavBtn = document.querySelector(`[data-gov-tab="${tabName}"]`);
+  if (selectedNavBtn) {
+    selectedNavBtn.classList.add('active');
+  }
+  
+  // 탭별 초기화
+  switch(tabName) {
+    case 'system':
+      this.loadSystemFiles();
+      break;
+    case 'collab':
+      this.loadCollabList();
+      break;
+    case 'forkspace':
+      this.loadForkList();
+      break;
+  }
+};
+
+// System 탭 - 파일 목록 로드
+BaekyaProtocolDApp.prototype.loadSystemFiles = function() {
+  const fileList = document.getElementById('systemFileList');
+  if (!fileList) return;
+  
+  // 백야프로토콜의 실제 파일 구조를 모방
+  const files = [
+    { name: 'src/', type: 'folder', size: '-', time: '2시간 전' },
+    { name: 'public/', type: 'folder', size: '-', time: '1시간 전' },
+    { name: 'docs/', type: 'folder', size: '-', time: '3시간 전' },
+    { name: 'tests/', type: 'folder', size: '-', time: '1일 전' },
+    { name: 'package.json', type: 'file', size: '2.1 KB', time: '2시간 전' },
+    { name: 'server.js', type: 'file', size: '15.2 KB', time: '1시간 전' },
+    { name: 'README.md', type: 'file', size: '4.5 KB', time: '3시간 전' },
+    { name: 'LICENSE', type: 'file', size: '1.1 KB', time: '1주 전' }
+  ];
+  
+  fileList.innerHTML = files.map(file => `
+    <div class="file-item" onclick="window.dapp.openFile('${file.name}')">
+      <i class="fas ${file.type === 'folder' ? 'fa-folder' : 'fa-file-alt'} file-icon ${file.type}"></i>
+      <span class="file-name">${file.name}</span>
+      <span class="file-size">${file.size}</span>
+      <span class="file-time">${file.time}</span>
+    </div>
+  `).join('');
+};
+
+// 파일 열기 (시뮬레이션)
+BaekyaProtocolDApp.prototype.openFile = function(fileName) {
+  console.log('📁 파일 열기:', fileName);
+  this.showNotification(`${fileName} 파일을 열었습니다`, 'info');
+};
+
+// Collab 탭 - 제안 목록 로드
+BaekyaProtocolDApp.prototype.loadCollabList = function() {
+  const collabList = document.getElementById('collabList');
+  if (!collabList) return;
+  
+  // 저장된 제안들 로드
+  const collabs = JSON.parse(localStorage.getItem('baekya_collabs') || '[]');
+  
+  if (collabs.length === 0) {
+    collabList.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+        <i class="fas fa-handshake" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+        <h3>아직 제안이 없습니다</h3>
+        <p>첫 번째 제안을 생성해보세요!</p>
+      </div>
+    `;
+    return;
+  }
+  
+  collabList.innerHTML = collabs.map(collab => this.createCollabCard(collab)).join('');
+};
+
+// Collab 카드 생성
+BaekyaProtocolDApp.prototype.createCollabCard = function(collab) {
+  const statusClass = collab.status === 'voting' ? 'voting' : collab.status === 'completed' ? 'completed' : 'pending';
+  const timeLeft = collab.status === 'voting' ? this.calculateTimeLeft(collab.votingEndTime) : '';
+  
+  return `
+    <div class="collab-card" onclick="window.dapp.openCollabDetail('${collab.id}')">
+      <div class="collab-card-header">
+        <div>
+          <div class="collab-card-title">${collab.title}</div>
+          <div class="collab-card-meta">
+            <span><i class="fas fa-user"></i> ${collab.author}</span>
+            <span><i class="fas fa-clock"></i> ${collab.createdAt}</span>
+            <span><i class="fas fa-tag"></i> ${collab.category}</span>
+          </div>
+        </div>
+        <div class="collab-card-status">
+          <span class="status-badge ${statusClass}">${this.getStatusText(collab.status)}</span>
+          ${timeLeft ? `<small style="color: var(--text-secondary);">${timeLeft}</small>` : ''}
+        </div>
+      </div>
+      <div class="collab-card-description">${collab.description.substring(0, 120)}${collab.description.length > 120 ? '...' : ''}</div>
+      <div class="collab-card-footer">
+        <div class="collab-stats">
+          <span class="collab-stat"><i class="fas fa-code-branch"></i> ${collab.prs?.length || 0}</span>
+          <span class="collab-stat"><i class="fas fa-vote-yea"></i> ${collab.totalVotes || 0}</span>
+          <span class="collab-stat"><i class="fas fa-coins"></i> ${collab.totalFunding || 0}B</span>
+        </div>
+        <div class="collab-reward">${collab.reward || 0}B</div>
+      </div>
+    </div>
+  `;
+};
+
+// 상태 텍스트 변환
+BaekyaProtocolDApp.prototype.getStatusText = function(status) {
+  switch(status) {
+    case 'voting': return '투표중';
+    case 'completed': return '완료';
+    case 'pending': return 'PR대기';
+    default: return '대기중';
+  }
+};
+
+// 남은 시간 계산
+BaekyaProtocolDApp.prototype.calculateTimeLeft = function(endTime) {
+  const now = new Date().getTime();
+  const end = new Date(endTime).getTime();
+  const diff = end - now;
+  
+  if (diff <= 0) return '투표 종료';
+  
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  
+  if (days > 0) return `${days}일 ${hours}시간`;
+  return `${hours}시간`;
+};
+
+// Collab 생성 모달 열기
+BaekyaProtocolDApp.prototype.openCollabCreateModal = function() {
+  const modal = document.getElementById('collabCreateModal');
+  if (modal) {
+    modal.style.display = 'block';
+    document.getElementById('collabCreateForm').reset();
+  }
+};
+
+// Collab 생성 모달 닫기
+BaekyaProtocolDApp.prototype.closeCollabCreateModal = function() {
+  const modal = document.getElementById('collabCreateModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+};
+
+// Collab 제안 제출
+BaekyaProtocolDApp.prototype.submitCollabProposal = function() {
+  const title = document.getElementById('collabTitle').value;
+  const description = document.getElementById('collabDescription').value;
+  const category = document.getElementById('collabCategory').value;
+  const reward = document.getElementById('collabReward').value;
+  
+  if (!title || !description || !category) {
+    this.showNotification('모든 필수 필드를 입력해주세요', 'error');
+    return;
+  }
+  
+  const collab = {
+    id: 'collab_' + Date.now(),
+    title,
+    description,
+    category,
+    reward: parseFloat(reward) || 0,
+    author: this.authData.userId || '익명',
+    createdAt: new Date().toLocaleString('ko-KR'),
+    status: 'pending',
+    prs: [],
+    totalVotes: 0,
+    totalFunding: 0,
+    votingStartTime: null,
+    votingEndTime: null
+  };
+  
+  // 로컬 스토리지에 저장
+  const collabs = JSON.parse(localStorage.getItem('baekya_collabs') || '[]');
+  collabs.unshift(collab);
+  localStorage.setItem('baekya_collabs', JSON.stringify(collabs));
+  
+  this.showNotification('제안이 성공적으로 생성되었습니다!', 'success');
+  this.closeCollabCreateModal();
+  this.loadCollabList();
+};
+
+// Collab 상세 모달 열기
+BaekyaProtocolDApp.prototype.openCollabDetail = function(collabId) {
+  const collabs = JSON.parse(localStorage.getItem('baekya_collabs') || '[]');
+  const collab = collabs.find(c => c.id === collabId);
+  
+  if (!collab) return;
+  
+  const modal = document.getElementById('collabDetailModal');
+  const titleEl = document.getElementById('collabDetailTitle');
+  const infoEl = document.getElementById('collabDetailInfo');
+  const prsEl = document.getElementById('collabPRs');
+  const votingEl = document.getElementById('collabVoting');
+  
+  if (!modal || !titleEl || !infoEl || !prsEl || !votingEl) return;
+  
+  titleEl.textContent = collab.title;
+  
+  // 제안 정보 표시
+  infoEl.innerHTML = `
+    <div style="margin-bottom: 1.5rem;">
+      <h4>제안 정보</h4>
+      <p><strong>작성자:</strong> ${collab.author}</p>
+      <p><strong>카테고리:</strong> ${collab.category}</p>
+      <p><strong>보상:</strong> ${collab.reward} B-Token</p>
+      <p><strong>생성일:</strong> ${collab.createdAt}</p>
+      <p><strong>상태:</strong> ${this.getStatusText(collab.status)}</p>
+    </div>
+    <div>
+      <h4>설명</h4>
+      <p style="line-height: 1.5; white-space: pre-wrap;">${collab.description}</p>
+    </div>
+  `;
+  
+  // PR 목록 표시
+  if (collab.prs && collab.prs.length > 0) {
+    prsEl.innerHTML = `
+      <h4>Pull Requests</h4>
+      ${collab.prs.map(pr => `
+        <div style="border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem;">
+          <h5 style="margin: 0 0 0.5rem 0;">${pr.title}</h5>
+          <p style="color: var(--text-secondary); margin: 0.25rem 0; font-size: 0.9rem;">${pr.description}</p>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <small>작성자: ${pr.author} | ${pr.createdAt}</small>
+            <span style="color: var(--primary-color); font-weight: 600;">${pr.votes || 0} 투표</span>
+          </div>
+        </div>
+      `).join('')}
+      <button class="btn-primary" onclick="window.dapp.openPRCreateModal('${collabId}')">
+        <i class="fas fa-plus"></i> PR 생성
+      </button>
+    `;
+  } else {
+    prsEl.innerHTML = `
+      <h4>Pull Requests</h4>
+      <p style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">
+        아직 PR이 없습니다. 첫 번째 PR을 생성해보세요!
+      </p>
+      <button class="btn-primary" onclick="window.dapp.openPRCreateModal('${collabId}')">
+        <i class="fas fa-plus"></i> PR 생성
+      </button>
+    `;
+  }
+  
+  // 투표 섹션 표시
+  if (collab.status === 'voting') {
+    votingEl.innerHTML = `
+      <h4>투표</h4>
+      <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 6px;">
+        <p><strong>투표 기간:</strong> ${this.calculateTimeLeft(collab.votingEndTime)}</p>
+        <p><strong>총 모금액:</strong> ${collab.totalFunding} B-Token</p>
+        <div style="margin-top: 0.75rem;">
+          ${collab.prs.map(pr => `
+            <button class="btn-secondary" style="margin: 0.2rem; display: block; width: 100%; font-size: 0.9rem;" onclick="window.dapp.voteForPR('${collabId}', '${pr.id}')">
+              ${pr.title} (${pr.votes || 0} 투표)
+            </button>
+          `).join('')}
+          <button class="btn-secondary" style="margin: 0.2rem; display: block; width: 100%; background: var(--status-offline); color: white; font-size: 0.9rem;" onclick="window.dapp.voteForNoMerge('${collabId}')">
+            No Merge (${collab.noMergeVotes || 0} 투표)
+          </button>
+        </div>
+      </div>
+    `;
+  } else {
+    votingEl.innerHTML = '';
+  }
+  
+  modal.style.display = 'block';
+};
+
+// Collab 상세 모달 닫기
+BaekyaProtocolDApp.prototype.closeCollabDetailModal = function() {
+  const modal = document.getElementById('collabDetailModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+};
+
+// PR 생성 모달 열기
+BaekyaProtocolDApp.prototype.openPRCreateModal = function(collabId) {
+  this.currentCollabId = collabId;
+  const modal = document.getElementById('prCreateModal');
+  if (modal) {
+    modal.style.display = 'block';
+    document.getElementById('prCreateForm').reset();
+  }
+};
+
+// PR 생성 모달 닫기
+BaekyaProtocolDApp.prototype.closePRCreateModal = function() {
+  const modal = document.getElementById('prCreateModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  this.currentCollabId = null;
+};
+
+// PR 제출
+BaekyaProtocolDApp.prototype.submitPR = function() {
+  if (!this.currentCollabId) return;
+  
+  const title = document.getElementById('prTitle').value;
+  const description = document.getElementById('prDescription').value;
+  const testResults = document.getElementById('prTestResults').value;
+  
+  if (!title || !description) {
+    this.showNotification('제목과 설명을 입력해주세요', 'error');
+    return;
+  }
+  
+  const pr = {
+    id: 'pr_' + Date.now(),
+    title,
+    description,
+    testResults,
+    author: this.authData.userId || '익명',
+    createdAt: new Date().toLocaleString('ko-KR'),
+    votes: 0
+  };
+  
+  // Collab에 PR 추가
+  const collabs = JSON.parse(localStorage.getItem('baekya_collabs') || '[]');
+  const collabIndex = collabs.findIndex(c => c.id === this.currentCollabId);
+  
+  if (collabIndex !== -1) {
+    if (!collabs[collabIndex].prs) {
+      collabs[collabIndex].prs = [];
+    }
+    collabs[collabIndex].prs.push(pr);
+    
+    // 첫 번째 PR이 생성되면 투표 시작
+    if (collabs[collabIndex].prs.length === 1) {
+      collabs[collabIndex].status = 'voting';
+      collabs[collabIndex].votingStartTime = new Date().toISOString();
+      collabs[collabIndex].votingEndTime = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(); // 2주 후
+    }
+    
+    localStorage.setItem('baekya_collabs', JSON.stringify(collabs));
+    
+    this.showNotification('PR이 성공적으로 생성되었습니다!', 'success');
+    this.closePRCreateModal();
+    this.closeCollabDetailModal();
+    this.loadCollabList();
+  }
+};
+
+// Forkspace 탭 - 포크 목록 로드
+BaekyaProtocolDApp.prototype.loadForkList = function() {
+  const forkList = document.getElementById('forkList');
+  if (!forkList) return;
+  
+  const forks = JSON.parse(localStorage.getItem('baekya_forks') || '[]');
+  
+  if (forks.length === 0) {
+    forkList.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+        <i class="fas fa-code-branch" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+        <h3>아직 포크가 없습니다</h3>
+        <p>새 포크를 생성해서 개발을 시작해보세요!</p>
+      </div>
+    `;
+    return;
+  }
+  
+  forkList.innerHTML = forks.map(fork => `
+    <div class="fork-card">
+      <div class="fork-card-header">
+        <div class="fork-name">${fork.name}</div>
+        <div class="fork-actions">
+          <button class="fork-btn" onclick="window.dapp.openFork('${fork.id}')">열기</button>
+          <button class="fork-btn primary" onclick="window.dapp.createPRFromFork('${fork.id}')">PR 생성</button>
+        </div>
+      </div>
+      <div class="fork-description">${fork.description}</div>
+      <div class="fork-meta">
+        <span><i class="fas fa-clock"></i> ${fork.createdAt}</span>
+        <span><i class="fas fa-code"></i> ${fork.commits || 0} 커밋</span>
+        <span><i class="fas fa-file-alt"></i> ${fork.files || 0} 파일</span>
+      </div>
+    </div>
+  `).join('');
+};
+
+// 개인 포크 생성
+BaekyaProtocolDApp.prototype.createPersonalFork = function() {
+  const forkName = prompt('포크 이름을 입력하세요:', `${this.authData.userId || 'user'}-fork-${Date.now()}`);
+  if (!forkName) return;
+  
+  const description = prompt('포크 설명을 입력하세요:', '백야프로토콜 개인 포크');
+  if (description === null) return;
+  
+  const fork = {
+    id: 'fork_' + Date.now(),
+    name: forkName,
+    description: description || '백야프로토콜 개인 포크',
+    owner: this.authData.userId || '익명',
+    createdAt: new Date().toLocaleString('ko-KR'),
+    commits: 0,
+    files: 0
+  };
+  
+  const forks = JSON.parse(localStorage.getItem('baekya_forks') || '[]');
+  forks.unshift(fork);
+  localStorage.setItem('baekya_forks', JSON.stringify(forks));
+  
+  this.showNotification('포크가 성공적으로 생성되었습니다!', 'success');
+  this.loadForkList();
+};
+
+// 포크 열기
+BaekyaProtocolDApp.prototype.openFork = function(forkId) {
+  console.log('🍴 포크 열기:', forkId);
+  this.showNotification('포크 작업공간이 열렸습니다', 'info');
+};
+
+// 포크에서 PR 생성
+BaekyaProtocolDApp.prototype.createPRFromFork = function(forkId) {
+  console.log('🔀 포크에서 PR 생성:', forkId);
+  this.showNotification('포크에서 PR을 생성하는 기능은 개발 중입니다', 'info');
+};
+
+// Collab 필터링
+BaekyaProtocolDApp.prototype.filterCollabs = function(filter) {
+  console.log('🔍 Collab 필터:', filter);
+  
+  // 필터 버튼 상태 업데이트
+  const filterBtns = document.querySelectorAll('.filter-btn-simple');
+  filterBtns.forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+  
+  // 실제 필터링 로직은 여기에 구현
+  this.loadCollabList();
+};
+
+// PR 투표 (간소화)
+BaekyaProtocolDApp.prototype.voteForPR = function(collabId, prId) {
+  console.log('🗳️ PR 투표:', collabId, prId);
+  this.showNotification('투표 기능은 개발 중입니다', 'info');
+};
+
+// No Merge 투표 (간소화)
+BaekyaProtocolDApp.prototype.voteForNoMerge = function(collabId) {
+  console.log('❌ No Merge 투표:', collabId);
+  this.showNotification('No Merge 투표 기능은 개발 중입니다', 'info');
+};
+
+// 거버넌스 탭 로드
+BaekyaProtocolDApp.prototype.loadGovernance = function() {
+  console.log('🏛️ 거버넌스 탭 로드');
+  
+  // 기본적으로 System 탭을 활성화
+  this.switchGovernanceTab('system');
+};
+
+// 거버넌스 페이지로 이동하는 함수
+function navigateToGovernance() {
+  console.log('🔄 거버넌스 페이지로 이동');
+  
+  // 거버넌스 탭 헤더 제목을 로딩 메시지로 변경
+  const governanceHeaderTitle = document.querySelector('#mobile-header-governance .mobile-governance-title span');
+  if (governanceHeaderTitle) {
+    governanceHeaderTitle.textContent = '거버넌스 페이지 이동중...';
+  }
+  
+  // 현재 탭을 비활성화하여 깜빡임 방지
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.style.opacity = '0';
+  });
+  
+  // 즉시 페이지 이동
+  setTimeout(() => {
+    window.location.replace('governance.html');
+  }, 100);
 } 
