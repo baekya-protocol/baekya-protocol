@@ -58,14 +58,17 @@ class Transaction {
       'invite_code_registration',
       'dca_verification',
       'system_notification',
-      'metadata_update'
+      'metadata_update',
+      'governance_vote',              // 거버넌스 투표는 무료
+      'governance_proposal_creation', // 거버넌스 제안 생성
+      'governance_funding'            // 거버넌스 모금
     ];
     
     const isZeroAmountAllowed = this.data?.type && 
       zeroAmountAllowedTypes.includes(this.data.type);
     
     if (typeof this.amount !== 'number' || 
-        (!isZeroAmountAllowed && this.amount <= 0)) {
+        (!isZeroAmountAllowed && this.amount < 0)) {  // 0 이상 허용으로 변경
       return false;
     }
 

@@ -18,23 +18,8 @@ try {
   console.log('⚠️  Firebase 설정을 확인하세요.');
 }
 
-// Firebase Auth 및 GitHub 프로바이더 설정
+// Firebase Auth 설정
 const auth = firebase.auth();
-const githubProvider = new firebase.auth.GithubAuthProvider();
-
-// Firebase Auth 객체를 전역으로 내보내기
-window.firebaseAuth = auth;
-window.getGitHubInfoFromUser = getGitHubInfoFromUser;
-
-// GitHub 스코프 설정 (사용자 정보 및 public 저장소 접근)
-githubProvider.addScope('user');
-githubProvider.addScope('user:email');
-githubProvider.addScope('public_repo');
-
-// 추가 사용자 정보 요청
-githubProvider.setCustomParameters({
-  'allow_signup': 'true'
-});
 
 // Firebase Auth 상태 변경 리스너
 auth.onAuthStateChanged((user) => {
@@ -331,23 +316,7 @@ function getCurrentUser() {
   return auth.currentUser;
 }
 
-// Firebase Auth 사용자로부터 GitHub 정보 추출
-function getGitHubInfoFromUser(user) {
-  if (!user) return null;
-  
-  const githubUsername = user.reloadUserInfo?.screenName || 
-                        user.providerData?.[0]?.displayName || 
-                        extractUsernameFromEmail(user.email) || 
-                        'unknown';
-  
-  return {
-    githubUsername: githubUsername,
-    displayName: user.displayName || githubUsername,
-    photoURL: user.photoURL || '/icons/icon-192x192.png',
-    email: user.email,
-    uid: user.uid
-  };
-}
+
 
 // Firebase Auth 준비 상태 확인
 function waitForAuth() {
@@ -360,7 +329,6 @@ function waitForAuth() {
 }
 
 // 전역 함수로 노출
-window.signInWithGitHub = signInWithGitHub;
 window.signOut = signOut;
 window.getCurrentUser = getCurrentUser;
 window.waitForAuth = waitForAuth; 

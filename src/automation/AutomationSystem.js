@@ -2,12 +2,11 @@ const crypto = require('crypto');
 
 /**
  * 자동화 시스템
- * GitHub 통합, 초대 시스템 등을 관리
+ * 초대 시스템 등을 관리
  */
 class AutomationSystem {
   constructor(protocol) {
     this.protocol = protocol;
-    this.githubWebhooks = new Map();
     this.inviteLinks = new Map();
     this.pendingInvites = new Map();
   }
@@ -67,22 +66,7 @@ class AutomationSystem {
     };
   }
 
-  // GitHub 통합 설정
-  setupGitHubIntegration(repoOwner, repoName, accessToken) {
-    const webhookId = `${repoOwner}/${repoName}`;
-    this.githubWebhooks.set(webhookId, {
-      owner: repoOwner,
-      repo: repoName,
-      token: accessToken,
-      active: true
-    });
-    
-    return {
-      success: true,
-      webhookUrl: `https://baekya-protocol.io/webhook/github/${webhookId}`,
-      message: 'GitHub 통합이 설정되었습니다'
-    };
-  }
+
 
   // 초대 링크 생성
   createInviteLink(inviterDID) {
@@ -107,11 +91,7 @@ class AutomationSystem {
   // 자동화 시스템 상태 확인
   getAutomationStatus() {
     return {
-      githubWebhooks: Array.from(this.githubWebhooks.entries()).map(([id, webhook]) => ({
-        id,
-        active: webhook.active,
-        repo: `${webhook.owner}/${webhook.repo}`
-      })),
+      githubWebhooks: [],
       activeInvites: Array.from(this.inviteLinks.values()).filter(invite => 
         !invite.used && Date.now() < invite.expiresAt
       ).length,

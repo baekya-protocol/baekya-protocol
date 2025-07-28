@@ -50,6 +50,26 @@
                     </div>
                 </div>
 
+                <!-- 거버넌스 탭 헤더 -->
+                <div class="mobile-header-tab" id="mobile-header-governance">
+                    <div class="mobile-header-governance">
+                        <div class="mobile-governance-title">
+                            <i class="fas fa-university"></i>
+                            <span>거버넌스</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 시스템 탭 헤더 -->
+                <div class="mobile-header-tab" id="mobile-header-system">
+                    <div class="mobile-header-system">
+                        <div class="mobile-system-title">
+                            <i class="fas fa-code"></i>
+                            <span>시스템</span>
+                        </div>
+                    </div>
+                </div>
+
 
 
 
@@ -78,39 +98,20 @@
                     <i class="fas fa-users"></i>
                     <span>DAO</span>
                 </button>
+                <button class="tab-btn" data-tab="governance" onclick="window.dapp.checkGovernanceAccess()">
+                    <i class="fas fa-university"></i>
+                    <span>거버넌스</span>
+                </button>
+                <button class="tab-btn" data-tab="system">
+                    <i class="fas fa-code"></i>
+                    <span>시스템</span>
+                </button>
 
             </nav>
 
             <!-- 대시보드 탭 -->
             <div id="dashboard" class="tab-content active">
-                <!-- 대시보드 카드 필터 메뉴 -->
-                <div class="dashboard-filter-nav">
-                    <div class="dashboard-filter-scroll">
-                        <button class="dashboard-filter-btn active" data-card="all" onclick="window.dapp.switchDashboardFilter('all')">
-                            <i class="fas fa-th-large"></i>
-                            전체 카드
-                        </button>
-                        <button class="dashboard-filter-btn" data-card="profile" onclick="window.dapp.switchDashboardFilter('profile')">
-                            <i class="fas fa-user-circle"></i>
-                            내 프로필
-                        </button>
-                        <button class="dashboard-filter-btn" data-card="balance" onclick="window.dapp.switchDashboardFilter('balance')">
-                            <i class="fas fa-coins"></i>
-                            토큰 잔액
-                        </button>
 
-                        <!-- 소속 DAO 메뉴 제거됨 - 토큰 보유량 카드에 통합 -->
-
-                        <button class="dashboard-filter-btn" data-card="validator" onclick="window.dapp.switchDashboardFilter('validator')">
-                            <i class="fas fa-shield-alt"></i>
-                            검증자 참여
-                        </button>
-                        <button class="dashboard-filter-btn" data-card="protocol" onclick="window.dapp.switchDashboardFilter('protocol')">
-                            <i class="fas fa-book"></i>
-                            프로토콜 개요
-                        </button>
-                    </div>
-                </div>
 
                 <div class="dashboard-grid">
                     <!-- 개인 상태 카드 -->
@@ -121,14 +122,13 @@
                         </div>
                         <div class="card-content">
                             <div class="profile-section">
+                                <!-- 프로필 사진과 기본 정보를 같은 행에 배치 -->
+                                <div class="profile-header">
                                 <div class="profile-photo-section">
                                     <div class="profile-photo-container">
-                                        <div class="profile-photo" id="profilePhoto">
+                                            <div class="profile-photo" id="profilePhoto" onclick="window.dapp.openProfileSettingsModal()" title="프로필 설정 (클릭)">
                                             <i class="fas fa-user"></i>
                                         </div>
-                                        <button class="profile-photo-edit" onclick="window.dapp.openProfileSettingsModal()" title="프로필 설정">
-                                            <i class="fas fa-cog"></i>
-                                        </button>
                                     </div>
                                 </div>
                                 <div class="personal-info">
@@ -140,14 +140,19 @@
                                         <label>이름</label>
                                         <span id="userName">미설정</span>
                                     </div>
-                                    <div class="info-row">
-                                        <label>상태메시지</label>
-                                        <span id="userStatusMessage" style="color: var(--text-secondary); font-style: italic;">상태메시지를 설정해보세요</span>
                                     </div>
                                 </div>
 
-                                <div class="profile-actions">
-                                    <span class="badge" id="verificationBadge">인증 대기</span>
+                                <!-- 프로필 카드 하단 버튼들 -->
+                                <div class="profile-buttons">
+                                    <button class="profile-btn contribute-btn" onclick="window.dapp.goToDAOTab()">
+                                        <i class="fas fa-plus"></i>
+                                        기여하기
+                                    </button>
+                                    <button class="profile-btn contribute-history-btn" onclick="window.dapp.showContributeHistoryModal()">
+                                        <i class="fas fa-history"></i>
+                                        기여내역
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -173,22 +178,6 @@
                                 </div>
                             </div>
                             
-                            <!-- 소속 DAO 토글 섹션 -->
-                            <div class="dao-toggle-section">
-                        <div class="dao-toggle-header" onclick="window.dapp.toggleMyDAOCard()">
-                            <div class="dao-toggle-content">
-                                <i class="fas fa-history"></i>
-                                <span>기여내역 확인하기</span>
-                                <div class="notification-badge" id="daoToggleNotificationBadge" style="display: none;"></div>
-                        </div>
-                            <i class="fas fa-chevron-down dao-toggle-icon" id="daoToggleIcon"></i>
-                        </div>
-                        <div class="dao-card-content" id="daoCardContent" style="display: none;">
-                            <div class="my-dao-list" id="myDAOList">
-                                <!-- 소속 DAO 목록이 동적으로 생성됩니다 -->
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -218,21 +207,21 @@
                         </div>
                                 </div>
                                 <div class="validator-actions">
-                                    <button class="btn-primary validator-join-btn" onclick="window.dapp.navigateToValidatorDAO()">
-                                        <i class="fas fa-users"></i> 검증자 참여하기
-                                    </button>
                                     <button class="btn-support validator-sponsor-btn" onclick="window.dapp.showValidatorSponsorModal()">
-                                        <i class="fas fa-heart"></i> 검증자 풀 후원하기
+                                        <i class="fas fa-heart"></i> 후원하기
+                                    </button>
+                                    <button class="btn-primary validator-join-btn" onclick="window.dapp.navigateToValidatorDAO()">
+                                        <i class="fas fa-users"></i> 참여하기
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 프로토콜 개요 카드 -->
+                    <!-- BROTHERHOOD 카드 -->
                     <div class="protocol-overview-card" data-card="protocol">
                         <div class="card-header">
-                            <h3><i class="fas fa-book"></i> 백야 프로토콜</h3>
+                            <h3><i class="fas fa-users"></i> BROTHERHOOD</h3>
                         </div>
                         <div class="card-content">
                             <div class="protocol-info">
@@ -242,11 +231,45 @@
                                 <button class="btn-primary protocol-overview-btn" onclick="window.open('https://github.com/baekya-protocol/baekya-protocol/blob/main/docs/protocol_overview.md', '_blank')">
                                     <i class="fas fa-external-link-alt"></i> 프로토콜 개요 보기
                                 </button>
-                                
-
                             </div>
                         </div>
                     </div>
+
+                    <!-- 거버넌스 카드 -->
+                    <div class="protocol-overview-card" data-card="governance">
+                        <div class="card-header">
+                            <h3><i class="fas fa-university"></i> 거버넌스</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="protocol-info">
+                                <p class="protocol-description">
+                                    커뮤니티 거버넌스에 참여하고 제안을 만들어보세요.
+                                </p>
+                                <button class="btn-primary protocol-overview-btn" onclick="window.dapp.switchTab('governance')">
+                                    <i class="fas fa-balance-scale"></i> 거버넌스 참여하기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 시스템 카드 -->
+                    <div class="protocol-overview-card" data-card="system">
+                        <div class="card-header">
+                            <h3><i class="fas fa-code"></i> 시스템</h3>
+                            </div>
+                        <div class="card-content">
+                            <div class="protocol-info">
+                                <p class="protocol-description">
+                                    프로토콜의 시스템 구조와 코드를 살펴보세요.
+                                </p>
+                                <button class="btn-primary protocol-overview-btn" onclick="window.dapp.switchTab('system')">
+                                    <i class="fas fa-folder-tree"></i> 시스템 구조 보기
+                                </button>
+                        </div>
+                    </div>
+                    </div>
+
+
                 </div>
             </div>
 
@@ -285,7 +308,7 @@
                     <!-- 지갑 정보 섹션 -->
                     <div class="wallet-info" id="walletInfo" style="display: none;">
                         <!-- 토큰 잔액 개요 -->
-                        <div class="balance-overview">
+                        <div class="balance-overview wallet-full-width">
                             <div class="balance-card-large">
                                 <div class="balance-header">
                                     <h3>B-Token (화폐)</h3>
@@ -295,12 +318,8 @@
                                     <!-- 기여 관련 메시지 제거됨 -->
                             </div>
                             
-
-                            </div>
-                        </div>
-
-                        <!-- 내 주소 카드 -->
-                        <div class="balance-card-large address-card">
+                                <!-- 내 주소 토글 추가 -->
+                                <div class="address-toggle-section">
                             <div class="address-toggle-header" onclick="window.dapp.toggleAddressCard()">
                                 <div class="address-toggle-content">
                                     <i class="fas fa-address-card"></i>
@@ -310,12 +329,11 @@
                             </div>
                             <div class="address-card-content" id="addressCardContent" style="display: none;">
                                 <div class="address-section">
-
                                     <div class="address-info">
-                                        <div class="address-label">통신 주소</div>
+                                                <div class="address-label">지갑 주소</div>
                                         <div class="address-container">
-                                            <div class="address-value" id="myCommAddress">-</div>
-                                            <button class="copy-btn" onclick="window.dapp.copyToClipboard('myCommAddress', '통신주소')" title="통신주소 복사">
+                                                    <div class="address-value" id="myWalletAddress">-</div>
+                                                    <button class="copy-btn" onclick="window.dapp.copyToClipboard('myWalletAddress', '지갑주소')" title="지갑주소 복사">
                                                 <i class="fas fa-copy"></i>
                                             </button>
                                         </div>
@@ -329,6 +347,8 @@
                                         <button class="btn-secondary" onclick="window.dapp.downloadQR()">
                                             <i class="fas fa-download"></i> QR 저장
                                         </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -350,9 +370,9 @@
                                     </div>
                                     <form id="transferForm">
                                         <div class="form-group">
-                                            <label for="recipientAddress">받는 주소 (아이디)</label>
+                                            <label for="recipientAddress">받는 주소</label>
                                             <div class="address-input-group">
-                                            <input type="text" id="recipientAddress" placeholder="아이디 입력">
+                                                                                          <input type="text" id="recipientAddress" placeholder="지갑 주소 입력">
                                                 <!-- QR 스캔 버튼은 모바일 앱에서만 사용 가능 -->
                                                 <div class="web-qr-notice">
                                                     <i class="fas fa-mobile-alt"></i>
@@ -437,18 +457,6 @@
                 <div class="dao-container">
                     <div class="dao-header">
                         <h2><i class="fas fa-users"></i> DAO 컨소시엄</h2>
-                    </div>
-
-
-
-                    <!-- DAO 검색창 -->
-                    <div class="dao-search-section">
-                        <div class="search-input-wrapper">
-                            <input type="text" id="daoSearchInput" placeholder="DAO 이름으로 검색..." onkeyup="window.dapp.searchDAOs(this.value)">
-                            <button class="clear-search-btn" onclick="window.dapp.clearDAOSearch()" style="display: none;">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
                     </div>
 
                     <div class="dao-grid" id="daoGrid">
@@ -556,6 +564,415 @@
                     <div id="op-review-content">
                         <!-- 각 탭의 콘텐츠가 동적으로 로드됩니다 -->
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 거버넌스 탭 -->
+    <div id="governance" class="tab-content">
+        <div class="governance-container">
+            <div class="governance-header">
+                <h2><i class="fas fa-balance-scale"></i> 거버넌스</h2>
+            </div>
+
+            <!-- 거버넌스 서브탭 -->
+            <div class="governance-nav">
+                <button class="governance-tab active" data-tab="proposals" onclick="window.dapp.switchGovernanceTab('proposals')">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>I. 제안</span>
+                </button>
+                <button class="governance-tab" data-tab="collaboration" onclick="window.dapp.switchGovernanceTab('collaboration')">
+                    <i class="fas fa-handshake"></i>
+                    <span>II. 협업</span>
+                </button>
+                <button class="governance-tab" data-tab="completed" onclick="window.dapp.switchGovernanceTab('completed')">
+                    <i class="fas fa-check-circle"></i>
+                    <span>III. 완료</span>
+                </button>
+            </div>
+
+            <!-- 제안 탭 콘텐츠 -->
+            <div id="governance-proposals" class="governance-tab-content active">
+                <!-- 검색창 -->
+                <div class="proposals-search-section">
+                    <div class="search-container">
+                        <input type="text" id="proposalSearchInput" placeholder="제안 제목 또는 ID로 검색..." 
+                               onkeyup="window.dapp.governanceManager.searchProposals(this.value)">
+                    </div>
+                </div>
+
+                <!-- 필터 메뉴 -->
+                <div class="proposals-filter-menu">
+                    <button class="filter-btn active" data-filter="popular" onclick="window.dapp.governanceManager.setFilter('popular')">
+                        <i class="fas fa-fire"></i>
+                        인기순
+                    </button>
+                    <button class="filter-btn" data-filter="date" onclick="window.dapp.governanceManager.toggleDateSort()">
+                        <i class="fas fa-calendar"></i>
+                        <span id="dateSortText">최신순</span>
+                    </button>
+                    <button class="filter-btn" data-filter="my" onclick="window.dapp.governanceManager.setFilter('my')">
+                        <i class="fas fa-user"></i>
+                        나의 제안
+                    </button>
+                    <button class="filter-btn" data-filter="bookmarked" onclick="window.dapp.governanceManager.setFilter('bookmarked')">
+                        <i class="fas fa-star"></i>
+                        관심 제안
+                    </button>
+                    
+                    <!-- 라벨 필터 구분선 -->
+                    <div class="filter-divider"></div>
+                    
+                    <!-- 라벨 탭들 -->
+                    <button class="label-btn" data-label="" onclick="window.dapp.governanceManager.setLabelFilter('')">
+                        전체
+                    </button>
+                    <button class="label-btn" data-label="bugfix" onclick="window.dapp.governanceManager.setLabelFilter('bugfix')">
+                        버그수정
+                    </button>
+                    <button class="label-btn" data-label="feature" onclick="window.dapp.governanceManager.setLabelFilter('feature')">
+                        기능추가
+                    </button>
+                    <button class="label-btn" data-label="improvement" onclick="window.dapp.governanceManager.setLabelFilter('improvement')">
+                        개선사항
+                    </button>
+                    <button class="label-btn" data-label="security" onclick="window.dapp.governanceManager.setLabelFilter('security')">
+                        보안
+                    </button>
+                    <button class="label-btn" data-label="governance" onclick="window.dapp.governanceManager.setLabelFilter('governance')">
+                        거버넌스
+                    </button>
+                    <button class="label-btn" data-label="performance" onclick="window.dapp.governanceManager.setLabelFilter('performance')">
+                        성능
+                    </button>
+                    <button class="label-btn" data-label="ui" onclick="window.dapp.governanceManager.setLabelFilter('ui')">
+                        UI/UX
+                    </button>
+                    <button class="label-btn" data-label="documentation" onclick="window.dapp.governanceManager.setLabelFilter('documentation')">
+                        문서화
+                    </button>
+                    <button class="label-btn" data-label="etc" onclick="window.dapp.governanceManager.setLabelFilter('etc')">
+                        기타
+                    </button>
+
+                </div>
+
+                <div class="proposals-header">
+                    <div class="proposals-title">
+                        <h3>제안 목록</h3>
+                        <p>시스템 개선 및 기능 추가를 위한 제안들을 확인하고 참여하세요.</p>
+                    </div>
+                    <button class="btn-primary create-proposal-btn" onclick="window.dapp.showCreateProposalModal()">
+                        <i class="fas fa-plus"></i>
+                        생성
+                    </button>
+                </div>
+
+                <div class="proposals-list" id="proposalsList">
+                    <!-- 제안 카드들이 동적으로 생성됩니다 -->
+                </div>
+            </div>
+
+            <!-- 협업 탭 콘텐츠 -->
+            <div id="governance-collaboration" class="governance-tab-content">
+                <div class="collaboration-content">
+                    <h3>협업 진행 중</h3>
+                    <p>현재 진행 중인 협업 프로젝트들입니다.</p>
+                </div>
+            </div>
+
+            <!-- 완료 탭 콘텐츠 -->
+            <div id="governance-completed" class="governance-tab-content">
+                <div class="completed-content">
+                    <h3>완료된 제안</h3>
+                    <p>성공적으로 완료된 제안들입니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 시스템 탭 -->
+    <div id="system" class="tab-content">
+        <div class="system-container">
+            <div class="system-header">
+                <h2><i class="fas fa-code"></i> 시스템 구조</h2>
+                <div class="system-actions">
+                    <button class="btn-primary download-btn" onclick="window.dapp.toggleDownloadMode()">
+                        <i class="fas fa-download"></i> 가져오기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 파일 트리 -->
+            <div class="file-tree-container">
+                <div class="select-all-controls">
+                    <button class="select-all-btn" onclick="window.dapp.selectAllFiles()">전체 선택</button>
+                    <button class="select-all-btn" onclick="window.dapp.deselectAllFiles()">전체 해제</button>
+                    <button class="btn-primary" onclick="window.dapp.downloadSelectedFiles()">
+                        <i class="fas fa-download"></i> 다운로드
+                    </button>
+                </div>
+                <div class="file-tree" id="fileTree">
+                    <!-- 파일 트리가 동적으로 생성됩니다 -->
+                </div>
+            </div>
+
+            <!-- 파일 뷰어 -->
+            <div class="file-viewer" id="fileViewer" style="display: none;">
+                <div class="file-viewer-header">
+                    <div class="file-path" id="filePath"></div>
+                    <button class="close-viewer-btn" onclick="window.dapp.closeFileViewer()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="file-content" id="fileContent">
+                    <!-- 파일 내용이 표시됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 거버넌스 제안 생성 모달 -->
+    <div id="createGovernanceProposalModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-lightbulb"></i> 새 제안 생성</h3>
+                <button class="modal-close" onclick="window.dapp.closeCreateGovernanceProposalModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createGovernanceProposalForm">
+                    <!-- 기본 정보 -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-info-circle"></i> 기본 정보</h4>
+                        <div class="form-group">
+                            <label for="proposalTitle">제목 <span class="char-count" id="titleCharCount">(0/50)</span></label>
+                            <input type="text" id="proposalTitle" placeholder="제안의 제목을 입력하세요" maxlength="50" required
+                                   oninput="window.dapp.governanceManager.updateCharCount('proposalTitle', 50)">
+                        </div>
+                        <div class="form-group">
+                            <label for="proposalDescription">설명 <span class="char-count" id="descriptionCharCount">(0/1500)</span></label>
+                            <textarea id="proposalDescription" rows="8" placeholder="제안에 대한 상세한 설명을 입력하세요" maxlength="1500" required
+                                      oninput="window.dapp.governanceManager.updateCharCount('proposalDescription', 1500)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 코어구조 업로드 -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-code"></i> 코어구조</h4>
+                        <p class="section-description">시스템 수정에 대한 핵심 코드를 업로드하세요. (선택사항)</p>
+                        <div class="core-structure-upload">
+                            <div class="upload-options">
+                                <button type="button" class="upload-btn" onclick="document.getElementById('coreStructureInput').click()">
+                                    <i class="fas fa-file-upload"></i>
+                                    파일 선택
+                                </button>
+                                <button type="button" class="upload-btn" onclick="document.getElementById('folderStructureInput').click()">
+                                    <i class="fas fa-folder-open"></i>
+                                    폴더 선택
+                                </button>
+                            </div>
+                            <div class="upload-area" id="uploadArea" 
+                                 ondragover="window.dapp.handleDragOver(event)" 
+                                 ondragenter="window.dapp.handleDragEnter(event)" 
+                                 ondragleave="window.dapp.handleDragLeave(event)" 
+                                 ondrop="window.dapp.handleDrop(event)">
+                                <div class="upload-content">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>코어구조 파일/폴더를 선택하거나 드래그하세요</p>
+                                    <small>지원 형식: .js, .json, .md, .txt, .css, .html (최대 총 20MB)</small>
+                                </div>
+                                <input type="file" id="coreStructureInput" accept=".js,.json,.md,.txt,.css,.html" multiple style="display: none;" onchange="window.dapp.handleCoreStructureUpload(this)">
+                                <input type="file" id="folderStructureInput" webkitdirectory directory style="display: none;" onchange="window.dapp.handleCoreStructureUpload(this)">
+                            </div>
+                            <div class="uploaded-structure" id="uploadedStructure" style="display: none;">
+                                <div class="structure-info">
+                                    <div class="structure-header">
+                                        <h5><i class="fas fa-file-code"></i> 업로드된 파일들</h5>
+                                        <button type="button" class="remove-all-btn" onclick="window.dapp.removeAllCoreStructure()">
+                                            <i class="fas fa-trash"></i> 모두 삭제
+                                        </button>
+                                    </div>
+                                    <div class="structure-files" id="structureFilesList">
+                                        <!-- 업로드된 파일들이 표시됩니다 -->
+                                    </div>
+                                    <div class="diff-preview" id="diffPreview">
+                                        <!-- 차이점이 표시됩니다 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 라벨 선택 -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-tags"></i> 라벨</h4>
+                        <div class="form-group">
+                            <select id="proposalLabel" required>
+                                <option value="">라벨을 선택하세요</option>
+                                <option value="bugfix">버그수정</option>
+                                <option value="feature">기능추가</option>
+                                <option value="improvement">개선사항</option>
+                                <option value="security">보안</option>
+                                <option value="governance">거버넌스</option>
+                                <option value="performance">성능</option>
+                                <option value="ui">UI/UX</option>
+                                <option value="documentation">문서화</option>
+                                <option value="etc">기타</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 비용 정보 -->
+                    <div class="form-section">
+                        <div class="cost-info">
+                            <div class="cost-notice">
+                                <i class="fas fa-coins"></i>
+                                <span>제안 생성 비용: <strong>30 B-Token</strong></span>
+                            </div>
+                            <small>생성 비용은 제안의 초기 모금액으로 사용됩니다.</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="window.dapp.closeCreateGovernanceProposalModal()">
+                    <i class="fas fa-times"></i> 취소
+                </button>
+                <button type="submit" form="createGovernanceProposalForm" class="btn-primary" onclick="window.dapp.submitGovernanceProposal(event)">
+                    <i class="fas fa-plus"></i> 생성 (30B)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 거버넌스 제안 상세 모달 -->
+    <div id="governanceProposalDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-alt"></i> 제안 상세 정보</h3>
+                <button class="modal-close" onclick="window.dapp.closeGovernanceProposalDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 제안자 정보 -->
+                <div class="proposal-detail-author">
+                    <div class="author-avatar clickable-avatar" id="proposalDetailAvatar" 
+                         title="사용자 정보 보기">A</div>
+                    <div class="author-info">
+                        <div class="author-name" id="proposalDetailAuthor">작성자</div>
+                        <div class="author-date" id="proposalDetailDate">2024-01-01</div>
+                    </div>
+                    <div class="proposal-actions">
+                        <button class="action-btn bookmark-btn" onclick="window.dapp.toggleProposalBookmark()" title="관심 제안">
+                            <i class="far fa-star"></i>
+                        </button>
+                        <button class="action-btn report-btn" onclick="window.dapp.reportProposal()" title="신고하기">
+                            <i class="fas fa-flag"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 신고 누적 경고 -->
+                <div class="report-warning" id="reportWarning" style="display: none;">
+                    <div class="warning-content">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>신고가 누적된 제안입니다. 제안을 꼼꼼히 보고 투표해주세요.</span>
+                    </div>
+                </div>
+
+                <!-- 제안 정보 -->
+                <div class="proposal-detail-content">
+                    <div class="proposal-id" id="proposalDetailId">GP-123456</div>
+                    <h2 class="proposal-title" id="proposalDetailTitle">제안 제목</h2>
+                    <div class="proposal-label" id="proposalDetailLabel">
+                        <i class="fas fa-tag"></i> 라벨
+                    </div>
+                    <div class="proposal-description" id="proposalDetailDescription">
+                        제안 설명...
+                    </div>
+                </div>
+
+                <!-- 코어구조 섹션 -->
+                <div class="proposal-detail-structure" id="proposalDetailStructure" style="display: none;">
+                    <h4><i class="fas fa-code"></i> 코어구조</h4>
+                    <div class="structure-files" id="detailStructureFiles">
+                        <!-- 업로드된 파일들이 표시됩니다 -->
+                    </div>
+                    <div class="diff-preview" id="detailDiffPreview">
+                        <!-- 차이점이 표시됩니다 -->
+                    </div>
+                </div>
+
+                <!-- 투표 섹션 (투표 전) -->
+                <div class="proposal-voting-section" id="votingSection">
+                    <h4><i class="fas fa-vote-yea"></i> 투표하기</h4>
+                    <p class="voting-notice">투표에 참여하면 투표 현황과 모금 기능이 활성화됩니다.</p>
+                    <div class="voting-buttons">
+                        <button class="vote-btn vote-agree" onclick="window.dapp.voteProposal('agree')">
+                            <i class="fas fa-check"></i> 동의
+                        </button>
+                        <button class="vote-btn vote-abstain" onclick="window.dapp.voteProposal('abstain')">
+                            <i class="fas fa-minus"></i> 기권
+                        </button>
+                        <button class="vote-btn vote-disagree" onclick="window.dapp.voteProposal('disagree')">
+                            <i class="fas fa-times"></i> 비동의
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 투표 현황 섹션 (투표 후 표시) -->
+                <div class="proposal-voting-status" id="votingStatusSection" style="display: none;">
+                    <h4><i class="fas fa-chart-bar"></i> 투표 현황</h4>
+                    <div class="voting-stats">
+                        <div class="vote-bar-container">
+                            <div class="vote-bar">
+                                <div class="vote-segment agree" id="agreeBar" style="width: 0%">
+                                    <span class="vote-percent">0%</span>
+                                </div>
+                                <div class="vote-segment abstain" id="abstainBar" style="width: 0%">
+                                    <span class="vote-percent">0%</span>
+                                </div>
+                                <div class="vote-segment disagree" id="disagreeBar" style="width: 0%">
+                                    <span class="vote-percent">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="vote-counts">
+                            <div class="vote-count agree">
+                                <i class="fas fa-check"></i>
+                                <span>동의: <strong id="agreeCount">0</strong>명</span>
+                            </div>
+                            <div class="vote-count abstain">
+                                <i class="fas fa-minus"></i>
+                                <span>기권: <strong id="abstainCount">0</strong>명</span>
+                            </div>
+                            <div class="vote-count disagree">
+                                <i class="fas fa-times"></i>
+                                <span>비동의: <strong id="disagreeCount">0</strong>명</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="user-vote-info">
+                        <i class="fas fa-user-check"></i>
+                        <span>내 투표: <strong id="userVote">-</strong></span>
+                    </div>
+                </div>
+
+                <!-- 모금 섹션 (투표 후 표시) -->
+                <div class="proposal-funding-section" id="fundingSection" style="display: none;">
+                    <h4><i class="fas fa-coins"></i> 모금 현황</h4>
+                    <div class="funding-info">
+                        <span class="current-amount">
+                            현재 모금액: <strong id="currentFunding">30</strong> B
+                        </span>
+                    </div>
+                    <div class="funding-action">
+                        <input type="number" id="fundingAmount" min="1" value="1" step="0.1" placeholder="모금액">
+                        <button class="btn-primary fund-btn" onclick="window.dapp.fundProposal()">
+                            <i class="fas fa-donate"></i> 모금하기
+                        </button>
+                    </div>
+                    <p class="funding-notice">최소 1B부터 모금 가능합니다.</p>
                 </div>
             </div>
         </div>
@@ -1733,7 +2150,61 @@
         </div>
     </div>
 
+    <!-- 사용자 프로필 정보 모달 -->
+    <div id="userProfileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user"></i> 사용자 정보</h3>
+                <button class="modal-close" onclick="window.dapp.closeUserProfileModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 사용자 프로필 정보 -->
+                <div class="user-profile-info">
+                    <div class="user-profile-header">
+                        <div class="user-avatar-large" id="userProfileAvatar">U</div>
+                                             <div class="user-basic-info">
+                         <div class="user-profile-name" id="userProfileName">사용자</div>
+                     </div>
+                    </div>
+                    
+                    <div class="user-status-message" id="userStatusMessage">
+                        <i class="fas fa-comment-dots"></i>
+                        <span id="userStatusText">상태메시지</span>
+                    </div>
+                </div>
 
+                <!-- 사용자 생성 제안 목록 -->
+                <div class="user-proposals-section">
+                    <h4><i class="fas fa-lightbulb"></i> 생성한 제안</h4>
+                    <div class="user-proposals-list" id="userProposalsList">
+                        <!-- 사용자가 생성한 제안들이 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- 기여내역 모달 -->
+    <div id="contributeHistoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-history"></i> 기여내역</h3>
+                <button class="modal-close" onclick="window.dapp.closeContributeHistoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="contribute-history-content">
+                    <div class="my-dao-list" id="contributeHistoryList">
+                        <!-- 기여내역이 동적으로 생성됩니다 -->
+                        <div class="dao-placeholder">
+                            <i class="fas fa-users"></i>
+                            <p>소속된 DAO가 없습니다.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 제안하기 모달 -->
 </body>
 </html> 

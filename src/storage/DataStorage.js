@@ -57,6 +57,11 @@ class DataStorage {
         if (!this.data.validatorPool) {
           this.data.validatorPool = { totalStake: 0, contributions: {} };
         }
+        if (!this.data.governance) {
+          this.data.governance = {
+            proposals: []
+          };
+        }
         if (!this.data.transactions) this.data.transactions = [];
         if (!this.data.blockchain) this.data.blockchain = [];
         
@@ -72,6 +77,9 @@ class DataStorage {
           validatorPool: {
             totalStake: 0,
             contributions: {}
+          },
+          governance: {
+            proposals: []
           },
           transactions: [],
           blockchain: []
@@ -184,6 +192,16 @@ class DataStorage {
       this.data.tokens.pTokenBalances[didHash] = Math.round(newAmount * 10000) / 10000;
     }
     this.saveData();
+  }
+
+  // 잔액 조회 (거버넌스용)
+  getBalance(didHash, tokenType) {
+    if (tokenType === 'B-Token' || tokenType === 'B') {
+      return this.data.tokens.bTokenBalances?.[didHash] || 0;
+    } else if (tokenType === 'P-Token' || tokenType === 'P') {
+      return this.data.tokens.pTokenBalances?.[didHash] || 0;
+    }
+    return 0;
   }
 
   // 검증자 풀 관리
@@ -654,6 +672,59 @@ class DataStorage {
       totalContributions,
       totalContributors: contributors.size
     };
+  }
+
+  // 거버넌스 제안 관련 메서드들
+  getGovernanceProposals() {
+    return this.data.governance.proposals || [];
+  }
+
+  addGovernanceProposal(proposal) {
+    if (!this.data.governance) {
+      this.data.governance = { proposals: [] };
+    }
+    this.data.governance.proposals.push(proposal);
+    this.saveData();
+    console.log(`🏛️ 거버넌스 제안 저장됨: ${proposal.id}`);
+  }
+
+  getGovernanceProposal(proposalId) {
+    return this.data.governance.proposals.find(p => p.id === proposalId);
+  }
+
+  updateGovernanceProposal(proposalId, updates) {
+    const index = this.data.governance.proposals.findIndex(p => p.id === proposalId);
+    if (index !== -1) {
+      this.data.governance.proposals[index] = {
+        ...this.data.governance.proposals[index],
+        ...updates
+      };
+      this.saveData();
+      return true;
+    }
+    return false;
+  }
+
+  deleteGovernanceProposal(proposalId) {
+    const index = this.data.governance.proposals.findIndex(p => p.id === proposalId);
+    if (index !== -1) {
+      this.data.governance.proposals.splice(index, 1);
+      this.saveData();
+      return true;
+    }
+    return false;
+  }
+
+  // 모든 거버넌스 제안 삭제 (테스트용)
+  clearAllGovernanceProposals() {
+    if (!this.data.governance) {
+      this.data.governance = { proposals: [] };
+    }
+    const count = this.data.governance.proposals.length;
+    this.data.governance.proposals = [];
+    this.saveData();
+    console.log(`🧹 모든 거버넌스 제안 삭제됨: ${count}개`);
+    return count;
   }
 }
 

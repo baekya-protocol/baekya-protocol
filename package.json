@@ -48,7 +48,7 @@
     "level": "^8.0.0",
     "localtunnel": "^2.0.2",
     "merkletreejs": "^0.3.10",
-    "ngrok": "^5.0.0",
+    "ngrok": "^4.3.3",
     "socket.io": "^4.8.1",
     "uuid": "^9.0.1",
     "ws": "^8.18.2"

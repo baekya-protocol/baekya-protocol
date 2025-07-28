@@ -56,12 +56,7 @@ class DAO {
   initializeDefaultDAOs() {
     const systemDID = 'did:baekya:system0000000000000000000000000000000001';
 
-    // Development DAO  
-    const developmentDAO = this.createDAO(systemDID, {
-      name: 'Development DAO',
-      purpose: 'Development',
-      description: '백야 프로토콜 개발을 담당하는 DAO'
-    });
+
 
     // Community DAO
     const communityDAO = this.createDAO(systemDID, {

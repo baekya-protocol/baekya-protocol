@@ -365,14 +365,17 @@ class BlockchainCore {
       'invite_code_registration',
       'dca_verification',
       'system_notification',
-      'metadata_update'
+      'metadata_update',
+      'governance_vote',  // 거버넌스 투표는 무료
+      'governance_proposal_creation', // 거버넌스 제안 생성
+      'governance_funding'  // 거버넌스 모금
     ];
     
     const isZeroAmountAllowed = transaction.data?.type && 
       zeroAmountAllowedTypes.includes(transaction.data.type);
     
     if (typeof transaction.amount !== 'number' || 
-        (!isZeroAmountAllowed && transaction.amount <= 0)) {
+        (!isZeroAmountAllowed && transaction.amount < 0)) {  // 0 이상 허용으로 변경
       return {
         success: false,
         error: '유효하지 않은 금액입니다'
@@ -413,7 +416,10 @@ class BlockchainCore {
         'pr_merged_reward',       // PR 병합 보상
         'pr_review_reward',       // PR 리뷰 보상
         'issue_resolved_reward',  // Issue 해결 보상
-        'github_integration_bonus' // GitHub 연동 보너스
+        'github_integration_bonus', // GitHub 연동 보너스
+        'governance_proposal_creation', // 거버넌스 제안 생성
+        'governance_vote',        // 거버넌스 투표
+        'governance_funding'      // 거버넌스 모금
       ];
       
       if (!allowedSystemTypes.includes(transaction.data?.type || transaction.data)) {
@@ -424,8 +430,9 @@ class BlockchainCore {
       }
     }
 
-    // 시스템 트랜잭션은 잔액 검증 건너뛰기
-    if (!transaction.fromDID.includes('system')) {
+    // 시스템 트랜잭션 또는 0원 거버넌스 트랜잭션은 잔액 검증 건너뛰기
+    if (!transaction.fromDID.includes('system') && 
+        !(transaction.amount === 0 && isZeroAmountAllowed)) {
       // 잔액 검증 - 대기 중인 트랜잭션도 고려
       const senderBalance = this.getBalance(transaction.fromDID, transaction.tokenType);
       

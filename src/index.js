@@ -332,7 +332,7 @@ class BaekyaProtocol {
       this.components.didSystem.registerDID(founderDID, result);
       
       // 4개 기본 DAO의 OP로 설정
-      const defaultDAOs = ['Operations DAO', 'Development DAO', 'Community DAO', 'Political DAO'];
+      const defaultDAOs = ['Operations DAO', 'Community DAO', 'Political DAO'];
       
       for (const daoName of defaultDAOs) {
         const dao = Array.from(this.components.dao.daos.values())

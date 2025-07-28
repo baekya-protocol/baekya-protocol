@@ -162,29 +162,7 @@ describe('자동화 시스템 테스트', () => {
     });
   });
 
-  describe('GitHub 통합', () => {
-    test('GitHub 웹훅 설정이 가능해야 함', () => {
-      const result = automationSystem.setupGitHubIntegration(
-        'baekya-protocol',
-        'baekya-protocol',
-        'mock-token-123'
-      );
 
-      expect(result.success).toBe(true);
-      expect(result.webhookUrl).toContain('baekya-protocol/baekya-protocol');
-      expect(result.message).toBe('GitHub 통합이 설정되었습니다');
-    });
-
-    test('통신주소 추출이 정상적으로 작동해야 함', () => {
-      const text1 = '안녕하세요! 제 통신주소는 010-1234-5678입니다.';
-      const text2 = 'My baekya address: baekya://010-9876-5432';
-      const text3 = '주소 없는 텍스트입니다.';
-
-      expect(automationSystem.extractCommunicationAddress(text1)).toBe('010-1234-5678');
-      expect(automationSystem.extractCommunicationAddress(text2)).toBe('010-9876-5432');
-      expect(automationSystem.extractCommunicationAddress(text3)).toBeNull();
-    });
-  });
 
   describe('초대 시스템', () => {
     test('초대 링크 생성이 가능해야 함', () => {
@@ -278,7 +256,7 @@ describe('자동화 시스템 테스트', () => {
   describe('자동화 상태', () => {
     test('자동화 시스템 상태를 확인할 수 있어야 함', () => {
       // GitHub 웹훅 설정
-      automationSystem.setupGitHubIntegration('test-owner', 'test-repo', 'token');
+  
       
       // 초대 링크 생성
       automationSystem.createInviteLink('test-inviter');
