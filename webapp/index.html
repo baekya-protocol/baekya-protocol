@@ -59,6 +59,7 @@
                         </div>
                     </div>
                 </div>
+<<<<<<< HEAD
 
                 <!-- 시스템 탭 헤더 -->
                 <div class="mobile-header-tab" id="mobile-header-system">
@@ -72,6 +73,8 @@
 
 
 
+=======
+>>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
 
             </div>
         </div>
@@ -98,6 +101,7 @@
                     <i class="fas fa-users"></i>
                     <span>DAO</span>
                 </button>
+<<<<<<< HEAD
                 <button class="tab-btn" data-tab="governance" onclick="window.dapp.checkGovernanceAccess()">
                     <i class="fas fa-university"></i>
                     <span>거버넌스</span>
@@ -105,6 +109,12 @@
                 <button class="tab-btn" data-tab="system">
                     <i class="fas fa-code"></i>
                     <span>시스템</span>
+=======
+                <button class="tab-btn" data-tab="governance" onclick="event.preventDefault(); navigateToGovernance();">
+                    <i class="fas fa-university"></i>
+                    <span>거버넌스</span>
+                    <i class="fas fa-external-link-alt governance-external-icon" style="margin-left: 5px; font-size: 0.8em; opacity: 0.7;"></i>
+>>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
                 </button>
 
             </nav>
@@ -207,7 +217,11 @@
                         </div>
                                 </div>
                                 <div class="validator-actions">
+<<<<<<< HEAD
                                     <button class="btn-support validator-sponsor-btn" onclick="window.dapp.showValidatorSponsorModal()">
+=======
+                                    <button class="btn-primary validator-sponsor-btn" onclick="window.dapp.showValidatorSponsorModal()">
+>>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
                                         <i class="fas fa-heart"></i> 후원하기
                                     </button>
                                     <button class="btn-primary validator-join-btn" onclick="window.dapp.navigateToValidatorDAO()">
@@ -275,7 +289,7 @@
 
             <!-- 지갑 탭 -->
             <div id="wallet" class="tab-content">
-                <div class="wallet-container">
+                <div class="wallet-container" style="padding-top: 1rem;">
                     <div class="wallet-header">
                         <h2><i class="fas fa-wallet"></i> 내 지갑</h2>
                         <div class="wallet-actions">
@@ -465,9 +479,92 @@
                 </div>
             </div>
 
+            <!-- 거버넌스 탭 -->
+            <div id="governance" class="tab-content">
+                <div class="governance-container">
+                    <!-- 거버넌스 헤더 -->
+                    <div class="governance-header">
+                        <h2><i class="fas fa-university"></i> 백야 거버넌스</h2>
+                        <p class="governance-subtitle">탈중앙화된 프로토콜 개발 및 의사결정</p>
+                    </div>
 
+                    <!-- 거버넌스 필터 메뉴 (대시보드 스타일) -->
+                    <div class="dashboard-filter-nav">
+                        <div class="dashboard-filter-scroll">
+                            <button class="dashboard-filter-btn active" data-gov-tab="system" onclick="window.dapp.switchGovernanceTab('system')">
+                                <i class="fas fa-code"></i>
+                                System
+                            </button>
+                            <button class="dashboard-filter-btn" data-gov-tab="collab" onclick="window.dapp.switchGovernanceTab('collab')">
+                                <i class="fas fa-handshake"></i>
+                                Collab
+                            </button>
+                            <button class="dashboard-filter-btn" data-gov-tab="forkspace" onclick="window.dapp.switchGovernanceTab('forkspace')">
+                                <i class="fas fa-code-branch"></i>
+                                Forkspace
+                            </button>
+                        </div>
+                    </div>
 
+                    <!-- System 탭 (백야코드) -->
+                    <div id="gov-system" class="governance-tab-content active">
+                        <div class="system-container">
+                            <div class="system-header-simple">
+                                <div class="system-title">
+                                    <i class="fas fa-code"></i>
+                                    <span class="system-name">시스템 구조</span>
+                                </div>
+                            </div>
 
+                            <div class="file-browser-simple">
+                                <div class="file-list" id="systemFileList">
+                                    <!-- 파일 목록이 동적으로 생성됩니다 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Collab 탭 (이슈 + PR 통합) -->
+                    <div id="gov-collab" class="governance-tab-content">
+                        <div class="collab-container">
+                            <div class="collab-header-simple">
+                                <h3><i class="fas fa-handshake"></i> 협업 거버넌스</h3>
+                                <button class="btn-primary collab-create-btn" onclick="window.dapp.openCollabCreateModal()">
+                                    <i class="fas fa-plus"></i>
+                                    새 제안
+                                </button>
+                            </div>
+
+                            <div class="collab-filters-simple">
+                                <button class="filter-btn-simple active" data-filter="all" onclick="window.dapp.filterCollabs('all')">전체</button>
+                                <button class="filter-btn-simple" data-filter="voting" onclick="window.dapp.filterCollabs('voting')">투표중</button>
+                                <button class="filter-btn-simple" data-filter="completed" onclick="window.dapp.filterCollabs('completed')">완료</button>
+                            </div>
+
+                            <div class="collab-list" id="collabList">
+                                <!-- 콜랩 카드들이 동적으로 생성됩니다 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Forkspace 탭 (내 포크) -->
+                    <div id="gov-forkspace" class="governance-tab-content">
+                        <div class="forkspace-container">
+                            <div class="forkspace-header-simple">
+                                <h3><i class="fas fa-code-branch"></i> 내 작업공간</h3>
+                                <button class="btn-primary fork-create-btn" onclick="window.dapp.createPersonalFork()">
+                                    <i class="fas fa-plus"></i>
+                                    새 포크
+                                </button>
+                            </div>
+
+                            <div class="fork-list" id="forkList">
+                                <!-- 포크 목록이 동적으로 생성됩니다 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
     <!-- 이모지 피커 모달 -->
     <div id="emojiPickerModal" class="modal">
@@ -543,7 +640,7 @@
                 <!-- OP 검토 탭 네비게이션 -->
                 <div class="op-review-nav">
                     <button class="op-review-tab active" data-tab="my-dao" onclick="window.dapp.switchOPReviewTab('my-dao')">
-                        <i class="fas fa-gavel"></i>
+                        <i class="fas fa-university"></i>
                         <span>내 DAO 검토</span>
                         <small>OP 권한으로 안건 결정</small>
                     </button>
@@ -2150,6 +2247,7 @@
         </div>
     </div>
 
+<<<<<<< HEAD
     <!-- 사용자 프로필 정보 모달 -->
     <div id="userProfileModal" class="modal">
         <div class="modal-content">
@@ -2179,10 +2277,109 @@
                     <div class="user-proposals-list" id="userProposalsList">
                         <!-- 사용자가 생성한 제안들이 표시됩니다 -->
                     </div>
+=======
+    <!-- Collab 생성 모달 -->
+    <div id="collabCreateModal" class="modal">
+        <div class="modal-content collab-create-content">
+            <div class="modal-header">
+                <h3>새 제안 생성</h3>
+                <button class="modal-close" onclick="window.dapp.closeCollabCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="collabCreateForm">
+                    <div class="form-group">
+                        <label for="collabTitle">제안 제목</label>
+                        <input type="text" id="collabTitle" required placeholder="명확하고 구체적인 제안 제목을 입력하세요">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="collabDescription">제안 설명</label>
+                        <textarea id="collabDescription" rows="6" required placeholder="제안의 배경, 목적, 구현 방법 등을 상세히 설명하세요"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="collabCategory">카테고리</label>
+                        <select id="collabCategory" required>
+                            <option value="">카테고리를 선택하세요</option>
+                            <option value="feature">새 기능 추가</option>
+                            <option value="improvement">기능 개선</option>
+                            <option value="bugfix">버그 수정</option>
+                            <option value="documentation">문서 개선</option>
+                            <option value="governance">거버넌스 개선</option>
+                            <option value="other">기타</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="collabReward">제안 보상 (B-Token)</label>
+                        <input type="number" id="collabReward" min="1" step="0.1" placeholder="완료 시 지급할 B-Token 양">
+                        <small>제안자:채택자 = 3:7 비율로 분배됩니다</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="window.dapp.closeCollabCreateModal()">취소</button>
+                <button type="button" class="btn-primary" onclick="window.dapp.submitCollabProposal()">제안 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collab 상세 모달 -->
+    <div id="collabDetailModal" class="modal">
+        <div class="modal-content collab-detail-content">
+            <div class="modal-header">
+                <h3 id="collabDetailTitle">제안 상세</h3>
+                <button class="modal-close" onclick="window.dapp.closeCollabDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="collab-detail-info" id="collabDetailInfo">
+                    <!-- 제안 상세 정보가 동적으로 생성됩니다 -->
+                </div>
+                <div class="collab-prs" id="collabPRs">
+                    <!-- PR 목록이 동적으로 생성됩니다 -->
+                </div>
+                <div class="collab-voting" id="collabVoting">
+                    <!-- 투표 섹션이 동적으로 생성됩니다 -->
+>>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
                 </div>
             </div>
         </div>
     </div>
+<<<<<<< HEAD
+=======
+
+    <!-- PR 생성 모달 -->
+    <div id="prCreateModal" class="modal">
+        <div class="modal-content pr-create-content">
+            <div class="modal-header">
+                <h3>Pull Request 생성</h3>
+                <button class="modal-close" onclick="window.dapp.closePRCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="prCreateForm">
+                    <div class="form-group">
+                        <label for="prTitle">PR 제목</label>
+                        <input type="text" id="prTitle" required placeholder="구현 내용을 명확히 설명하세요">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="prDescription">구현 설명</label>
+                        <textarea id="prDescription" rows="6" required placeholder="어떻게 구현했는지, 어떤 변경사항이 있는지 설명하세요"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="prTestResults">테스트 결과</label>
+                        <textarea id="prTestResults" rows="3" placeholder="테스트한 내용과 결과를 설명하세요 (선택사항)"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="window.dapp.closePRCreateModal()">취소</button>
+                <button type="button" class="btn-primary" onclick="window.dapp.submitPR()">PR 생성</button>
+            </div>
+        </div>
+    </div>
+>>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
 
     <!-- 기여내역 모달 -->
     <div id="contributeHistoryModal" class="modal">

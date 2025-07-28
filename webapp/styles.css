@@ -61,6 +61,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-y: scroll; /* 항상 세로 스크롤바 표시하여 화면 이동 방지 */
 }
 
 body {
@@ -71,6 +72,7 @@ body {
   background-color: var(--bg-secondary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* 가로 스크롤 방지 */
 }
 
 /* 연결 상태 표시 */
@@ -1150,11 +1152,23 @@ body.capacitor .web-only {
 
 /* 검증자 액션 버튼들 - 기존 스타일 덮어쓰기 */
 .validator-actions {
+<<<<<<< HEAD
   display: flex;
   gap: 0.5rem;
   justify-content: center;
   align-items: center;
+=======
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0.75rem;
+>>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
   margin-top: 1rem;
+  align-items: center;
+}
+
+.validator-actions .btn-primary {
+  flex: 1;
+  min-width: 0;
 }
 
 /* DAO 금고 액션 버튼들 */
@@ -40102,6 +40116,7 @@ html {
   }
 }
 
+<<<<<<< HEAD
 /* ========================================
    거버넌스 제안 - 다중 파일 업로드 스타일
 ======================================== */
@@ -40331,11 +40346,286 @@ html {
 
 .diff-status {
   padding: 0.25rem 0.75rem;
+=======
+/* ==========================================
+   간소화된 거버넌스 시스템 스타일
+   ========================================== */
+
+/* 거버넌스 컨테이너 */
+.governance-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* 거버넌스 헤더 */
+.governance-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  border-radius: 8px;
+  color: white;
+}
+
+.governance-header h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.governance-subtitle {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+
+
+/* 거버넌스 탭 콘텐츠 */
+.governance-tab-content {
+  display: none;
+  animation: fadeIn 0.3s ease-in-out;
+  margin: 0; /* 마진 제거 */
+  padding: 0; /* 패딩 제거 */
+  width: 100%; /* 전체 너비 사용 */
+}
+
+.governance-tab-content.active {
+  display: block;
+}
+
+/* ==========================================
+   간소화된 System 탭
+   ========================================== */
+
+.system-container {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin: 0; /* 마진 제거 */
+  padding: 0; /* 패딩 제거 */
+}
+
+.system-header-simple {
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.system-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.system-title i {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+}
+
+.system-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.file-browser-simple {
+  background: var(--bg-primary);
+}
+
+.file-list {
+  padding: 0;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.file-item:hover {
+  background: var(--bg-secondary);
+}
+
+.file-item:last-child {
+  border-bottom: none;
+}
+
+.file-icon {
+  font-size: 0.9rem;
+  width: 16px;
+  height: 16px; /* 높이 고정 */
+  text-align: center;
+  display: flex; /* 플렉스 박스로 변경 */
+  align-items: center; /* 세로 중앙 정렬 */
+  justify-content: center; /* 가로 중앙 정렬 */
+  flex-shrink: 0; /* 축소 방지 */
+}
+
+.file-icon.folder {
+  color: #54aeff;
+}
+
+.file-icon.file {
+  color: var(--text-secondary);
+}
+
+.file-name {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.file-size {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  min-width: 60px;
+}
+
+.file-time {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  min-width: 80px;
+  text-align: right;
+}
+
+/* ==========================================
+   간소화된 Collab 탭
+   ========================================== */
+
+.collab-container {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin: 0; /* 왼쪽 어긋남 방지 */
+  padding: 0; /* 추가 패딩 제거 */
+}
+
+.collab-header-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  margin: 0; /* 마진 제거 */
+}
+
+.collab-header-simple h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.collab-create-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.collab-filters-simple {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filter-btn-simple {
+  padding: 0.4rem 0.8rem;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.filter-btn-simple:hover {
+  background: var(--bg-secondary);
+  color: var(--primary-color);
+}
+
+.filter-btn-simple.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.collab-list {
+  padding: 1rem;
+}
+
+.collab-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.collab-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.collab-card:last-child {
+  margin-bottom: 0;
+}
+
+.collab-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.collab-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.collab-card-meta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.collab-card-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.status-badge {
+  padding: 0.2rem 0.5rem;
+>>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
 }
 
+<<<<<<< HEAD
 .diff-status.new-file {
   background: #f0fdf4;
   color: #16a34a;
@@ -40747,10 +41037,136 @@ html {
 }
 
 .proposal-actions {
+=======
+.status-badge.voting {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.pending {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.collab-card-description {
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.collab-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.collab-stats {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.collab-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.collab-reward {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 0.9rem;
+}
+
+/* ==========================================
+   간소화된 Forkspace 탭
+   ========================================== */
+
+.forkspace-container {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin: 0; /* 마진 제거 */
+  padding: 0; /* 패딩 제거 */
+}
+
+.forkspace-header-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.forkspace-header-simple h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.fork-create-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.fork-list {
+  padding: 1rem;
+}
+
+.fork-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  transition: all var(--transition-fast);
+}
+
+.fork-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.fork-card:last-child {
+  margin-bottom: 0;
+}
+
+.fork-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.fork-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.fork-actions {
+>>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
   display: flex;
   gap: 0.5rem;
 }
 
+<<<<<<< HEAD
 .action-btn {
   width: 40px;
   height: 40px;
@@ -41407,3 +41823,260 @@ html {
   opacity: 0.3;
   border-color: rgba(255, 255, 255, 0.5);
 }
+=======
+.fork-btn {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.fork-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--primary-color);
+}
+
+.fork-btn.primary {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.fork-btn.primary:hover {
+  background: var(--primary-dark);
+}
+
+.fork-description {
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.fork-meta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ==========================================
+   간소화된 모달 스타일
+   ========================================== */
+
+.collab-create-content,
+.collab-detail-content,
+.pr-create-content {
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color var(--transition-fast);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.1);
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* ==========================================
+   반응형 디자인
+   ========================================== */
+
+@media (max-width: 768px) {
+  
+  .collab-header-simple,
+  .forkspace-header-simple {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+  }
+  
+  .collab-filters-simple {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .collab-card-header,
+  .fork-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .collab-card-status {
+    align-items: flex-start;
+  }
+  
+  .collab-card-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+  }
+  
+  .file-item {
+    padding: 0.5rem;
+  }
+  
+  .file-size,
+  .file-time {
+    display: none;
+  }
+}
+
+/* ==========================================
+   거버넌스 헤더 색상 강제 적용 (최종 오버라이드)
+   ========================================== */
+
+.mobile-governance-title,
+.mobile-governance-title span,
+.mobile-governance-title i {
+  color: var(--text-white) !important;
+}
+
+/* 시스템 헤더 일관성 보정 */
+.system-header-simple {
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.system-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.system-title i {
+  font-size: 1.2rem;
+  color: var(--text-secondary) !important;
+}
+
+.system-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ==========================================
+   거버넌스 메뉴 크기 및 배치 개선
+   ========================================== */
+
+/* 거버넌스 메뉴 전체 설정 */
+.governance-container .dashboard-filter-nav {
+  margin-bottom: 1.5rem;
+}
+
+.governance-container .dashboard-filter-scroll {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  overflow-x: visible;
+}
+
+/* 거버넌스 메뉴 버튼 크기 동일하게 */
+.governance-container .dashboard-filter-btn {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+  max-width: none;
+}
+
+/* 모바일에서도 아이콘과 텍스트 나란히 배치 */
+@media (max-width: 768px) {
+  .governance-container .dashboard-filter-btn {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem 1rem !important;
+    text-align: center !important;
+  }
+  
+  .governance-container .dashboard-filter-btn i {
+    margin-bottom: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  .governance-container .dashboard-filter-scroll {
+    justify-content: center;
+    gap: 0.5rem;
+  }
+}
+>>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5

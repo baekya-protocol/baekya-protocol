@@ -94,7 +94,9 @@ app.all('/api/*', async (req, res) => {
     });
     
     // 응답 전달
-    res.status(nodeResponse.status).json(nodeResponse.data);
+    const statusCode = nodeResponse.status || 200;
+    const responseData = nodeResponse.data || nodeResponse;
+    res.status(statusCode).json(responseData);
     
   } catch (error) {
     console.error('API 라우팅 오류:', error);
