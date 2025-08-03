@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>백야 프로토콜 APK 설치 가이드</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .step h3 {
+            color: #667eea;
+            margin-top: 0;
+            font-size: 1.3rem;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        ul li {
+            margin: 8px 0;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .feature {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .feature i {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-download"></i> 백야 프로토콜 APK 설치 가이드</h1>
+        
+        <div class="success">
+            <strong><i class="fas fa-check-circle"></i> 서명된 APK 준비 완료!</strong><br>
+            안전하게 서명된 백야 프로토콜 모바일 앱이 준비되었습니다.
+        </div>
+
+        <div class="step">
+            <h3><i class="fas fa-download"></i> 1단계: APK 다운로드</h3>
+            <p>아래 버튼을 클릭하여 최신 백야 프로토콜 APK를 다운로드하세요.</p>
+            <a href="baekya-protocol-latest.apk" class="download-btn">
+                <i class="fas fa-download"></i> 백야 프로토콜 APK 다운로드
+            </a>
+            <p><small>파일 크기: 약 58MB | 버전: 1.2.0 Release | 정식 서명된 안전한 버전</small></p>
+        </div>
+
+        <div class="warning">
+            <strong><i class="fas fa-shield-alt"></i> 🛡️ 보안 경고 해결 가이드</strong><br>
+            <strong>"유해한 앱이 감지되었습니다" 또는 "알 수 없는 앱"</strong> 메시지가 뜨는 경우:<br><br>
+            
+            <strong>📱 Google Play Protect 경고:</strong><br>
+            → <strong>"자세히"</strong> 클릭 → <strong>"그래도 설치"</strong> 선택<br><br>
+            
+            <strong>🔒 삼성 Smart Switch 경고:</strong><br>
+            → <strong>"설정"</strong> → <strong>"앱 설치 허용"</strong> → <strong>"이 소스 허용"</strong><br><br>
+            
+            <strong>✅ 안전성 확인:</strong><br>
+            • 이 APK는 백야 프로토콜 공식 서명으로 보호됨<br>
+            • 오픈소스 프로젝트로 코드 투명성 보장<br>
+            • 권한: 인터넷 접근만 (매우 제한적)<br>
+            • 개발용 빌드라서 경고가 뜨는 것이 정상<br><br>
+            
+            <small><strong>💡 왜 경고가 뜨나요?</strong><br>
+            Google Play Store에 없는 앱은 자동으로 경고가 표시됩니다. 
+            백야 프로토콜은 탈중앙화 특성상 스토어 심사를 거치지 않아 이런 경고가 나타납니다.</small>
+        </div>
+
+        <div class="step">
+            <h3><i class="fas fa-shield-alt"></i> 2단계: 알 수 없는 소스 허용</h3>
+            <p>Android에서 Play Store 외부 앱을 설치하려면:</p>
+            <ul>
+                <li><strong>Android 8.0 이상:</strong> 설정 → 보안 및 개인정보 보호 → 알 수 없는 소스에서 설치 → 브라우저/Chrome → 허용</li>
+                <li><strong>Android 7.0 이하:</strong> 설정 → 보안 → 알 수 없는 소스 → 허용</li>
+                <li><strong>MIUI (샤오미):</strong> 설정 → 추가 설정 → 개인정보보호 → 알 수 없는 소스 → 허용</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3><i class="fas fa-mobile-alt"></i> 3단계: APK 설치</h3>
+            <p>다운로드가 완료되면:</p>
+            <ul>
+                <li>알림 창에서 <strong>"설치"</strong> 버튼 클릭</li>
+                <li>또는 파일 관리자 → 다운로드 폴더 → APK 파일 터치</li>
+                <li><strong>"앱 설치"</strong> → <strong>"설치"</strong> → <strong>"완료"</strong></li>
+                <li><strong>경고 메시지가 뜨면 위의 해결 가이드 참고</strong></li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3><i class="fas fa-rocket"></i> 4단계: 앱 실행</h3>
+            <p>설치 완료 후:</p>
+            <ul>
+                <li><strong>"열기"</strong> 버튼 클릭하거나 홈 화면에서 앱 아이콘 터치</li>
+                <li>기존 계정으로 로그인하거나 새 계정 생성</li>
+                <li>UUID 기반 디바이스 인증 자동 활성화</li>
+            </ul>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <i class="fas fa-fingerprint"></i>
+                <h4>UUID 기반 보안</h4>
+                <p>디바이스별 고유 식별자로 안전한 계정 관리</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-sync-alt"></i>
+                <h4>실시간 동기화</h4>
+                <p>웹앱과 완전히 동일한 기능과 데이터</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-coins"></i>
+                <h4>B-Token 지원</h4>
+                <p>모바일에서도 토큰 전송과 거버넌스 참여</p>
+            </div>
+        </div>
+
+        <div class="success">
+            <strong><i class="fas fa-info-circle"></i> 참고사항</strong><br>
+            • 이 APK는 백야 프로토콜 공식 릴리즈입니다<br>
+            • 서명자: CN=Baekya Protocol, OU=Development, O=Baekya<br>
+            • 자동 업데이트는 지원되지 않으며, 새 버전은 수동으로 설치해야 합니다<br>
+            • 문제 발생 시 기존 계정으로 웹앱에서 계속 이용 가능
+        </div>
+    </div>
+</body>
+</html>

@@ -59,9 +59,7 @@ class Transaction {
       'dca_verification',
       'system_notification',
       'metadata_update',
-      'governance_vote',              // 거버넌스 투표는 무료
-      'governance_proposal_creation', // 거버넌스 제안 생성
-      'governance_funding'            // 거버넌스 모금
+      'governance_proposal_creation' // 거버넌스 제안 생성
     ];
     
     const isZeroAmountAllowed = this.data?.type && 

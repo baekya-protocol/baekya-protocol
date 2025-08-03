@@ -1,0 +1,56 @@
+# 빌드 결과물
+android/
+Android-SDK/
+jdk-*/
+
+# APK 파일들
+*.apk
+*.zip
+*.aab
+
+# 큰 바이너리 파일들
+webapp/downloads/
+android/app/build/
+android/build/
+
+# 큰 ZIP 파일들 (개발 도구)
+commandlinetools-*.zip
+jdk-*.zip
+*_windows-x64_bin.zip
+
+# JDK 폴더들
+jdk-17.0.12/
+jdk-21.0.8/
+
+# 개발 도구들
+.gradle/
+local.properties
+
+# 테스트 파일들
+*.test.js
+__tests__/
+coverage/
+
+# 키스토어 파일들
+*.keystore
+
+# 임시 파일들
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# 환경 설정
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 로그 파일들
+*.log
+logs/
+
+# IDE 설정
+.vscode/
+.idea/

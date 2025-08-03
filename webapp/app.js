@@ -9,7 +9,9 @@ class BaekyaProtocolDApp {
     
     // 프로토콜 API 설정
     // 로컬 서버 직접 연결 모드
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    // APK에서는 무조건 릴레이 서버 사용, 웹앱에서만 localhost 체크
+const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const localServerUrl = `http://${window.location.hostname}:3000`;
     this.relayServerUrl = isLocal ? localServerUrl : (window.RELAY_SERVER_URL || 'https://baekya-relay.up.railway.app');
     this.apiBase = isLocal ? `${localServerUrl}/api` : `${this.relayServerUrl}/api`;
@@ -159,7 +161,9 @@ class BaekyaProtocolDApp {
         this.updateConnectionStatus('connected');
         
         // 로컬 서버에 맞는 인증 메시지 전송
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        // APK에서는 무조건 릴레이 서버 사용, 웹앱에서만 localhost 체크
+const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
         if (isLocal) {
           // 로컬 서버용 메시지
           this.ws.send(JSON.stringify({
@@ -852,12 +856,9 @@ class BaekyaProtocolDApp {
       case 'governance':
         this.loadGovernance();
         break;
-<<<<<<< HEAD
       case 'system':
         this.loadSystemFiles();
         break;
-=======
->>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
       case 'p2p':
         this.loadP2P();
         break;
@@ -1176,17 +1177,26 @@ class BaekyaProtocolDApp {
           alert('비밀번호를 입력해주세요.');
           return;
         }
+
+        // UUID 초기화 확인
+        if (!window.deviceUUIDManager.isReady()) {
+          alert('디바이스 초기화 중입니다. 잠시 후 다시 시도해주세요.');
+          return;
+        }
         
         try {
           // 서버 API로 로그인 요청
+          const deviceUUID = window.deviceUUIDManager.getDeviceUUID();
           const response = await fetch(`${this.apiBase}/login`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'X-Device-UUID': deviceUUID
             },
             body: JSON.stringify({
               username: userId,
-              password: password
+              password: password,
+              deviceUUID: deviceUUID
             })
           });
 
@@ -1194,6 +1204,16 @@ class BaekyaProtocolDApp {
           
           if (result.success) {
             console.log('🔐 서버 로그인 성공:', result);
+            
+            // 디바이스와 계정 연결
+            try {
+              const linkResult = await window.deviceUUIDManager.linkAccountToDevice(result.didHash);
+              if (!linkResult) {
+                console.warn('⚠️ 디바이스-계정 연결 실패');
+              }
+            } catch (error) {
+              console.error('❌ 디바이스 연결 오류:', error);
+            }
             
             // 사용자 데이터 설정
             this.currentUser = {
@@ -1249,11 +1269,7 @@ class BaekyaProtocolDApp {
                       // 짧은 ID 생성
                       let shortId = 'ops-dao';
                       if (dao.name.includes('Operations')) shortId = 'ops-dao';
-<<<<<<< HEAD
               
-=======
-                      else if (dao.name.includes('Governance')) shortId = 'governance-dao';
->>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
                       else if (dao.name.includes('Community')) shortId = 'community-dao';
                       else if (dao.name.includes('Political')) shortId = 'political-dao';
                       
@@ -1405,6 +1421,16 @@ class BaekyaProtocolDApp {
           
           if (result.success) {
             console.log('🔐 서버 로그인 성공:', result);
+            
+            // 디바이스와 계정 연결
+            try {
+              const linkResult = await window.deviceUUIDManager.linkAccountToDevice(result.didHash);
+              if (!linkResult) {
+                console.warn('⚠️ 디바이스-계정 연결 실패');
+              }
+            } catch (error) {
+              console.error('❌ 디바이스 연결 오류:', error);
+            }
             
             // 다른 기기에서 로그아웃되었다면 알림
             if (result.otherSessionsTerminated) {
@@ -2266,6 +2292,190 @@ class BaekyaProtocolDApp {
     }
   }
 
+  // QR 코드 스캔 함수
+  async scanQRCode() {
+    try {
+      // Capacitor Camera 플러그인이 있는지 확인
+      if (window.Capacitor && window.Capacitor.Plugins.Camera) {
+        return await this.scanQRWithCamera();
+      } else {
+        // 웹 환경에서는 브라우저 카메라 사용
+        return await this.scanQRWithWebCamera();
+      }
+    } catch (error) {
+      console.error('❌ QR 스캔 오류:', error);
+      this.showErrorMessage('QR 코드 스캔 중 오류가 발생했습니다: ' + error.message);
+    }
+  }
+
+  // Capacitor Camera를 사용한 QR 스캔
+  async scanQRWithCamera() {
+    try {
+      const { Camera, CameraResultType, CameraSource } = window.Capacitor.Plugins;
+      
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera
+      });
+      
+      // QR 코드 디코딩을 위해 Canvas 사용
+      const qrResult = await this.decodeQRFromImage(image.webPath);
+      
+      if (qrResult) {
+        document.getElementById('recipientAddress').value = qrResult;
+        this.showSuccessMessage('QR 코드가 성공적으로 읽혔습니다!');
+      } else {
+        this.showErrorMessage('QR 코드를 찾을 수 없습니다. 다시 시도해주세요.');
+      }
+      
+    } catch (error) {
+      if (error.message?.includes('cancelled') || error.message?.includes('canceled')) {
+        console.log('⏹️ 사용자가 카메라를 취소했습니다');
+      } else {
+        console.error('❌ Capacitor 카메라 오류:', error);
+        this.showErrorMessage('카메라 접근에 실패했습니다: ' + error.message);
+      }
+    }
+  }
+
+  // 웹 브라우저 카메라를 사용한 QR 스캔
+  async scanQRWithWebCamera() {
+    try {
+      // 카메라 권한 요청
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment' // 후면 카메라 사용
+        } 
+      });
+      
+      // QR 스캐너 모달 생성
+      const modal = document.createElement('div');
+      modal.className = 'qr-scanner-modal';
+      modal.innerHTML = `
+        <div class="qr-scanner-container">
+          <div class="qr-scanner-header">
+            <h3>📷 QR 코드 스캔</h3>
+            <button class="qr-scanner-close">&times;</button>
+          </div>
+          <video class="qr-scanner-video" autoplay></video>
+          <p style="text-align: center; margin-top: 1rem; color: var(--text-secondary);">
+            QR 코드를 카메라 중앙에 맞춰주세요
+          </p>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      const video = modal.querySelector('.qr-scanner-video');
+      const closeBtn = modal.querySelector('.qr-scanner-close');
+      
+      video.srcObject = stream;
+      
+      // QR 코드 스캔 시작
+      this.startQRScanning(video, modal, stream);
+      
+      // 닫기 버튼 이벤트
+      closeBtn.onclick = () => {
+        this.stopQRScanning(stream, modal);
+      };
+      
+      // 모달 배경 클릭 시 닫기
+      modal.onclick = (e) => {
+        if (e.target === modal) {
+          this.stopQRScanning(stream, modal);
+        }
+      };
+      
+    } catch (error) {
+      console.error('❌ 웹 카메라 접근 실패:', error);
+      if (error.name === 'NotAllowedError') {
+        this.showErrorMessage('카메라 권한이 필요합니다. 브라우저 설정에서 카메라 권한을 허용해주세요.');
+      } else if (error.name === 'NotFoundError') {
+        this.showErrorMessage('카메라를 찾을 수 없습니다.');
+      } else {
+        this.showErrorMessage('카메라 접근에 실패했습니다: ' + error.message);
+      }
+    }
+  }
+
+  // QR 코드 스캔 시작
+  startQRScanning(video, modal, stream) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const scanInterval = setInterval(() => {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // jsQR 라이브러리가 있다면 사용, 없다면 간단한 QR 패턴 감지
+        if (window.jsQR) {
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) {
+            clearInterval(scanInterval);
+            this.stopQRScanning(stream, modal);
+            document.getElementById('recipientAddress').value = code.data;
+            this.showSuccessMessage('QR 코드가 성공적으로 읽혔습니다!');
+          }
+        } else {
+          // jsQR가 없는 경우 시뮬레이션
+          // 실제로는 QR 라이브러리를 추가해야 함
+          console.log('📷 QR 스캔 시뮬레이션 중...');
+        }
+      }
+    }, 300); // 300ms마다 스캔
+    
+    // 10초 후 타임아웃
+    setTimeout(() => {
+      clearInterval(scanInterval);
+      if (modal.parentNode) {
+        this.stopQRScanning(stream, modal);
+        this.showErrorMessage('QR 코드를 찾을 수 없습니다. 다시 시도해주세요.');
+      }
+    }, 10000);
+  }
+
+  // QR 코드 스캔 중지
+  stopQRScanning(stream, modal) {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    if (modal && modal.parentNode) {
+      modal.remove();
+    }
+  }
+
+  // 이미지에서 QR 코드 디코딩 (Capacitor용)
+  async decodeQRFromImage(imagePath) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        if (window.jsQR) {
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          resolve(code ? code.data : null);
+        } else {
+          // jsQR가 없는 경우 시뮬레이션
+          resolve('did:baekya:example123456789');
+        }
+      };
+      img.src = imagePath;
+    });
+  }
+
   // 지문 재인증 (신규 사용자 등록 시 보안 강화)
   async simulateFingerprintReauth() {
     const progressMessage = document.getElementById('progressMessage');
@@ -2558,23 +2768,31 @@ class BaekyaProtocolDApp {
 
   async generateDID() {
     try {
+      // UUID 초기화 확인
+      if (!window.deviceUUIDManager.isReady()) {
+        throw new Error('디바이스 초기화가 완료되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      }
+
       // 아이디/비밀번호 데이터를 기반으로 DID 생성 요청 (새로운 SimpleAuth API)
       const userData = {
         username: this.authData.userId,
         password: this.authData.password, // 원본 비밀번호 (서버 검증용)
         name: this.biometricData.personalInfo?.name || '미설정',
-        inviteCode: this.biometricData.inviteCode // 초대코드 추가
+        inviteCode: this.biometricData.inviteCode, // 초대코드 추가
+        deviceUUID: window.deviceUUIDManager.getDeviceUUID()
       };
 
       console.log('📤 사용자 등록 데이터 전송:', { 
         username: userData.username, 
-        name: userData.name
+        name: userData.name,
+        deviceUUID: userData.deviceUUID
       });
 
       const response = await fetch(`${this.apiBase}/register`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Device-UUID': userData.deviceUUID
         },
         body: JSON.stringify({ userData })
       });
@@ -2583,6 +2801,16 @@ class BaekyaProtocolDApp {
       
       if (result.success) {
         console.log('🎉 사용자 등록 성공:', result);
+        
+        // 디바이스와 계정 연결
+        try {
+          const linkResult = await window.deviceUUIDManager.linkAccountToDevice(result.didHash);
+          if (!linkResult) {
+            console.warn('⚠️ 회원가입 후 디바이스-계정 연결 실패');
+          }
+        } catch (error) {
+          console.error('❌ 회원가입 후 디바이스 연결 오류:', error);
+        }
         
         // 초대코드 보상 정보 저장
         this.inviteRewardInfo = result.inviteReward;
@@ -2914,11 +3142,30 @@ class BaekyaProtocolDApp {
       this.updateProfilePhotoInUI();
     }
     
+    // 프로필 버튼 업데이트
+    this.updateProfileButtons();
+    
     // 모바일 헤더도 업데이트
     this.updateMobileProfileHeader();
+  }
+
+  // 프로필 버튼 상태 업데이트
+  updateProfileButtons() {
+    const logoutBtn = document.querySelector('.profile-btn.logout-btn');
     
-    // 상태메시지 업데이트
-    this.updateStatusMessageInUI();
+    if (logoutBtn) {
+      if (this.isAuthenticated && this.currentUser) {
+        // 로그인 상태: 로그아웃 버튼
+        logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> 로그아웃';
+        logoutBtn.onclick = () => window.dapp.confirmLogout();
+        logoutBtn.title = '로그아웃';
+      } else {
+        // 로그아웃 상태: 로그인 버튼
+        logoutBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 로그인';
+        logoutBtn.onclick = () => window.dapp.switchTab('wallet');
+        logoutBtn.title = '로그인하러 가기';
+      }
+    }
   }
 
   // 통신주소 모달 표시
@@ -3559,10 +3806,7 @@ class BaekyaProtocolDApp {
     this.updateTokenBalances();
     this.initializeMyDAOCard(); // 초기 상태를 닫힌 상태로 설정
     
-    // 백그라운드에서 추가 데이터 로드
-    setTimeout(() => {
-      this.loadContributionHistory();
-    }, 100);
+    // 백그라운드에서 추가 데이터 로드는 제거됨
     
     // BMR 시스템 제거로 해당 코드 삭제
   }
@@ -3648,89 +3892,7 @@ class BaekyaProtocolDApp {
     }
   }
 
-  loadContributionHistory() {
-    const historyContainer = document.getElementById('contributionHistory');
-    if (!historyContainer) return;
 
-    // 로그인하지 않은 경우 빈 상태 표시
-    if (!this.isAuthenticated) {
-      historyContainer.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-sign-in-alt"></i>
-          <p>로그인이 필요합니다</p>
-                          <small>기여 내역을 확인하려면 로그인을 완료하세요</small>
-        </div>
-      `;
-      return;
-    }
-    
-    // 캐시 확인
-    if (this.dataCache.contributions) {
-      this.renderContributionHistory(this.dataCache.contributions);
-      return;
-    }
-
-    // 실제 기여 내역 가져오기
-    const contributions = this.getUserContributions();
-
-    this.dataCache.contributions = contributions;
-    this.renderContributionHistory(contributions);
-  }
-  
-  // 사용자 기여 내역 가져오기
-  getUserContributions() {
-    if (!this.currentUser || !this.currentUser.did) return [];
-    
-    // 로컬 스토리지에서 사용자별 기여 내역 가져오기
-    const contributionsKey = `baekya_contributions_${this.currentUser.did}`;
-    const storedContributions = localStorage.getItem(contributionsKey);
-    
-    if (storedContributions) {
-      return JSON.parse(storedContributions);
-    }
-    
-    // 초기 상태는 빈 배열
-    return [];
-  }
-
-  renderContributionHistory(contributions) {
-    const container = document.getElementById('contributionHistory');
-    if (!container) return;
-
-    if (contributions.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-inbox"></i>
-          <p>아직 기여 내역이 없습니다</p>
-          <small>프로토콜에 첫 기여를 해보세요!</small>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = contributions.map(contribution => `
-      <div class="contribution-item">
-        <div class="contribution-header">
-          <div class="contribution-type">
-            <i class="fas ${this.getContributionIcon(contribution.type)}"></i>
-            <span>${this.getContributionTypeName(contribution.type)}</span>
-          </div>
-          ${contribution.dao ? `<div class="contribution-dao">${contribution.dao}</div>` : ''}
-        </div>
-        <div class="contribution-content">
-          <h4>${contribution.title}</h4>
-          <div class="contribution-meta">
-            <span class="contribution-date">${contribution.date}</span>
-            ${contribution.status === 'verified' ? `
-              <span class="contribution-rewards">
-                <span class="b-token-reward">+${contribution.bTokens} B</span>
-              </span>
-            ` : ''}
-          </div>
-        </div>
-      </div>
-    `).join('');
-  }
 
   loadMyDAOs() {
     const myDAOList = document.getElementById('myDAOList');
@@ -4188,17 +4350,6 @@ class BaekyaProtocolDApp {
     // 기본 DAO 데이터 (커뮤니티와 개발 DAO, 검증자 DAO)
     const defaultDAOs = [
       {
-<<<<<<< HEAD
-=======
-        id: 'governance-dao',
-        name: 'Governance DAO',
-        description: '제안/협업/평가를 통한 탈중앙화 의사결정 컨소시엄',
-        memberCount: 28,
-        totalContributions: 456,
-        isDefault: true
-      },
-      {
->>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
         id: 'community-dao',
         name: 'Community DAO',
         description: '사용자 참여를 도모하는 프로토콜 증진 컨소시엄',
@@ -4283,10 +4434,7 @@ class BaekyaProtocolDApp {
         <p class="dao-description">${dao.description}</p>
         <div class="dao-actions">
           <button class="btn-primary" onclick="window.dapp.joinDAO('${dao.id}')">
-            <i class="fas fa-plus"></i> 참여하기
-          </button>
-          <button class="btn-secondary" onclick="window.dapp.showDAODetail('${dao.id}')">
-            <i class="fas fa-history"></i> 기여내역 보기
+            <i class="fas fa-plus"></i> 기여하기
           </button>
         </div>
       </div>
@@ -4310,12 +4458,7 @@ class BaekyaProtocolDApp {
   // DAO별 참여 안내문 가져오기
   getDAOJoinGuideText(daoId) {
     switch(daoId) {
-<<<<<<< HEAD
 
-=======
-      case 'governance-dao':
-        return '거버넌스DAO는 제안/협업/평가 단계를 통해 탈중앙화 의사결정을 실현하며, 누구나 시스템 개선에 참여할 수 있습니다.';
->>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
       case 'community-dao':
         return '사용자 네트워크 형성 기여에 필수적인 탈중앙화 조직으로, 누구나 아래의 지정기여활동(DCA)에 따라 기여할 수 있습니다.';
       case 'validator-dao':
@@ -4335,10 +4478,6 @@ class BaekyaProtocolDApp {
     // 모든 DAO 목록에서 현재 DAO 찾기
     const allDAOs = [...this.loadUserCreatedDAOs()];
     const defaultDAOs = {
-<<<<<<< HEAD
-=======
-      'governance-dao': 'Governance DAO',
->>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
       'community-dao': 'Community DAO',
       'validator-dao': 'Validator DAO'
     };
@@ -4401,213 +4540,9 @@ class BaekyaProtocolDApp {
 
 
 
-  showFirebaseGitHubIntegrationModal(daoId) {
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    
-    modal.innerHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>GitHub 계정 연동</h3>
-          <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="github-integration-form">
-            <div class="integration-info">
-              <h4>🎯 백야 프로토콜 개발 참여 방법</h4>
-              <ol>
-                <li><strong>GitHub 계정 연동:</strong> 아래 버튼을 클릭하여 안전하게 계정을 연동합니다</li>
-                <li><strong>저장소 포크:</strong> <code>baekya-protocol/baekya-protocol</code> 저장소를 포크합니다</li>
-                <li><strong>코드 수정:</strong> 포크한 저장소에서 원하는 기능을 개발합니다</li>
-                <li><strong>PR 생성:</strong> 원본 저장소에 Pull Request를 생성합니다</li>
-                <li><strong>자동 보상:</strong> PR이 병합되면 자동으로 250B가 지급됩니다</li>
-              </ol>
-            </div>
-            
-            <div class="integration-preview">
-              <h4>DCA 보상 체계:</h4>
-              <ul>
-                <li>Pull Request (자기 이슈): <strong>250B</strong></li>
-                <li>Pull Request (남의 이슈): <strong>280B</strong></li>
-                <li>Issue 리포트: <strong>80B</strong></li>
-              </ul>
-              <div class="reward-explanation">
-                <p><small>💡 <strong>자기 이슈</strong>: 본인이 작성한 이슈에 대한 PR<br>
-                <strong>남의 이슈</strong>: 다른 사용자가 작성한 이슈 해결 PR (+30B 보너스)</small></p>
-              </div>
-            </div>
-            
-            <div class="firebase-auth-info">
-              <div class="security-note">
-                <i class="fas fa-shield-alt"></i>
-                <span>Firebase Authentication을 통해 안전하게 GitHub 계정을 연동합니다.</span>
-              </div>
-            </div>
-            
-            <div class="form-actions">
-              <button class="btn-primary" id="connectGitHub" onclick="window.dapp.processFirebaseGitHubIntegration('${daoId}')">
-                <i class="fab fa-github"></i> GitHub 계정 연결
-              </button>
-              <button class="btn-secondary" onclick="this.closest('.modal').remove()">
-                취소
-              </button>
-            </div>
-            
-            <div class="user-info" id="userInfo">
-              <!-- GitHub 사용자 정보가 여기에 표시됩니다 -->
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-  }
 
-    async processFirebaseGitHubIntegration(daoId) {
-    // 먼저 Firebase Auth 상태 확인
-    const currentUser = window.firebaseAuth?.currentUser;
-    
-    if (currentUser) {
-      // 이미 Firebase Auth로 로그인되어 있으면 성공 모달 바로 표시
-      console.log('🔗 Firebase 사용자 이미 로그인됨:', currentUser.displayName || currentUser.email);
-      
-      const githubInfo = window.getGitHubInfoFromUser(currentUser);
-      
-      // 연동 상태를 localStorage에 저장
-      const integrationData = {
-        githubUsername: githubInfo.githubUsername,
-        displayName: githubInfo.displayName,
-        photoURL: githubInfo.photoURL,
-        targetRepository: 'baekya-protocol/baekya-protocol',
-        connectedAt: new Date().toISOString(),
-        uid: githubInfo.uid
-      };
-      
-      this.saveFirebaseGitHubIntegration(daoId, integrationData);
-      
-      // 성공 모달 표시
-      const result = {
-        user: {
-          displayName: githubInfo.displayName,
-          photoURL: githubInfo.photoURL,
-          reloadUserInfo: {
-            screenName: githubInfo.githubUsername
-          },
-          email: githubInfo.email
-        }
-      };
-      
-      this.showFirebaseGitHubIntegrationSuccess(result, daoId, true);
-      
-      // GitHub 연동 모달 닫기
-      const githubModal = document.querySelector('.modal');
-      if (githubModal) {
-        githubModal.remove();
-      }
-  
-      // DAO 참여 모달 닫기
-      const daoModal = document.querySelector('.dao-participate-modal');
-      if (daoModal) {
-        daoModal.closest('.modal').remove();
-      }
-      
-      return; // 이미 연동되어 있으므로 여기서 종료
-    }
-    
-    // Firebase Auth 상태가 없으면 localStorage에서 기존 연동 상태 확인
-    const existingIntegration = await this.checkGitHubIntegrationStatus(daoId);
-    
-    if (existingIntegration) {
-      // 이미 연동되어 있으면 성공 모달 바로 표시
-      console.log('🔗 기존 GitHub 연동 정보 발견:', existingIntegration);
-      
-      // 기존 연동 정보로 성공 모달 표시
-      const mockResult = {
-        user: {
-          displayName: existingIntegration.displayName || existingIntegration.githubUsername,
-          photoURL: existingIntegration.photoURL || '/icons/icon-192x192.png',
-          reloadUserInfo: {
-            screenName: existingIntegration.githubUsername
-          },
-          email: `${existingIntegration.githubUsername}@github.local`
-        }
-      };
-      
-      this.showFirebaseGitHubIntegrationSuccess(mockResult, daoId, true);
-      
-      // GitHub 연동 모달 닫기
-      const githubModal = document.querySelector('.modal');
-      if (githubModal) {
-        githubModal.remove();
-      }
-  
-      // DAO 참여 모달 닫기
-      const daoModal = document.querySelector('.dao-participate-modal');
-      if (daoModal) {
-        daoModal.closest('.modal').remove();
-      }
-      
-      return; // 기존 연동이므로 여기서 종료
-    }
-    
-    // 기존 연동이 없고 모바일인 경우 PC 진행 안내
-    if (this.isMobile()) {
-      this.showMobileGitHubWarning();
-      return;
-    }
 
-    this.showLoadingMessage('GitHub 계정 연동 중...');
-    
-    try {
-      // Firebase Auth를 통한 GitHub 로그인
-      const result = await signInWithGitHub();
-      
 
-      
-      if (result && result.user) {
-        this.hideLoadingMessage();
-        this.showFirebaseGitHubIntegrationSuccess(result, daoId, false);
-        
-        // GitHub 연동 모달 닫기
-        const githubModal = document.querySelector('.modal');
-        if (githubModal) {
-          githubModal.remove();
-        }
-    
-    // DAO 참여 모달 닫기
-    const daoModal = document.querySelector('.dao-participate-modal');
-    if (daoModal) {
-      daoModal.closest('.modal').remove();
-    }
-        
-        // 연동 상태를 로컬 스토리지에 저장
-        this.saveFirebaseGitHubIntegration(daoId, {
-          githubUsername: result.user.reloadUserInfo?.screenName || extractUsernameFromEmail(result.user.email),
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL,
-          targetRepository: 'baekya-protocol/baekya-protocol',
-          connectedAt: new Date().toISOString(),
-          uid: result.user.uid
-        });
-        
-      } else {
-        this.hideLoadingMessage();
-        this.showErrorMessage('GitHub 계정 연동이 취소되었습니다.');
-      }
-      
-    } catch (error) {
-      this.hideLoadingMessage();
-      if (error.code === 'auth/popup-closed-by-user') {
-        this.showErrorMessage('GitHub 로그인이 취소되었습니다.');
-      } else if (error.code === 'auth/popup-blocked') {
-        this.showErrorMessage('팝업이 차단되었습니다. 팝업을 허용하고 다시 시도해주세요.');
-      } else {
-        this.showErrorMessage('GitHub 계정 연동 중 오류가 발생했습니다.');
-      }
-      console.error('Firebase GitHub 연동 오류:', error);
-    }
-  }
 
   saveGitHubIntegration(daoId, integrationData) {
     try {
@@ -4683,18 +4618,7 @@ class BaekyaProtocolDApp {
     document.body.appendChild(modal);
   }
 
-  saveFirebaseGitHubIntegration(daoId, integrationData) {
-    try {
-      const key = `github_integration_${this.currentUser.did}`;
-      const existing = JSON.parse(localStorage.getItem(key) || '{}');
-      existing[daoId] = integrationData;
-      localStorage.setItem(key, JSON.stringify(existing));
-      
-      console.log('Firebase GitHub 연동 정보 저장됨:', integrationData);
-    } catch (error) {
-      console.error('Firebase GitHub 연동 정보 저장 실패:', error);
-    }
-  }
+
 
   showFirebaseGitHubIntegrationSuccess(result, daoId, isExisting = false) {
     const modal = document.createElement('div');
@@ -4862,97 +4786,12 @@ class BaekyaProtocolDApp {
 
   // 기여 가이드 열기
   openContributionGuide(daoId) {
-<<<<<<< HEAD
     // 기본 처리로 변경
   }
 
   // 기여 활동 섹션 렌더링
   renderContributionActions(daoId) {
     // 모든 DAO들은 기본 처리
-=======
-    if (daoId === 'governance-dao') {
-      // 거버넌스 페이지로 이동
-      window.location.href = 'governance.html';
-    }
-  }
-
-  // 기여 활동 섹션 렌더링 (구버전 - 삭제 예정)
-  renderContributionActionsOld(daoId) {
-    if (daoId === 'governance-dao') {
-      // 거버넌스 DAO 기여 활동
-      return `
-        <div class="contribution-action-box">
-          <div class="action-header">
-            <h4><i class="fas fa-university"></i> 거버넌스 참여</h4>
-          </div>
-          <div class="action-content">
-            <p>거버넌스 페이지에서 제안, 협업, 평가 활동에 참여하세요.</p>
-            <button class="action-button primary" onclick="window.location.href='governance.html'">
-              <i class="fas fa-external-link-alt"></i> 거버넌스 페이지로 이동
-            </button>
-          </div>
-        </div>
-      `;
-    } else if (daoId === 'dev-dao') {
-      // GitHub 연동 상태 확인
-      const integrationStatus = this.checkGitHubIntegrationStatus(daoId);
-      
-      if (integrationStatus) {
-        // 이미 연동된 경우
-        return `
-          <div class="contribution-action-box connected">
-            <div class="action-header">
-              <h4><i class="fas fa-check-circle"></i> GitHub 계정 연동 완료</h4>
-            </div>
-            <div class="connected-info">
-              <p><strong>연동 계정:</strong> ${integrationStatus.githubUsername}</p>
-              <p><strong>타겟 저장소:</strong> ${integrationStatus.targetRepository}</p>
-              <p><strong>연동 일시:</strong> ${new Date(integrationStatus.connectedAt).toLocaleString()}</p>
-            </div>
-            <div class="dca-guide">
-              <h5>DCA 수행 방법:</h5>
-              <ol>
-                <li>백야 프로토콜 저장소를 Fork하여 개인 계정으로 복사</li>
-                <li>포크한 저장소에서 코드 수정 후 커밋</li>
-                <li>원본 저장소로 Pull Request 생성</li>
-                <li>PR이 Merge되면 자기 이슈: 250B, 남의 이슈: 280B 자동 지급</li>
-              </ol>
-            </div>
-            <div class="action-buttons">
-              <button class="btn-primary" onclick="window.dapp.openTargetRepository()">
-                <i class="fab fa-github"></i> 백야 프로토콜 저장소
-              </button>
-              <button class="btn-secondary" onclick="window.dapp.openGitHubProfile('${integrationStatus.githubUsername}')">
-                <i class="fas fa-user"></i> 내 GitHub 프로필
-              </button>
-            </div>
-          </div>
-        `;
-      } else {
-        // 연동되지 않은 경우
-        return `
-          <div class="contribution-action-box">
-            <div class="action-header">
-              <h4><i class="fab fa-github"></i> GitHub 계정 연동 필요</h4>
-            </div>
-            <div class="action-content">
-              <p>개발DAO DCA를 수행하려면 먼저 GitHub 계정과 연동해야 합니다.</p>
-              <div class="action-buttons">
-                <button class="btn-primary" onclick="window.dapp.setupGitHubIntegration('${daoId}')">
-                  <i class="fab fa-github"></i> GitHub 계정 연동
-                </button>
-                <button class="btn-secondary" onclick="window.dapp.openContributionGuide('${daoId}')">
-                  <i class="fas fa-book"></i> 기여 가이드
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-    }
-    
-    // 다른 DAO들은 기본 처리
->>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
     return `
       <div class="contribution-action-box">
         <div class="action-header">
@@ -5228,8 +5067,8 @@ class BaekyaProtocolDApp {
         <div class="dca-info">
           <div class="dca-title">DCA: ${dca.title}</div>
           <div class="dca-criteria">검증기준: ${dca.criteria}</div>
-          <div class="dca-value">기여가치: ${dca.value}B</div>
         </div>
+        <div class="dca-value">${dca.value}B</div>
         ${this.getUserOPRole().isTopOP ? `
           <div class="dca-actions" style="display: none;">
             <button class="btn-small btn-edit" onclick="window.dapp.editDCA('${daoId}', '${dca.id}')">
@@ -5246,16 +5085,8 @@ class BaekyaProtocolDApp {
 
     // DCA 데이터 가져오기 (330B 예시에 맞춘 DCA 구성)
   getDCAData(daoId) {
-    // 기본 DAO의 DCA (거버넌스DAO, 커뮤니티DAO, 검증자DAO)
+    // 기본 DAO의 DCA (개발DAO, 커뮤니티DAO, 검증자DAO)
     const defaultDCAs = {
-<<<<<<< HEAD
-=======
-      'governance-dao': [
-        { id: 'dca1', title: '제안활동', criteria: '협업대기탭 진입', value: '120' },
-        { id: 'dca2', title: '협업활동', criteria: 'None Good PR보다 많은 vote', value: '250' },
-        { id: 'dca3', title: '평가활동', criteria: 'None Good Feedback보다 많은 vote', value: '80' }
-      ],
->>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
       'community-dao': [
         { id: 'dca1', title: '초대 활동', criteria: '초대 받은 사용자가 DID생성', value: '50' }
       ],
@@ -5464,24 +5295,6 @@ class BaekyaProtocolDApp {
 
   // 기여하러가기 액션 렌더링
   renderContributionActions(daoId) {
-    // 거버넌스 DAO 처리
-    if (daoId === 'governance-dao') {
-      return `
-        <div class="contribution-actions">
-          <h4><i class="fas fa-rocket"></i> 기여하러가기</h4>
-          <div class="join-options">
-            <div class="option-card">
-              <h4><i class="fas fa-university"></i> 거버넌스 참여</h4>
-              <p>거버넌스 페이지에서 제안, 협업, 평가 활동에 참여하세요.</p>
-              <button class="btn-primary" onclick="window.location.href='governance.html'">
-                <i class="fas fa-external-link-alt"></i> 거버넌스 페이지로 이동
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-    
     // 기본 DAO들의 액션
     if (daoId === 'ops-dao') {
       return `
@@ -5908,9 +5721,9 @@ class BaekyaProtocolDApp {
           joinedAt: Date.now()
         },
         {
-          id: 'governance-dao',
-          name: 'Governance DAO',
-          icon: 'fa-university',
+          id: 'dev-dao',
+          name: 'Development DAO',
+          icon: 'fa-code',
           role: 'OP',
           contributions: 0,
           lastActivity: '방금',
@@ -6194,8 +6007,8 @@ class BaekyaProtocolDApp {
           abstentions: 2,
           votingStartDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3일 전
           votingEndDate: '2024-01-25',
-          daoName: 'Governance DAO',
-          daoId: 'governance-dao'
+          daoName: 'Development DAO',
+          daoId: 'dev-dao'
         },
         {
           id: 'dev-prop-2',
@@ -6208,8 +6021,8 @@ class BaekyaProtocolDApp {
           abstentions: 6,
           votingStartDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1일 전
           votingEndDate: '2024-01-22',
-          daoName: 'Governance DAO',
-          daoId: 'governance-dao'
+          daoName: 'Development DAO',
+          daoId: 'dev-dao'
         },
         {
           id: 'dev-prop-3',
@@ -6223,8 +6036,8 @@ class BaekyaProtocolDApp {
           votingStartDate: '2024-01-01',
           votingEndDate: '2024-01-15',
           reviewStartDate: '2024-01-16',
-          daoName: 'Governance DAO',
-          daoId: 'governance-dao',
+          daoName: 'Development DAO',
+          daoId: 'dev-dao',
           reviewStage: 'dao-op', // dao-op, ops-dao-objection, top-op
           opDecision: null, // null, approved, rejected
           opReviewComment: null, // OP 검토 중이므로 아직 의견 없음
@@ -6241,8 +6054,8 @@ class BaekyaProtocolDApp {
           proposalTarget: 45,
           proposalStartDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           proposalEndDate: '2024-01-30',
-          daoName: 'Governance DAO',
-          daoId: 'governance-dao'
+          daoName: 'Development DAO',
+          daoId: 'dev-dao'
         }
       ],
       'community-dao': [
@@ -8045,16 +7858,16 @@ class BaekyaProtocolDApp {
         return;
       }
 
-      // B-Token 잔액 확인 (투표 수수료)
+      // B-Token 잔액 확인 (투표 비용)
       const currentBTokens = parseFloat(document.getElementById('bTokenBalance').textContent.replace(' B', '')) || 0;
-      const votingFee = 0.001;
+      const votingFee = 0.1;
       
       if (currentBTokens < votingFee) {
         alert(`B-Token이 부족합니다. 현재 보유량: ${currentBTokens}B, 필요량: ${votingFee}B`);
         return;
       }
 
-      if (confirm(`이 제안에 ${voteTypeKorean[voteType]} 투표하시겠습니까?\n- P-Token 소모: 0.1P\n- 네트워크 수수료: ${votingFee}B`)) {
+      if (confirm(`이 제안에 ${voteTypeKorean[voteType]} 투표하시겠습니까? (${votingFee}B)`)) {
         // 수수료 차감
         const newBBalance = currentBTokens - votingFee;
         document.getElementById('bTokenBalance').textContent = `${newBBalance.toFixed(3)} B`;
@@ -13779,66 +13592,9 @@ class BaekyaProtocolDApp {
     
     const modal = document.getElementById('profileSettingsModal');
     const photoPreview = document.getElementById('photoPreview');
-    const statusInput = document.getElementById('statusMessageInput');
-    const charCount = document.getElementById('statusCharCount');
     
     // 현재 프로필 사진 로드
     this.loadCurrentPhoto(photoPreview);
-    
-    // 현재 상태메시지 로드
-    const currentStatus = this.currentUser?.statusMessage || '';
-    statusInput.value = currentStatus;
-    charCount.textContent = currentStatus.length;
-    
-    // 상태메시지 입력 이벤트 리스너 추가
-    statusInput.addEventListener('input', function() {
-      charCount.textContent = this.value.length;
-    });
-    
-    // 이름 변경 필드 업데이트
-    const nameChangeInput = document.getElementById('nameChangeInput');
-    const nameChangeStatus = document.getElementById('nameChangeStatus');
-    if (nameChangeInput && nameChangeStatus) {
-      nameChangeInput.placeholder = `현재: ${this.currentUser?.name || '미설정'}`;
-      
-      // 이름 입력 필드에 실시간 검증 추가 (IME 고려)
-      let isComposing = false;
-      
-      nameChangeInput.addEventListener('compositionstart', () => {
-        isComposing = true;
-      });
-      
-      nameChangeInput.addEventListener('compositionend', () => {
-        isComposing = false;
-        // composition이 끝난 후 검증
-        const value = nameChangeInput.value;
-        const filteredValue = value.replace(/[^가-힣a-zA-Z\s]/g, '');
-        if (value !== filteredValue) {
-          nameChangeInput.value = filteredValue;
-        }
-      });
-      
-      nameChangeInput.addEventListener('input', (e) => {
-        // IME 입력 중에는 필터링하지 않음
-        if (!isComposing) {
-        const value = e.target.value;
-        // 한글, 영어, 공백만 허용
-        const filteredValue = value.replace(/[^가-힣a-zA-Z\s]/g, '');
-        if (value !== filteredValue) {
-          e.target.value = filteredValue;
-          }
-        }
-      });
-      
-      if (this.canChangeName()) {
-        nameChangeStatus.innerHTML = '<span class="status-available">✓ 변경 가능 <small>(3개월에 한 번 가능)</small></span><br><small style="color: var(--text-secondary);">※ 한글/영문만 입력 가능합니다.</small>';
-        nameChangeInput.disabled = false;
-      } else {
-        const daysLeft = this.getDaysUntilNameChange();
-        nameChangeStatus.innerHTML = `<span class="status-unavailable">✗ ${daysLeft}일 후에 변경 가능 <small>(3개월에 한 번 가능)</small></span><br><small style="color: var(--text-secondary);">※ 한글/영문만 입력 가능합니다.</small>`;
-        nameChangeInput.disabled = true;
-      }
-    }
     
     modal.classList.add('active');
   }
@@ -13853,49 +13609,13 @@ class BaekyaProtocolDApp {
     if (photoInput) photoInput.value = '';
   }
 
-  setStatusPreset(message) {
-    const statusInput = document.getElementById('statusMessageInput');
-    const charCount = document.getElementById('statusCharCount');
     
-    statusInput.value = message;
-    charCount.textContent = message.length;
-  }
 
   saveProfileSettings() {
     try {
       if (!this.currentUser) {
         this.showErrorMessage('로그인이 필요합니다.');
         return;
-      }
-
-      const statusInput = document.getElementById('statusMessageInput');
-      const newStatus = statusInput.value.trim();
-      
-      // 이름 변경 처리
-      const nameInput = document.getElementById('nameChangeInput');
-      if (nameInput && nameInput.value.trim()) {
-        const newName = nameInput.value.trim();
-        
-        // 한글과 영어만 허용 (공백 포함)
-        const nameRegex = /^[가-힣a-zA-Z\s]+$/;
-        if (!nameRegex.test(newName)) {
-          this.showErrorMessage('이름은 한글과 영어만 입력 가능합니다.');
-          return;
-        }
-        
-        if (this.canChangeName()) {
-          this.currentUser.name = newName;
-          this.currentUser.nameChangeHistory = this.currentUser.nameChangeHistory || [];
-          this.currentUser.nameChangeHistory.push({
-            previousName: this.currentUser.name,
-            newName: newName,
-            changedAt: Date.now()
-          });
-        } else {
-          const daysLeft = this.getDaysUntilNameChange();
-          this.showErrorMessage(`이름은 3개월에 한 번만 변경 가능합니다. ${daysLeft}일 후에 변경 가능합니다.`);
-          return;
-        }
       }
 
       // 프로필 사진 데이터 업데이트
@@ -13905,19 +13625,12 @@ class BaekyaProtocolDApp {
         this.currentUser.profilePhoto = this.selectedPhoto;
       }
 
-      // 상태메시지 업데이트
-      this.currentUser.statusMessage = newStatus;
-
       // 로컬 스토리지에 저장
       localStorage.setItem('baekya_auth', JSON.stringify(this.currentUser));
 
       // UI 업데이트
       this.updateProfilePhotoInUI();
-      this.updateStatusMessageInUI();
       this.updateUserProfile();
-
-      // P2P 연락처 목록 새로고침 (상태메시지 반영)
-      this.loadContacts();
 
       // 성공 메시지
       this.showSuccessMessage('프로필이 업데이트되었습니다.');
@@ -13931,36 +13644,9 @@ class BaekyaProtocolDApp {
     }
   }
 
-  updateStatusMessageInUI() {
-    const statusElement = document.getElementById('userStatusMessage');
-    if (statusElement) {
-      const status = this.currentUser?.statusMessage || '';
-      if (status) {
-        statusElement.textContent = status;
-        statusElement.style.color = 'var(--text-primary)';
-        statusElement.style.fontStyle = 'normal';
-      } else {
-        statusElement.textContent = '';
-        statusElement.style.color = 'var(--text-secondary)';
-        statusElement.style.fontStyle = 'italic';
-      }
-    }
-  }
 
-  // 이름 변경 가능 여부 확인 (3개월에 한 번)
-  canChangeName() {
-    if (!this.currentUser || !this.currentUser.nameChangeHistory) {
-      return true;
-    }
-    
-    const lastChange = this.currentUser.nameChangeHistory[this.currentUser.nameChangeHistory.length - 1];
-    if (!lastChange) {
-      return true;
-    }
-    
-    const threeMonthsAgo = Date.now() - (3 * 30 * 24 * 60 * 60 * 1000); // 3개월
-    return lastChange.changedAt < threeMonthsAgo;
-  }
+
+
 
   // 통신주소 변경 가능 여부 확인 (3개월에 한 번)
   canChangeCommunicationAddress() {
@@ -13986,30 +13672,7 @@ class BaekyaProtocolDApp {
     return Math.max(0, daysDiff);
   }
   
-  // 다음 변경 가능 날짜 계산
-  getNextNameChangeDate() {
-    if (!this.currentUser || !this.currentUser.nameChangeHistory || this.currentUser.nameChangeHistory.length === 0) {
-      return null;
-    }
-    
-    const lastChange = this.currentUser.nameChangeHistory[this.currentUser.nameChangeHistory.length - 1];
-    const nextChangeDate = new Date(lastChange.changedAt + (3 * 30 * 24 * 60 * 60 * 1000));
-    return nextChangeDate;
-  }
 
-  // 이름 변경까지 남은 일수 계산
-  getDaysUntilNameChange() {
-    const nextChangeDate = this.getNextNameChangeDate();
-    if (!nextChangeDate) {
-      return 0;
-    }
-    
-    const today = new Date();
-    const timeDiff = nextChangeDate.getTime() - today.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    
-    return Math.max(0, daysDiff);
-  }
 
   // 지문 재등록
   async reRegisterBiometric() {
@@ -14180,89 +13843,7 @@ class BaekyaProtocolDApp {
     }
   }
   
-  // 계정 탈퇴
-  async deleteAccount() {
-    if (!this.isAuthenticated || !this.currentUser) {
-      this.showErrorMessage('로그인이 필요합니다.');
-      return;
-    }
-    
-    // 탈퇴 확인
-    const firstConfirm = confirm('정말로 계정을 탈퇴하시겠습니까?\n모든 데이터가 삭제되며 복구할 수 없습니다.');
-    if (!firstConfirm) return;
-    
-    // 2차 확인
-    const secondConfirm = confirm('정말로 탈퇴하시겠습니까?\n탈퇴 후에도 언제든지 새로운 계정을 생성할 수 있습니다.');
-    if (!secondConfirm) return;
-    
-    // 비밀번호 확인
-    const password = prompt('보안을 위해 비밀번호를 입력해주세요:');
-    if (!password) return;
-    
-    // 비밀번호 검증
-    const isPasswordCorrect = this.verifyPassword(password, this.currentUser);
-    if (!isPasswordCorrect) {
-      this.showErrorMessage('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-    
-    try {
-      // 기기 ID 가져오기
-      const deviceId = this.getDeviceId();
-      
-      // 탈퇴 기록 저장 없음 - 바로 재가입 가능
-      
-      // baekya_users에서 현재 사용자 제거
-      const storedUsers = JSON.parse(localStorage.getItem('baekya_users') || '[]');
-      const updatedUsers = storedUsers.filter(user => user.deviceId !== deviceId);
-      localStorage.setItem('baekya_users', JSON.stringify(updatedUsers));
-      
-      // 사용자별 데이터 삭제
-      if (this.currentUser.did) {
-        localStorage.removeItem(`baekya_contributions_${this.currentUser.did}`);
-      }
-      
-      // 현재 세션 데이터 삭제
-      localStorage.removeItem('baekya_auth');
-      localStorage.removeItem('currentBalance');
-      localStorage.removeItem('lastMiningTime');
-      localStorage.removeItem('miningHistory');
-      
-      // 세션 초기화
-      this.currentUser = null;
-      this.isAuthenticated = false;
-      this.authData = {
-        userId: null,
-        password: null,
-        did: null,
-        communicationAddress: null,
-        deviceId: null,
-        createdAt: null,
-        hasSetCommunicationAddress: false
-      };
-      
-      // 프로필 설정 모달 닫기
-      this.closeProfileSettingsModal();
-      
-      // UI 초기화
-      this.updateUserInterface();
-      
-      // 대시보드로 이동
-      const dashboardTab = document.querySelector('[data-tab="dashboard"]');
-      if (dashboardTab) dashboardTab.click();
-      
-      this.showSuccessMessage('계정이 성공적으로 탈퇴되었습니다.');
-      
-      // 앱 재시작
-      setTimeout(() => {
-        location.reload();
-      }, 2000);
-      
-    } catch (error) {
-      console.error('계정 탈퇴 실패:', error);
-      this.showErrorMessage('계정 탈퇴 중 오류가 발생했습니다.');
-    }
-  }
+
 
   // 로그아웃
   logout() {
@@ -16855,14 +16436,12 @@ class BaekyaProtocolDApp {
     const modal = document.getElementById('daoDetailModal');
     if (!modal) return;
 
-    // DAO 기본 정보 로드
-    this.loadDAODetailData(daoId);
-    
-    // 기본적으로 기여내역 탭 활성화
-    this.switchDAODetailTab('contribution');
-    
-    // DAO 세부 모달 탭에 알림 표시
-    this.updateDAODetailTabNotifications(daoId);
+    // DAO 기본 정보 표시
+    const titleElement = document.getElementById('daoDetailTitle');
+    const dao = this.getDAOData(daoId);
+    if (titleElement && dao) {
+      titleElement.textContent = dao.name;
+    }
     
     modal.classList.add('active');
   }
@@ -16874,115 +16453,9 @@ class BaekyaProtocolDApp {
     }
   }
 
-  switchDAODetailTab(tabType) {
-    // 탭 버튼 활성화 상태 변경
-    const tabBtns = document.querySelectorAll('.dao-detail-tab-btn');
-    tabBtns.forEach(btn => {
-      btn.classList.remove('active');
-      if (btn.dataset.tab === tabType) {
-        btn.classList.add('active');
-      }
-    });
 
-    // 탭 콘텐츠 표시/숨김
-    const tabContents = document.querySelectorAll('.dao-detail-tab-content');
-    tabContents.forEach(content => {
-      content.classList.remove('active');
-      if (content.id === `daoDetail${tabType.charAt(0).toUpperCase() + tabType.slice(1)}`) {
-        content.classList.add('active');
-      }
-    });
 
-    // 각 탭별 데이터 로드 및 해당 타입 알림 클리어
-    const currentDAOId = this.getCurrentDAOId();
-    if (currentDAOId) {
-      switch(tabType) {
-        case 'contribution':
-          this.loadDAOContributions(currentDAOId);
-          // 기여내역 알림 클리어
-          this.clearDAONotification(currentDAOId, 'contribution');
-          break;
-        case 'participation':
-          this.loadDAOParticipation(currentDAOId);
-          // 참정내역 알림 클리어
-          this.clearDAONotification(currentDAOId, 'participation');
-          break;
-      }
-      
-      // 탭 알림 다시 업데이트
-      this.updateDAODetailTabNotifications(currentDAOId);
-    }
-  }
 
-  loadDAODetailData(daoId) {
-    const dao = this.getDAOData(daoId);
-    if (!dao) return;
-
-    // 제목 업데이트
-    const titleElement = document.getElementById('daoDetailTitle');
-    if (titleElement) {
-      titleElement.textContent = `${dao.name} 상세 정보`;
-    }
-
-    // 현재 DAO ID 저장
-    this.currentDAOId = daoId;
-  }
-
-  async loadDAOContributions(daoId) {
-    const contributionList = document.getElementById('daoContributionList');
-
-    if (!contributionList) return;
-
-    // 먼저 로딩 표시
-    contributionList.innerHTML = `
-      <div class="dao-contribution-loading">
-        <i class="fas fa-spinner fa-spin"></i>
-        <p>기여 내역을 불러오는 중...</p>
-      </div>
-    `;
-
-    // 서버에서 최신 기여 데이터 로드
-    await this.loadContributionData(daoId);
-
-    // 기여내역 데이터 가져오기
-    const contributions = this.getDAOContributionsData(daoId);
-
-    // 기여내역 리스트 렌더링
-    if (contributions.length === 0) {
-      contributionList.innerHTML = `
-        <div class="dao-contribution-empty">
-          <div class="empty-icon">
-            <i class="fas fa-tasks"></i>
-          </div>
-          <div class="empty-content">
-            <h4>아직 기여내역이 없습니다</h4>
-            <p>이 DAO에서 DCA를 완료하면 기여내역이 여기에 표시됩니다.</p>
-          </div>
-        </div>
-      `;
-    } else {
-      contributionList.innerHTML = contributions.map((contrib, index) => {
-        const daoNotifications = this.notifications?.dao?.[daoId] || { contribution: 0, participation: 0 };
-        const hasNewContribution = index < daoNotifications.contribution;
-        
-        return `
-          <div class="dao-contribution-item ${hasNewContribution ? 'new-item' : ''}">
-          <div class="contribution-icon">
-            <i class="${this.getContributionIcon(contrib.description)}"></i>
-              ${hasNewContribution ? '<div class="item-notification-badge">NEW</div>' : ''}
-          </div>
-          <div class="contribution-details">
-            <div class="contribution-description">${contrib.description}</div>
-            <div class="contribution-date">${this.formatDate(contrib.date)}</div>
-          </div>
-          <div class="contribution-value-section">
-            <div class="contribution-b-value">+${contrib.value}B</div>
-          </div>
-        </div>
-        `;
-      }).join('');
-    }
-  }
 
   loadDAOParticipation(daoId) {
     const participationList = document.getElementById('daoParticipationList');
@@ -27321,6 +26794,7 @@ if (storedAuth) {
     // UI 업데이트 지연 실행
     setTimeout(() => {
       dapp.updateUserInterface();
+      dapp.updateProfileButtons();
     }, 200);
   } catch (error) {
     console.error('초기 인증 정보 복원 실패:', error);
@@ -27329,6 +26803,11 @@ if (storedAuth) {
 
 // P2P 탭 알림 초기화
 dapp.updateP2PTabNotification();
+
+// 프로필 버튼 초기화 (로그아웃 상태에서도)
+setTimeout(() => {
+  dapp.updateProfileButtons();
+}, 300);
 
 // 거래내역 로드 (전화번호 형태로 업데이트를 위해 기존 샘플 데이터 초기화)
 if (localStorage.getItem('sampleTransactionsAdded')) {
@@ -27342,7 +26821,7 @@ window.startUserAuth = () => dapp.startUserAuth();
 window.closeBiometricModal = () => dapp.closeBiometricModal();
 window.refreshWallet = () => dapp.refreshWallet();
 window.createCommunicationAddress = () => dapp.createCommunicationAddress();
-window.deleteAccount = () => dapp.deleteAccount();
+
 window.showProposalGuide = () => dapp.showProposalGuide();
 window.showCreateProposal = () => dapp.showCreateProposal();
 window.closeCreateProposalModal = () => dapp.closeCreateProposalModal();
@@ -28070,7 +27549,6 @@ function openPlayStore() {
 function openAppStore() {
   // 추후 앱 스토어 출시 시 링크 업데이트
   alert('곧 앱 스토어에서 만나보실 수 있습니다!');
-<<<<<<< HEAD
 }
 
 // 시스템 파일 관리 기능
@@ -28814,10 +28292,11 @@ class GovernanceManager {
     try {
       const response = await fetch(`${window.dapp.apiBase}/governance/proposals`);
       if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          this.proposals = data.proposals || [];
-          this.renderProposals();
+                  const data = await response.json();
+          if (data.success) {
+           // 협업 단계가 아닌 제안만 표시 (voting, funding, review 상태)
+           this.proposals = (data.proposals || []).filter(p => !['collaboration', 'completed'].includes(p.status));
+            this.renderProposals();
           
           // 초기 라벨 필터 설정 (전체 선택)
           setTimeout(() => {
@@ -29291,10 +28770,16 @@ class GovernanceManager {
       return;
     }
 
+    // 코어구조 파일 업로드 필수 검증
+    if (!this.currentUploadedFiles || this.currentUploadedFiles.length === 0) {
+      alert('코어구조 파일을 업로드해주세요. 제안에는 반드시 코어구조가 포함되어야 합니다.');
+      return;
+    }
+
     // B-Token 잔액 확인
     const currentBalance = parseFloat(document.getElementById('bTokenBalance')?.textContent?.replace(' B', '') || '0');
-    if (currentBalance < 30) {
-      alert(`B-Token이 부족합니다. 현재 보유량: ${currentBalance}B, 필요량: 30B`);
+    if (currentBalance < 5) {
+      alert(`B-Token이 부족합니다. 현재 보유량: ${currentBalance}B, 필요량: 5B`);
       return;
     }
 
@@ -29306,7 +28791,7 @@ class GovernanceManager {
         label: labelSelect.value,
         hasStructure: !!(this.currentUploadedFiles && this.currentUploadedFiles.length > 0),
         structureFiles: this.currentUploadedFiles || [],
-        cost: 30,
+        cost: 5,
         authorDID: window.dapp.currentUser.did
       };
 
@@ -29339,15 +28824,1572 @@ class GovernanceManager {
   }
 
   // 협업 탭 로드
-  loadCollaboration() {
-    // 추후 구현
-    console.log('협업 탭 로드');
-  }
+     // 협업 탭 로드
+   async loadCollaboration() {
+     try {
+       // 활성 협업 제안 조회
+       const response = await fetch(`${window.dapp.apiBase}/governance/collaboration/active`);
+       const result = await response.json();
+       
+       if (result.success && result.proposal) {
+         // 협업 번호 계산 (완료된 협업 수 + 현재 협업)
+         const collaborationNumber = (result.completedCount || 0) + 1;
+         result.proposal.collaborationNumber = collaborationNumber;
+         this.displayCollaborationProposal(result.proposal);
+       } else {
+         this.displayNoActiveCollaboration();
+       }
+     } catch (error) {
+       console.error('협업 탭 로드 실패:', error);
+       this.displayCollaborationError();
+     }
+   }
+
+   // 협업 제안 표시
+   displayCollaborationProposal(proposal) {
+     const container = document.getElementById('governance-collaboration');
+     if (!container) return;
+
+     // 현재 협업 제안 저장
+     this.currentCollaborationProposal = proposal;
+
+     // 제안자 이름 정보가 없으면 현재 사용자 정보에서 찾아서 보완
+     if (proposal.author && proposal.author.did && !proposal.author.name) {
+       const currentUserInfo = window.dapp.currentUser;
+       if (currentUserInfo && currentUserInfo.did === proposal.author.did) {
+         proposal.author.name = currentUserInfo.name;
+       } else {
+         // 다른 사용자의 경우 저장된 정보에서 찾기
+         const existingProposal = this.proposals.find(p => p.author.did === proposal.author.did);
+         if (existingProposal && existingProposal.author.name) {
+           proposal.author.name = existingProposal.author.name;
+         }
+       }
+     }
+
+     container.innerHTML = `
+       <div class="collaboration-container">
+         <!-- 제안 상세 정보 -->
+         <div class="collaboration-proposal-detail">
+                     <div class="proposal-header">
+            <h2><i class="fas fa-handshake"></i> #${String(proposal.collaborationNumber || 1).padStart(2, '0')} ${proposal.title}</h2>
+          </div>
+           
+           <div class="proposal-info-card">
+             <div class="proposal-meta-top">
+               <div class="proposal-meta-left">
+                 <div class="proposal-id">제안 ID: ${proposal.id}</div>
+                 <div class="proposal-date">
+                   <i class="fas fa-calendar"></i>
+                   ${new Date(proposal.createdAt).toLocaleDateString('ko-KR')}
+                 </div>
+               </div>
+               <div class="proposal-author">
+                 <span class="author-label">제안자:</span>
+                 <div class="author-info">
+                   <div class="author-avatar" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);" onclick="event.stopPropagation(); window.dapp.showUserProfile('${proposal.author.did}')">
+                     ${(proposal.author.name || proposal.author.username).charAt(0).toUpperCase()}
+                   </div>
+                   <span class="author-name">${proposal.author.name || proposal.author.username}</span>
+                 </div>
+               </div>
+             </div>
+             
+                         <div class="proposal-content">
+              <div class="proposal-description-collaboration">
+                ${proposal.description.replace(/\n/g, '<br>')}
+              </div>
+               
+               <div class="proposal-label">
+                 <span class="label-badge label-${proposal.label}">${this.getLabelText(proposal.label)}</span>
+               </div>
+             
+              <div class="proposal-stats-compact">
+                <div class="vote-summary-compact">
+                  <h4>투표 결과</h4>
+                  <div class="vote-results-horizontal">
+                    ${this.renderVoteResultBarsHorizontal(proposal)}
+                    <div class="vote-stats-inline-horizontal">
+                      <span class="vote-stat agree">동의 ${proposal.agreeCount}</span>
+                      <span class="vote-stat abstain">기권 ${proposal.abstainCount}</span>
+                      <span class="vote-stat disagree">반대 ${proposal.disagreeCount}</span>
+                      <span class="total-votes">총 ${proposal.voteCount}표</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+             </div>
+           </div>
+         </div>
+
+                 <!-- 코어구조 섹션 -->
+        <div class="collaboration-structure-section">
+          <div class="structure-header">
+            <h3><i class="fas fa-code"></i> 제안 코어구조</h3>
+            <div class="structure-actions">
+              <button class="btn-secondary import-btn" onclick="window.dapp.governanceManager.downloadAllStructure()">
+                <i class="fas fa-download"></i> 전체 다운로드
+              </button>
+            </div>
+          </div>
+          
+          <div class="collaboration-files-container">
+            <div class="structure-files" id="collaborationStructureFiles">
+              ${this.renderCollaborationStructureFiles(proposal.structureFiles)}
+            </div>
+            <div class="diff-preview" id="collaborationDiffPreview">
+              <!-- 차이점이 표시됩니다 -->
+            </div>
+          </div>
+        </div>
+
+         <!-- 보완구조 목록 -->
+         <div class="collaboration-complements-section">
+           <div class="complements-header">
+             <h3><i class="fas fa-puzzle-piece"></i> 제안 코어구조에 대한 보완구조 목록</h3>
+             <div class="complements-actions">
+               <span class="complements-count">${proposal.complements ? proposal.complements.length : 0}개</span>
+               <button class="btn-primary complement-btn" onclick="window.dapp.governanceManager.showComplementUploadModal('${proposal.id}')">
+                 <i class="fas fa-plus"></i> 보완구조 업로드
+               </button>
+             </div>
+           </div>
+           
+           <div class="complements-list">
+             ${this.renderComplementsList(proposal.complements || [])}
+           </div>
+         </div>
+       </div>
+     `;
+
+     // 첫 번째 파일의 diff 표시
+     if (proposal.structureFiles && proposal.structureFiles.length > 0) {
+       setTimeout(() => {
+         this.showCollaborationFileDiff(0);
+       }, 100);
+     }
+   }
+
+   // 활성 협업이 없을 때 표시
+   displayNoActiveCollaboration() {
+     const container = document.getElementById('governance-collaboration');
+     if (!container) return;
+
+     container.innerHTML = `
+       <div class="collaboration-empty">
+         <div class="empty-state">
+           <i class="fas fa-handshake collaboration-empty-icon"></i>
+           <h3>현재 협업 진행 중인 제안이 없습니다</h3>
+         </div>
+       </div>
+     `;
+   }
+
+   // 협업 오류 표시
+   displayCollaborationError() {
+     const container = document.getElementById('governance-collaboration');
+     if (!container) return;
+
+     container.innerHTML = `
+       <div class="collaboration-error">
+         <div class="error-state">
+           <i class="fas fa-exclamation-triangle"></i>
+           <h3>협업 정보를 불러올 수 없습니다</h3>
+           <p>잠시 후 다시 시도해주세요.</p>
+           <button class="btn-secondary" onclick="window.dapp.governanceManager.loadCollaboration()">
+             <i class="fas fa-redo"></i> 다시 시도
+           </button>
+         </div>
+       </div>
+     `;
+   }
 
   // 완료 탭 로드
   loadCompleted() {
     // 추후 구현
     console.log('완료 탭 로드');
+  }
+
+  // 협업 단계 구조 파일 렌더링 (제안 생성 단계와 동일)
+  renderCollaborationStructureFiles(files) {
+    if (!files || files.length === 0) {
+      return '<p>업로드된 파일이 없습니다.</p>';
+    }
+
+    let filesHtml = '';
+    files.forEach((file, index) => {
+      const fileExtension = this.getFileExtension(file.name);
+      const fileIcon = this.getFileTypeIcon(fileExtension);
+      const fileSize = this.formatFileSize(file.size);
+      
+      filesHtml += `
+        <div class="structure-file-item" data-index="${index}">
+          <div class="file-info" onclick="window.dapp.governanceManager.showCollaborationFileDiff(${index})">
+            <div class="file-icon ${fileExtension}">
+              <i class="${fileIcon}"></i>
+            </div>
+            <div class="file-details">
+              <div class="file-name">${file.name}</div>
+              <div class="file-path">${file.path || file.name}</div>
+            </div>
+          </div>
+          <div class="file-actions">
+            <div class="file-size">${fileSize}</div>
+            <button class="file-download-btn" onclick="event.stopPropagation(); window.dapp.governanceManager.downloadCollaborationFile(${index})" title="파일 다운로드">
+              <i class="fas fa-download"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    return filesHtml;
+  }
+
+  // 파일 확장자 가져오기
+  getFileExtension(fileName) {
+    return fileName.split('.').pop().toLowerCase();
+  }
+
+  // 파일 타입 아이콘 가져오기
+  getFileTypeIcon(extension) {
+    const iconMap = {
+      'js': 'fas fa-file-code',
+      'json': 'fas fa-file-code',
+      'md': 'fas fa-file-alt',
+      'txt': 'fas fa-file-alt',
+      'css': 'fas fa-file-code',
+      'html': 'fas fa-file-code',
+      'py': 'fas fa-file-code',
+      'java': 'fas fa-file-code',
+      'cpp': 'fas fa-file-code',
+      'c': 'fas fa-file-code',
+      'go': 'fas fa-file-code',
+      'rs': 'fas fa-file-code',
+      'php': 'fas fa-file-code',
+      'rb': 'fas fa-file-code',
+      'sh': 'fas fa-file-code',
+      'yml': 'fas fa-file-code',
+      'yaml': 'fas fa-file-code',
+      'xml': 'fas fa-file-code'
+    };
+    return iconMap[extension] || 'fas fa-file';
+  }
+
+  // 파일 아이콘 가져오기
+  getFileIcon(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    const iconMap = {
+      'js': 'fa-file-code',
+      'json': 'fa-file-code',
+      'md': 'fa-file-alt',
+      'txt': 'fa-file-alt',
+      'css': 'fa-file-code',
+      'html': 'fa-file-code',
+      'py': 'fa-file-code',
+      'java': 'fa-file-code',
+      'cpp': 'fa-file-code',
+      'c': 'fa-file-code',
+      'go': 'fa-file-code',
+      'rs': 'fa-file-code',
+      'php': 'fa-file-code',
+      'rb': 'fa-file-code',
+      'sh': 'fa-file-code',
+      'yml': 'fa-file-code',
+      'yaml': 'fa-file-code',
+      'xml': 'fa-file-code'
+    };
+    return iconMap[ext] || 'fa-file';
+  }
+
+  // 협업 탭에서 파일 보기
+  viewCollaborationFile(fileIndex) {
+    if (!this.currentCollaborationProposal || !this.currentCollaborationProposal.structureFiles) {
+      alert('파일 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    const file = this.currentCollaborationProposal.structureFiles[fileIndex];
+    if (!file) {
+      alert('파일을 찾을 수 없습니다.');
+      return;
+    }
+
+    this.viewStructureFile(file.name, file.content);
+  }
+
+  // 협업 탭에서 파일 다운로드
+  downloadCollaborationFile(fileIndex) {
+    if (!this.currentCollaborationProposal || !this.currentCollaborationProposal.structureFiles) {
+      alert('파일 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    const file = this.currentCollaborationProposal.structureFiles[fileIndex];
+    if (!file) {
+      alert('파일을 찾을 수 없습니다.');
+      return;
+    }
+
+    this.downloadFile(file.name, file.content);
+  }
+
+  // 협업 파일 선택
+  selectCollaborationFile(fileIndex) {
+    // 모든 파일 아이템 비활성화
+    document.querySelectorAll('.code-file-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    
+    document.querySelectorAll('.code-file-content').forEach(content => {
+      content.classList.remove('active');
+    });
+
+    // 선택된 파일 활성화
+    const selectedItem = document.querySelector(`[data-file-index="${fileIndex}"]`);
+    const selectedContent = document.getElementById(`code-content-${fileIndex}`);
+    
+    if (selectedItem) selectedItem.classList.add('active');
+    if (selectedContent) selectedContent.classList.add('active');
+  }
+
+  // 협업 파일 복사
+  copyCollaborationFile(fileIndex) {
+    if (!this.currentCollaborationProposal || !this.currentCollaborationProposal.structureFiles) {
+      alert('파일 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    const file = this.currentCollaborationProposal.structureFiles[fileIndex];
+    if (!file) {
+      alert('파일을 찾을 수 없습니다.');
+      return;
+    }
+
+    this.copyCodeToClipboard(file.name, file.content);
+  }
+
+  // 전체 구조 다운로드 (폴더로 압축)
+  async downloadAllStructure() {
+    if (!this.currentCollaborationProposal || !this.currentCollaborationProposal.structureFiles) {
+      alert('다운로드할 파일이 없습니다.');
+      return;
+    }
+
+    try {
+      // JSZip 라이브러리가 없으면 동적으로 로드
+      if (typeof JSZip === 'undefined') {
+        await this.loadJSZip();
+      }
+
+      const zip = new JSZip();
+      const folderName = `#${String(this.currentCollaborationProposal.collaborationNumber || 1).padStart(2, '0')} 전체 코어구조`;
+      const folder = zip.folder(folderName);
+
+      // 각 파일을 압축에 추가
+      this.currentCollaborationProposal.structureFiles.forEach(file => {
+        folder.file(file.name, file.content);
+      });
+
+      // ZIP 파일 생성 및 다운로드
+      const content = await zip.generateAsync({type: 'blob'});
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${folderName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      window.dapp.showSuccessMessage(`${folderName}.zip이 다운로드되었습니다.`);
+    } catch (error) {
+      console.error('전체 구조 다운로드 실패:', error);
+      // 실패 시 기존 방식으로 다운로드
+      this.downloadStructureFiles(this.currentCollaborationProposal.structureFiles);
+    }
+  }
+
+  // JSZip 라이브러리 동적 로드
+  async loadJSZip() {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  // 협업 단계에서 파일 diff 표시 (제안 생성 단계와 동일)
+  async showCollaborationFileDiff(fileIndex) {
+    if (!this.currentCollaborationProposal || !this.currentCollaborationProposal.structureFiles) return;
+
+    const file = this.currentCollaborationProposal.structureFiles[fileIndex];
+    if (!file) return;
+
+    // 파일 선택 상태 표시
+    document.querySelectorAll('#collaborationStructureFiles .structure-file-item').forEach((item, index) => {
+      if (index === fileIndex) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+
+    // diff 분석 및 표시
+    const systemFile = this.findSystemFile(file.name);
+    const diffPreview = document.getElementById('collaborationDiffPreview');
+
+    if (!diffPreview) return;
+
+    if (!systemFile) {
+      diffPreview.innerHTML = `
+        <div class="diff-section">
+          <div class="diff-header">
+            <span class="diff-file-name">${file.name}</span>
+            <span class="diff-status new-file">새로운 파일</span>
+          </div>
+          <div class="diff-content">
+            <div class="diff-line added">+ 새로운 파일입니다.</div>
+          </div>
+        </div>
+      `;
+    } else {
+      const systemLines = systemFile.split('\n');
+      const newLines = file.content.split('\n');
+      const diffHtml = this.generateDiff(systemLines, newLines, file.name);
+      diffPreview.innerHTML = diffHtml;
+    }
+  }
+
+  // 투표 결과 막대 그래프 렌더링
+  renderVoteResultBars(proposal) {
+    const total = proposal.voteCount || 1; // 0으로 나누기 방지
+    const agreePercent = Math.round((proposal.agreeCount / total) * 100);
+    const abstainPercent = Math.round((proposal.abstainCount / total) * 100);
+    const disagreePercent = Math.round((proposal.disagreeCount / total) * 100);
+
+    return `
+      <div class="vote-bar-container">
+        <div class="vote-bar-row">
+          <span class="vote-bar-label agree">동의</span>
+          <div class="vote-bar-track">
+            <div class="vote-bar-fill agree" style="width: ${agreePercent}%"></div>
+          </div>
+          <span class="vote-bar-percent">${agreePercent}%</span>
+        </div>
+        <div class="vote-bar-row">
+          <span class="vote-bar-label abstain">기권</span>
+          <div class="vote-bar-track">
+            <div class="vote-bar-fill abstain" style="width: ${abstainPercent}%"></div>
+          </div>
+          <span class="vote-bar-percent">${abstainPercent}%</span>
+        </div>
+        <div class="vote-bar-row">
+          <span class="vote-bar-label disagree">반대</span>
+          <div class="vote-bar-track">
+            <div class="vote-bar-fill disagree" style="width: ${disagreePercent}%"></div>
+          </div>
+          <span class="vote-bar-percent">${disagreePercent}%</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // 협업 단계용 가로 투표 막대 그래프 렌더링
+  renderVoteResultBarsHorizontal(proposal) {
+    const total = proposal.voteCount || 1; // 0으로 나누기 방지
+    const agreePercent = Math.round((proposal.agreeCount / total) * 100);
+    const abstainPercent = Math.round((proposal.abstainCount / total) * 100);
+    const disagreePercent = Math.round((proposal.disagreeCount / total) * 100);
+
+    return `
+      <div class="vote-progress-horizontal">
+        <div class="vote-progress-track">
+          <div class="vote-progress-fill agree" style="width: ${agreePercent}%" title="동의 ${agreePercent}%"></div>
+          <div class="vote-progress-fill abstain" style="width: ${abstainPercent}%" title="기권 ${abstainPercent}%"></div>
+          <div class="vote-progress-fill disagree" style="width: ${disagreePercent}%" title="반대 ${disagreePercent}%"></div>
+        </div>
+        <div class="vote-progress-labels">
+          <span class="vote-progress-label">동의 ${agreePercent}%</span>
+          <span class="vote-progress-label">기권 ${abstainPercent}%</span>
+          <span class="vote-progress-label">반대 ${disagreePercent}%</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // 속성값을 위한 이스케이프
+  escapeForAttribute(str) {
+    if (!str) return '';
+    return str.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+  }
+
+  // 파일 열기
+  openFile(fileName, content) {
+    try {
+      // 이스케이프된 문자열을 복원
+      const decodedContent = content.replace(/\\'/g, "'").replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+      this.viewStructureFile(fileName, decodedContent);
+    } catch (error) {
+      console.error('파일 열기 실패:', error);
+      alert('파일을 열 수 없습니다.');
+    }
+  }
+
+  // 파일 크기 포맷팅
+  formatFileSize(size) {
+    if (!size) return '0 B';
+    
+    if (typeof size === 'string' && size.includes('KB')) {
+      return size;
+    }
+    
+    const bytes = typeof size === 'number' ? size : size.toString().length;
+    
+    if (bytes === 0) return '0 B';
+    
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  // 보완구조 목록 렌더링 (유튜브 댓글 스타일)
+  renderComplementsList(complements) {
+    if (!complements || complements.length === 0) {
+      return `
+        <div class="no-complements">
+          <i class="fas fa-info-circle"></i>
+          <p>아직 업로드된 보완구조가 없습니다.</p>
+        </div>
+      `;
+    }
+
+    return complements.map((complement, index) => `
+      <div class="complement-card" data-complement-id="${complement.id}">
+        <div class="complement-main">
+          <!-- 프로필 영역 -->
+          <div class="complement-profile">
+            <div class="profile-avatar">
+              ${complement.author.profilePhoto ? 
+                `<img src="${complement.author.profilePhoto}" alt="${complement.author.username}">` :
+                `<div class="default-avatar">${complement.author.username.charAt(0).toUpperCase()}</div>`
+              }
+            </div>
+          </div>
+          
+          <!-- 내용 영역 -->
+          <div class="complement-body">
+            <div class="complement-header">
+              <div class="complement-author-info">
+                <span class="author-name">${complement.author.username}</span>
+                <span class="complement-date">${this.formatComplementDate(complement.createdAt)}</span>
+              </div>
+              <div class="complement-actions">
+                <button class="action-btn" onclick="window.dapp.governanceManager.toggleComplementMenu(${index})">
+                  <i class="fas fa-ellipsis-v"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="complement-content">
+              <h4 class="complement-title">${complement.title}</h4>
+              <div class="complement-description">
+                ${complement.description.replace(/\n/g, '<br>')}
+              </div>
+              
+              <!-- 코드 변경사항 미리보기 -->
+              <div class="complement-diff-preview" id="complementDiff_${index}">
+                <div class="diff-summary">
+                  <i class="fas fa-code-branch"></i>
+                  <span>${complement.fileCount}개 파일 수정</span>
+                  <button class="view-diff-btn" onclick="window.dapp.governanceManager.toggleComplementDiff(${index})">
+                    <span class="view-text">변경사항 보기</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                </div>
+                <div class="diff-content" style="display: none;">
+                  ${this.renderComplementDiff(complement.structureFiles)}
+                </div>
+              </div>
+            </div>
+            
+            <!-- 투표 영역 -->
+            <div class="complement-voting">
+              <div class="voting-stats">
+                <div class="vote-bar">
+                  <div class="vote-progress">
+                    <div class="vote-fill" style="width: ${this.calculateVotePercentage(complement.votes)}%"></div>
+                  </div>
+                  <div class="vote-numbers">
+                    <span class="votes-for">👍 ${complement.votes?.agree || 0}</span>
+                    <span class="votes-against">👎 ${complement.votes?.disagree || 0}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="voting-actions">
+                <button class="vote-btn ${complement.userVote === 'agree' ? 'voted' : ''}" 
+                        onclick="window.dapp.governanceManager.voteComplement('${complement.id}', 'agree')">
+                  <i class="fas fa-thumbs-up"></i>
+                  <span>${complement.votes?.agree || 0}</span>
+                </button>
+                <button class="vote-btn ${complement.userVote === 'disagree' ? 'voted' : ''}" 
+                        onclick="window.dapp.governanceManager.voteComplement('${complement.id}', 'disagree')">
+                  <i class="fas fa-thumbs-down"></i>
+                  <span>${complement.votes?.disagree || 0}</span>
+                </button>
+                <button class="comment-btn" onclick="window.dapp.governanceManager.toggleComplementComments(${index})">
+                  <i class="fas fa-comment"></i>
+                  <span>댓글</span>
+                </button>
+                <button class="reply-btn" onclick="window.dapp.governanceManager.showComplementReply(${index})">
+                  <i class="fas fa-reply"></i>
+                  <span>답글</span>
+                </button>
+              </div>
+            </div>
+            
+            <!-- 댓글 섹션 -->
+            <div class="complement-comments" id="complementComments_${index}" style="display: none;">
+              <div class="comments-list">
+                ${this.renderComplementComments(complement.comments || [])}
+              </div>
+              <div class="comment-input">
+                <textarea placeholder="댓글을 입력하세요..." rows="2"></textarea>
+                <button class="submit-comment-btn" onclick="window.dapp.governanceManager.submitComplementComment('${complement.id}', ${index})">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // 보완구조 날짜 포맷팅
+  formatComplementDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffHours < 1) {
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      return `${diffMinutes}분 전`;
+    } else if (diffHours < 24) {
+      return `${diffHours}시간 전`;
+    } else if (diffDays < 7) {
+      return `${diffDays}일 전`;
+    } else {
+      return date.toLocaleDateString('ko-KR');
+    }
+  }
+
+  // 투표 비율 계산
+  calculateVotePercentage(votes) {
+    if (!votes) return 0;
+    const total = (votes.agree || 0) + (votes.disagree || 0);
+    if (total === 0) return 0;
+    return Math.round(((votes.agree || 0) / total) * 100);
+  }
+
+  // 보완구조 diff 렌더링
+  renderComplementDiff(files) {
+    if (!files || files.length === 0) {
+      return '<div class="no-diff">변경사항이 없습니다.</div>';
+    }
+
+    return files.map(file => `
+      <div class="diff-file">
+        <div class="diff-file-header">
+          <div class="diff-file-name">
+            <i class="fas fa-file-code"></i>
+            <span>${file.name}</span>
+          </div>
+          <div class="diff-status ${file.status || 'modified'}">
+            ${file.status === 'new' ? '새 파일' : '수정됨'}
+          </div>
+        </div>
+        <div class="diff-file-content">
+          ${this.renderFileDiff(file)}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // 파일 diff 렌더링
+  renderFileDiff(file) {
+    // 실제 구현에서는 서버에서 받은 diff 데이터를 사용
+    // 여기서는 예시 구현
+    const diffLines = file.diffContent || this.generateSampleDiff(file);
+    return `
+      <div class="diff-content">
+        ${diffLines.map((line, index) => `
+          <div class="diff-line ${line.type}">
+            <span class="line-number">${index + 1}</span>
+            <span class="line-content">${line.content}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // 샘플 diff 생성 (개발용)
+  generateSampleDiff(file) {
+    return [
+      { type: 'context', content: '// 기존 코드' },
+      { type: 'removed', content: '- const oldFunction = () => {' },
+      { type: 'removed', content: '-   return "old logic";' },
+      { type: 'removed', content: '- };' },
+      { type: 'added', content: '+ const improvedFunction = () => {' },
+      { type: 'added', content: '+   return "improved logic with better performance";' },
+      { type: 'added', content: '+ };' },
+      { type: 'context', content: '// 추가 코드...' }
+    ];
+  }
+
+  // 보완구조 댓글 렌더링
+  renderComplementComments(comments) {
+    if (!comments || comments.length === 0) {
+      return '<div class="no-comments">댓글이 없습니다.</div>';
+    }
+
+    return comments.map(comment => `
+      <div class="comment-item">
+        <div class="comment-avatar">
+          ${comment.author.profilePhoto ? 
+            `<img src="${comment.author.profilePhoto}" alt="${comment.author.username}">` :
+            `<div class="default-avatar">${comment.author.username.charAt(0).toUpperCase()}</div>`
+          }
+        </div>
+        <div class="comment-content">
+          <div class="comment-header">
+            <span class="comment-author">${comment.author.username}</span>
+            <span class="comment-date">${this.formatComplementDate(comment.createdAt)}</span>
+          </div>
+          <div class="comment-text">${comment.content}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // 구조 파일 렌더링 (기존 방식)
+  renderStructureFiles(files) {
+    if (!files || files.length === 0) {
+      return `<div class="no-files">코어구조 파일이 없습니다.</div>`;
+    }
+
+    return files.map(file => `
+      <div class="structure-file-item">
+        <div class="file-info">
+          <i class="fas fa-file-code"></i>
+          <span class="file-name">${file.name}</span>
+          <span class="file-size">(${this.formatFileSize(file.size)})</span>
+        </div>
+        <div class="file-actions">
+          <button class="btn-small" onclick="window.dapp.governanceManager.viewStructureFile('${file.name}', ${JSON.stringify(file.content).replace(/"/g, '&quot;')})">
+            <i class="fas fa-eye"></i> 보기
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // 구조 파일 가져오기
+  async importStructureFiles(proposalId) {
+    try {
+      const response = await fetch(`${window.dapp.apiBase}/governance/collaboration/active`);
+      const result = await response.json();
+      
+      if (result.success && result.proposal) {
+        const files = result.proposal.structureFiles;
+        if (!files || files.length === 0) {
+          alert('가져올 파일이 없습니다.');
+          return;
+        }
+
+        // 파일들을 zip으로 압축하여 다운로드
+        this.downloadStructureFiles(files, `${result.proposal.title}_코어구조`);
+        window.dapp.showSuccessMessage('코어구조 파일을 다운로드했습니다.');
+      }
+    } catch (error) {
+      console.error('구조 파일 가져오기 실패:', error);
+      alert('구조 파일 가져오기에 실패했습니다.');
+    }
+  }
+
+  // 구조 파일 다운로드
+  downloadStructureFiles(files, folderName) {
+    // 실제 구현에서는 JSZip 라이브러리 등을 사용하여 zip 파일로 압축
+    // 현재는 개별 파일 다운로드로 구현
+    files.forEach(file => {
+      const blob = new Blob([file.content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // 구조 파일 보기
+  viewStructureFile(fileName, content) {
+    if (!content) {
+      alert('파일 내용이 없습니다.');
+      return;
+    }
+
+    // 안전한 문자열 처리
+    const safeContent = typeof content === 'string' ? content : String(content);
+    const escapedFileName = fileName.replace(/'/g, "\\'");
+    
+    // 파일 내용을 모달로 표시
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content large-modal">
+        <div class="modal-header">
+          <h3><i class="fas fa-file-code"></i> ${fileName}</h3>
+          <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="code-viewer-header">
+            <span class="file-type">${this.getFileType(fileName)}</span>
+            <div class="code-actions">
+              <button class="copy-code-btn" onclick="window.dapp.governanceManager.copyCodeToClipboard('${escapedFileName}', \`${safeContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">
+                <i class="fas fa-copy"></i> 복사
+              </button>
+              <button class="download-code-btn" onclick="window.dapp.governanceManager.downloadSingleFile('${escapedFileName}', \`${safeContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">
+                <i class="fas fa-download"></i> 다운로드
+              </button>
+            </div>
+          </div>
+          <pre class="code-viewer"><code class="language-${this.getLanguageClass(fileName)}">${this.escapeHtml(safeContent)}</code></pre>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="this.closest('.modal').remove()">닫기</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+  }
+
+  // HTML 이스케이프
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // 파일 타입 가져오기
+  getFileType(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    const typeMap = {
+      'js': 'JavaScript',
+      'json': 'JSON',
+      'md': 'Markdown',
+      'txt': 'Text',
+      'css': 'CSS',
+      'html': 'HTML',
+      'py': 'Python',
+      'java': 'Java',
+      'cpp': 'C++',
+      'c': 'C',
+      'go': 'Go',
+      'rs': 'Rust',
+      'php': 'PHP',
+      'rb': 'Ruby',
+      'sh': 'Shell',
+      'yml': 'YAML',
+      'yaml': 'YAML',
+      'xml': 'XML'
+    };
+    return typeMap[ext] || 'Unknown';
+  }
+
+  // 언어 클래스 가져오기
+  getLanguageClass(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    const langMap = {
+      'js': 'javascript',
+      'json': 'json',
+      'md': 'markdown',
+      'txt': 'text',
+      'css': 'css',
+      'html': 'html',
+      'py': 'python',
+      'java': 'java',
+      'cpp': 'cpp',
+      'c': 'c',
+      'go': 'go',
+      'rs': 'rust',
+      'php': 'php',
+      'rb': 'ruby',
+      'sh': 'bash',
+      'yml': 'yaml',
+      'yaml': 'yaml',
+      'xml': 'xml'
+    };
+    return langMap[ext] || 'text';
+  }
+
+  // diff와 함께 코드 포맷팅
+  formatCodeWithDiff(content) {
+    let formatted = this.escapeHtml(content);
+    
+    // 줄 번호와 diff 표시 추가
+    const lines = formatted.split('\n');
+    const numberedLines = lines.map((line, index) => {
+      const lineNumber = (index + 1).toString().padStart(3, ' ');
+      let className = '';
+      let diffSymbol = '';
+      
+      // diff 감지 (+ 또는 - 로 시작하는 줄)
+      if (line.trim().startsWith('+') && !line.trim().startsWith('+++')) {
+        className = 'diff-added';
+        diffSymbol = '<span class="diff-symbol added">+</span>';
+      } else if (line.trim().startsWith('-') && !line.trim().startsWith('---')) {
+        className = 'diff-removed';
+        diffSymbol = '<span class="diff-symbol removed">-</span>';
+      }
+      
+      return `<span class="line-row ${className}"><span class="line-number">${lineNumber}</span>${diffSymbol}${line}</span>`;
+    });
+    
+    return numberedLines.join('\n');
+  }
+
+  // 코드 복사
+  copyCodeToClipboard(fileName, content) {
+    navigator.clipboard.writeText(content).then(() => {
+      window.dapp.showSuccessMessage(`${fileName} 내용이 복사되었습니다.`);
+    }).catch(() => {
+      // 폴백 복사 방법
+      const textArea = document.createElement('textarea');
+      textArea.value = content;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      window.dapp.showSuccessMessage(`${fileName} 내용이 복사되었습니다.`);
+    });
+  }
+
+  // 파일 다운로드
+  downloadFile(fileName, content) {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    window.dapp.showSuccessMessage(`${fileName}이 다운로드되었습니다.`);
+  }
+
+  // 단일 파일 다운로드 (모달에서 사용)
+  downloadSingleFile(fileName, content) {
+    try {
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      window.dapp.showSuccessMessage(`${fileName}이 다운로드되었습니다.`);
+    } catch (error) {
+      console.error('파일 다운로드 실패:', error);
+      alert('파일 다운로드에 실패했습니다.');
+    }
+  }
+
+  // 보완구조 업로드 모달 표시
+  showComplementUploadModal(proposalId) {
+    if (!window.dapp.currentUser) {
+      alert('보완구조 업로드를 위해서는 먼저 로그인이 필요합니다.');
+      return;
+    }
+
+    // 현재 업로드된 파일 초기화
+    this.currentComplementFiles = [];
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'complementUploadModal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3><i class="fas fa-plus"></i> 보완구조 업로드</h3>
+          <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="complementUploadForm">
+            <div class="form-group">
+              <label for="complementTitle">보완구조 제목 <span class="required-indicator">*</span></label>
+              <input type="text" id="complementTitle" placeholder="보완구조의 제목을 입력하세요" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="complementDescription">보완구조 설명 <span class="required-indicator">*</span></label>
+              <textarea id="complementDescription" rows="4" placeholder="이 보완구조가 어떤 개선사항을 제공하는지 설명해주세요" required></textarea>
+            </div>
+
+            <!-- 비용 정보 -->
+            <div class="form-section">
+              <div class="cost-info">
+                <div class="cost-notice">
+                  <i class="fas fa-coins"></i>
+                  <span>보완구조 업로드 비용: <strong>5 B-Token</strong></span>
+                </div>
+                <div class="cost-description">
+                  <small><i class="fas fa-info-circle"></i> 비용은 협업 제안 모금액에서 차감됩니다.</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- 코어구조 업로드 -->
+            <div class="form-section">
+              <h4><i class="fas fa-code"></i> 보완구조 파일 <span class="required-indicator">*</span></h4>
+              <p class="section-description">제안 코어구조를 개선할 수 있는 코드 파일을 업로드하세요.</p>
+              <div class="core-structure-upload">
+                <div class="upload-options">
+                  <button type="button" class="upload-btn" onclick="document.getElementById('complementStructureInput').click()">
+                    <i class="fas fa-file-upload"></i>
+                    파일 선택
+                  </button>
+                  <button type="button" class="upload-btn" onclick="document.getElementById('complementFolderInput').click()">
+                    <i class="fas fa-folder-open"></i>
+                    폴더 선택
+                  </button>
+                </div>
+                <div class="upload-area" id="complementUploadArea" 
+                     ondragover="window.dapp.governanceManager.handleComplementDragOver(event)" 
+                     ondragenter="window.dapp.governanceManager.handleComplementDragEnter(event)" 
+                     ondragleave="window.dapp.governanceManager.handleComplementDragLeave(event)" 
+                     ondrop="window.dapp.governanceManager.handleComplementDrop(event)">
+                  <div class="upload-content">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>보완구조 파일/폴더를 선택하거나 드래그하세요</p>
+                    <small>지원 형식: .js, .json, .md, .txt, .css, .html (최대 총 20MB)</small>
+                  </div>
+                  <input type="file" id="complementStructureInput" accept=".js,.json,.md,.txt,.css,.html" multiple style="display: none;" onchange="window.dapp.governanceManager.handleComplementStructureUpload(this)">
+                  <input type="file" id="complementFolderInput" webkitdirectory directory style="display: none;" onchange="window.dapp.governanceManager.handleComplementStructureUpload(this)">
+                </div>
+                <div class="uploaded-structure" id="complementUploadedStructure" style="display: none;">
+                  <div class="structure-info">
+                    <div class="structure-header">
+                      <h5><i class="fas fa-file-code"></i> 업로드된 파일들</h5>
+                      <button type="button" class="remove-all-btn" onclick="window.dapp.governanceManager.removeAllComplementStructure()">
+                        <i class="fas fa-trash"></i> 모두 삭제
+                      </button>
+                    </div>
+                    <div class="structure-files" id="complementStructureFilesList">
+                      <!-- 업로드된 파일 목록이 여기에 표시됩니다 -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="this.closest('.modal').remove()">취소</button>
+          <button type="button" class="btn-primary" onclick="window.dapp.governanceManager.submitComplementStructure('${proposalId}')">업로드</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+  }
+
+  // 보완구조 파일 업로드 처리 (제안 코어구조와 비교)
+  async handleComplementStructureUpload(input) {
+    const files = Array.from(input.files);
+    
+    // 현재 활성 협업의 제안 코어구조 가져오기
+    const proposalCoreStructure = await this.getCurrentProposalCoreStructure();
+    
+    // 업로드된 파일들을 제안 코어구조와 비교하여 diff 생성
+    await this.processComplementFilesWithDiff(files, proposalCoreStructure);
+  }
+
+  // 현재 제안의 코어구조 가져오기
+  async getCurrentProposalCoreStructure() {
+    try {
+      const response = await fetch(`${window.dapp.apiBase}/governance/collaboration/active`);
+      const result = await response.json();
+      
+      if (result.success && result.proposal && result.proposal.structureFiles) {
+        return result.proposal.structureFiles;
+      }
+      
+      // 개발용 샘플 코어구조 (실제 서버가 없을 때)
+      return [
+        {
+          name: 'sample.js',
+          content: `// 샘플 JavaScript 파일
+function sampleFunction() {
+  console.log("Hello World");
+  return true;
+}
+
+module.exports = sampleFunction;`
+        },
+        {
+          name: 'config.json',
+          content: `{
+  "version": "1.0.0",
+  "name": "sample-project",
+  "description": "샘플 프로젝트입니다"
+}`
+        }
+      ];
+    } catch (error) {
+      console.error('제안 코어구조 가져오기 실패:', error);
+      // 에러 시에도 샘플 데이터 반환
+      return [
+        {
+          name: 'sample.js',
+          content: `// 샘플 JavaScript 파일
+function sampleFunction() {
+  console.log("Hello World");
+  return true;
+}
+
+module.exports = sampleFunction;`
+        }
+      ];
+    }
+  }
+
+  // 보완구조 파일과 제안 코어구조 비교하여 diff 생성
+  async processComplementFilesWithDiff(uploadedFiles, proposalCoreStructure) {
+    if (!this.currentComplementFiles) {
+      this.currentComplementFiles = [];
+    }
+    
+    for (const file of uploadedFiles) {
+      try {
+        // 파일 크기 검증
+        if (file.size > 5 * 1024 * 1024) { // 5MB 제한
+          alert(`파일 "${file.name}"이 너무 큽니다. (최대 5MB)`);
+          continue;
+        }
+        
+        const fileContent = await this.readFileContent(file);
+        
+        // 같은 이름의 파일이 제안 코어구조에 있는지 확인
+        const originalFile = proposalCoreStructure.find(f => f.name === file.name);
+        
+        let diffContent = null;
+        let status = 'new';
+        
+        if (originalFile) {
+          // 기존 파일과 비교하여 diff 생성
+          diffContent = this.generateFileDiff(originalFile.content, fileContent);
+          status = 'modified';
+        } else {
+          // 새 파일인 경우 모든 라인을 추가로 표시
+          diffContent = this.generateNewFileDiff(fileContent);
+        }
+        
+        const fileData = {
+          name: file.name,
+          size: file.size,
+          content: fileContent,
+          diffContent: diffContent,
+          status: status,
+          type: file.type,
+          originalFile: originalFile
+        };
+        
+        this.currentComplementFiles.push(fileData);
+        
+      } catch (error) {
+        console.error(`파일 ${file.name} 처리 실패:`, error);
+        alert(`파일 "${file.name}" 처리 중 오류가 발생했습니다.`);
+      }
+    }
+    
+    // 파일 목록 업데이트
+    this.updateComplementFilesList();
+  }
+
+  // 파일 내용 읽기
+  async readFileContent(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => reject(new Error('파일 읽기 실패'));
+      reader.readAsText(file);
+    });
+  }
+
+  // 파일 diff 생성
+  generateFileDiff(originalContent, newContent) {
+    const originalLines = originalContent.split('\n');
+    const newLines = newContent.split('\n');
+    const diffLines = [];
+    
+    // 간단한 diff 생성 (실제로는 더 정교한 알고리즘 필요)
+    const maxLines = Math.max(originalLines.length, newLines.length);
+    
+    for (let i = 0; i < maxLines; i++) {
+      const originalLine = originalLines[i] || '';
+      const newLine = newLines[i] || '';
+      
+      if (originalLine === newLine) {
+        if (originalLine) {
+          diffLines.push({
+            type: 'context',
+            content: `  ${originalLine}`
+          });
+        }
+      } else {
+        if (originalLine) {
+          diffLines.push({
+            type: 'removed',
+            content: `- ${originalLine}`
+          });
+        }
+        if (newLine) {
+          diffLines.push({
+            type: 'added',
+            content: `+ ${newLine}`
+          });
+        }
+      }
+    }
+    
+    return diffLines;
+  }
+
+  // 새 파일 diff 생성
+  generateNewFileDiff(content) {
+    const lines = content.split('\n');
+    return lines.map(line => ({
+      type: 'added',
+      content: `+ ${line}`
+    }));
+  }
+
+
+
+  // 보완구조 파일 목록 업데이트 (diff 정보 포함)
+  updateComplementFilesList() {
+    const container = document.getElementById('complementUploadedStructure');
+    const filesList = document.getElementById('complementStructureFilesList');
+    
+    if (!container || !filesList || !this.currentComplementFiles) return;
+
+    if (this.currentComplementFiles.length > 0) {
+      container.style.display = 'block';
+      
+      const filesHtml = this.currentComplementFiles.map((fileData, index) => `
+        <div class="structure-file-item" data-index="${index}">
+          <div class="file-info">
+            <i class="fas fa-file-code"></i>
+            <span class="file-name">${fileData.name}</span>
+            <span class="file-size">(${this.formatFileSize(fileData.size)})</span>
+            <span class="file-status ${fileData.status || 'modified'}">${fileData.status === 'new' ? '새 파일' : '수정됨'}</span>
+          </div>
+          <div class="file-actions">
+            <button type="button" class="view-diff-btn" onclick="window.dapp.governanceManager.viewComplementFileDiff(${index})">
+              <i class="fas fa-eye"></i> Diff 보기
+            </button>
+            <button type="button" class="remove-file-btn" onclick="window.dapp.governanceManager.removeComplementFile(${index})">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+      
+      filesList.innerHTML = filesHtml;
+      
+      // diff 미리보기 영역 추가
+      if (!document.getElementById('complementDiffPreview')) {
+        const diffPreview = document.createElement('div');
+        diffPreview.className = 'diff-preview';
+        diffPreview.id = 'complementDiffPreview';
+        diffPreview.innerHTML = '<div class="diff-placeholder">파일을 선택하면 제안 코어구조와의 변경사항이 표시됩니다.</div>';
+        container.appendChild(diffPreview);
+      }
+    } else {
+      container.style.display = 'none';
+    }
+  }
+
+  // 보완구조 파일 diff 보기
+  viewComplementFileDiff(index) {
+    const fileData = this.currentComplementFiles[index];
+    if (!fileData || !fileData.diffContent) return;
+    
+    const diffPreview = document.getElementById('complementDiffPreview');
+    if (!diffPreview) return;
+    
+    const diffHtml = `
+      <div class="diff-file">
+        <div class="diff-file-header">
+          <div class="diff-file-name">
+            <i class="fas fa-file-code"></i>
+            <span>${fileData.name}</span>
+          </div>
+          <div class="diff-status ${fileData.status}">
+            ${fileData.status === 'new' ? '새 파일' : '수정됨'}
+          </div>
+        </div>
+        <div class="diff-file-content">
+          <div class="diff-content">
+            ${fileData.diffContent.map((line, lineIndex) => `
+              <div class="diff-line ${line.type}">
+                <span class="line-number">${lineIndex + 1}</span>
+                <span class="line-content">${line.content}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    diffPreview.innerHTML = diffHtml;
+    
+    // 파일 아이템 선택 상태 업데이트
+    document.querySelectorAll('.structure-file-item').forEach(item => {
+      item.classList.remove('selected');
+    });
+    document.querySelector(`[data-index="${index}"]`).classList.add('selected');
+  }
+
+  // 보완구조 파일 제거
+  removeComplementFile(index) {
+    if (this.currentComplementFiles && this.currentComplementFiles[index]) {
+      this.currentComplementFiles.splice(index, 1);
+      this.updateComplementFilesList();
+      
+      // diff 미리보기 초기화
+      const diffPreview = document.getElementById('complementDiffPreview');
+      if (diffPreview) {
+        diffPreview.innerHTML = '<div class="diff-placeholder">파일을 선택하면 제안 코어구조와의 변경사항이 표시됩니다.</div>';
+      }
+    }
+  }
+
+  // 모든 보완구조 파일 제거
+  removeAllComplementStructure() {
+    this.currentComplementFiles = [];
+    this.updateComplementFilesList();
+  }
+
+  // 보완구조 드래그 앤 드롭 처리
+  handleComplementDragOver(event) {
+    event.preventDefault();
+    event.currentTarget.classList.add('drag-over');
+  }
+
+  handleComplementDragEnter(event) {
+    event.preventDefault();
+  }
+
+  handleComplementDragLeave(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('drag-over');
+  }
+
+  async handleComplementDrop(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('drag-over');
+    
+    const files = Array.from(event.dataTransfer.files);
+    
+    // 현재 활성 협업의 제안 코어구조 가져오기
+    const proposalCoreStructure = await this.getCurrentProposalCoreStructure();
+    
+    // 업로드된 파일들을 제안 코어구조와 비교하여 diff 생성
+    await this.processComplementFilesWithDiff(files, proposalCoreStructure);
+  }
+
+  // 보완구조 제출
+  async submitComplementStructure(proposalId) {
+    const title = document.getElementById('complementTitle').value.trim();
+    const description = document.getElementById('complementDescription').value.trim();
+
+    // 유효성 검사
+    if (!title || !description) {
+      alert('제목과 설명을 모두 입력해주세요.');
+      return;
+    }
+
+    // 보완구조 파일 필수 검증
+    if (!this.currentComplementFiles || this.currentComplementFiles.length === 0) {
+      alert('보완구조 파일을 업로드해주세요.');
+      return;
+    }
+
+    try {
+      // 보완구조 데이터 구성
+      const complementData = {
+        title: title,
+        description: description,
+        structureFiles: this.currentComplementFiles,
+        fileCount: this.currentComplementFiles.length,
+        authorDID: window.dapp.currentUser.did
+      };
+
+      // 서버에 보완구조 업로드 요청
+      const response = await fetch(`${window.dapp.apiBase}/governance/proposals/${proposalId}/complement`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(complementData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          alert('보완구조가 성공적으로 업로드되었습니다!');
+          document.getElementById('complementUploadModal').remove();
+          this.loadCollaboration(); // 목록 새로고침
+        } else {
+          throw new Error(result.error || '보완구조 업로드 실패');
+        }
+      } else {
+        throw new Error('서버 오류가 발생했습니다.');
+      }
+
+    } catch (error) {
+      console.error('보완구조 업로드 실패:', error);
+      alert(`보완구조 업로드 실패: ${error.message}`);
+    }
+  }
+
+  // 보완구조 diff 토글
+  toggleComplementDiff(index) {
+    const diffContent = document.querySelector(`#complementDiff_${index} .diff-content`);
+    const toggleBtn = document.querySelector(`#complementDiff_${index} .view-diff-btn`);
+    const viewText = toggleBtn.querySelector('.view-text');
+    const chevron = toggleBtn.querySelector('i');
+
+    if (diffContent.style.display === 'none') {
+      diffContent.style.display = 'block';
+      viewText.textContent = '변경사항 숨기기';
+      chevron.className = 'fas fa-chevron-up';
+    } else {
+      diffContent.style.display = 'none';
+      viewText.textContent = '변경사항 보기';
+      chevron.className = 'fas fa-chevron-down';
+    }
+  }
+
+  // 보완구조 댓글 토글
+  toggleComplementComments(index) {
+    const commentsSection = document.getElementById(`complementComments_${index}`);
+    if (commentsSection.style.display === 'none') {
+      commentsSection.style.display = 'block';
+    } else {
+      commentsSection.style.display = 'none';
+    }
+  }
+
+  // 보완구조 투표
+  async voteComplement(complementId, voteType) {
+    if (!window.dapp.currentUser) {
+      alert('투표하려면 로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      // 실제 구현에서는 서버에 투표 요청
+      console.log(`보완구조 ${complementId}에 ${voteType} 투표`);
+      
+      // UI 업데이트 (임시)
+      const complementCard = document.querySelector(`[data-complement-id="${complementId}"]`);
+      const voteBtn = complementCard.querySelector(`.vote-btn[onclick*="${voteType}"]`);
+      const otherVoteBtn = complementCard.querySelector(`.vote-btn:not([onclick*="${voteType}"])`);
+      
+      // 기존 투표 제거
+      otherVoteBtn.classList.remove('voted');
+      
+      // 새 투표 추가
+      if (voteBtn.classList.contains('voted')) {
+        voteBtn.classList.remove('voted');
+      } else {
+        voteBtn.classList.add('voted');
+      }
+
+      window.dapp.showSuccessMessage('투표가 완료되었습니다.');
+    } catch (error) {
+      console.error('투표 오류:', error);
+      alert('투표 처리 중 오류가 발생했습니다.');
+    }
+  }
+
+  // 보완구조 댓글 제출
+  async submitComplementComment(complementId, index) {
+    if (!window.dapp.currentUser) {
+      alert('댓글을 작성하려면 로그인이 필요합니다.');
+      return;
+    }
+
+    const commentInput = document.querySelector(`#complementComments_${index} textarea`);
+    const content = commentInput.value.trim();
+    
+    if (!content) {
+      alert('댓글 내용을 입력해주세요.');
+      return;
+    }
+
+    try {
+      // 실제 구현에서는 서버에 댓글 전송
+      console.log(`보완구조 ${complementId}에 댓글 추가: ${content}`);
+      
+      // 댓글 추가 (임시)
+      const newComment = {
+        id: Date.now().toString(),
+        content: content,
+        author: window.dapp.currentUser,
+        createdAt: new Date().toISOString()
+      };
+
+      const commentsList = document.querySelector(`#complementComments_${index} .comments-list`);
+      commentsList.innerHTML += this.renderComplementComments([newComment]);
+      
+      commentInput.value = '';
+      window.dapp.showSuccessMessage('댓글이 추가되었습니다.');
+    } catch (error) {
+      console.error('댓글 추가 오류:', error);
+      alert('댓글 추가 중 오류가 발생했습니다.');
+    }
+  }
+
+  // 보완구조 메뉴 토글
+  toggleComplementMenu(index) {
+    // 메뉴 구현 (신고, 숨기기 등)
+    console.log(`보완구조 ${index} 메뉴 토글`);
+  }
+
+  // 보완구조 답글 표시
+  showComplementReply(index) {
+    const commentsSection = document.getElementById(`complementComments_${index}`);
+    commentsSection.style.display = 'block';
+    const textarea = commentsSection.querySelector('textarea');
+    textarea.focus();
   }
 
   // 제안 상세 보기
@@ -29505,7 +30547,6 @@ class GovernanceManager {
   async initializeVotingStatus(proposal) {
     const votingSection = document.getElementById('votingSection');
     const votingStatusSection = document.getElementById('votingStatusSection');
-    const fundingSection = document.getElementById('fundingSection');
 
     // 사용자가 이미 투표했는지 확인
     const userVote = await this.getUserVote(proposal.id);
@@ -29514,10 +30555,8 @@ class GovernanceManager {
       // 이미 투표한 경우
       votingSection.style.display = 'none';
       votingStatusSection.style.display = 'block';
-      fundingSection.style.display = 'block';
       
       this.updateVotingStats(proposal);
-      this.updateFundingStatus(proposal);
       
       // 사용자 투표 표시
       document.getElementById('userVote').textContent = 
@@ -29527,7 +30566,6 @@ class GovernanceManager {
       // 아직 투표하지 않은 경우
       votingSection.style.display = 'block';
       votingStatusSection.style.display = 'none';
-      fundingSection.style.display = 'none';
     }
   }
 
@@ -29591,12 +30629,7 @@ class GovernanceManager {
     }
   }
 
-  // 모금 상태 업데이트
-  updateFundingStatus(proposal) {
-    const currentFunding = proposal.currentFunding || 30; // 생성 비용 30B 포함
-    
-    document.getElementById('currentFunding').textContent = currentFunding;
-  }
+
 
   // 검색 기능
   searchProposals(query) {
@@ -29778,7 +30811,29 @@ class GovernanceManager {
 
   // 사용자가 생성한 제안 목록 가져오기
   getUserProposals(userDID) {
-    return this.proposals.filter(proposal => proposal.author.did === userDID);
+    const userProposals = this.proposals.filter(proposal => proposal.author.did === userDID);
+    
+    // 현재 협업 중인 제안도 포함
+    if (this.currentCollaborationProposal && this.currentCollaborationProposal.author.did === userDID) {
+      // 이미 목록에 있는지 확인 (중복 방지)
+      const exists = userProposals.some(proposal => proposal.id === this.currentCollaborationProposal.id);
+      if (!exists) {
+        // 협업 단계 표시를 위한 복사본 생성
+        const collaborationProposal = {
+          ...this.currentCollaborationProposal,
+          isCollaborationStage: true
+        };
+        userProposals.push(collaborationProposal);
+      } else {
+        // 이미 있으면 협업 단계 플래그만 추가
+        const existingProposal = userProposals.find(proposal => proposal.id === this.currentCollaborationProposal.id);
+        if (existingProposal) {
+          existingProposal.isCollaborationStage = true;
+        }
+      }
+    }
+    
+    return userProposals;
   }
 }
 
@@ -29915,58 +30970,7 @@ window.dapp.removeAllCoreStructure = function() {
         }
       };
       
-      // 제안 모금
-      window.dapp.fundProposal = async function() {
-        if (!this.isAuthenticated) {
-          alert('모금하려면 먼저 로그인해주세요.');
-          return;
-        }
-        
-        const proposalId = this.governanceManager.currentProposalId;
-        const amount = parseFloat(document.getElementById('fundingAmount').value);
-        
-        if (!amount || amount < 1) {
-          alert('최소 1B 이상 모금해야 합니다.');
-          return;
-        }
-        
-        // 확인창 표시
-        const confirmed = confirm(`${amount}B를 모금하시겠습니까?`);
-        if (!confirmed) {
-          return;
-        }
-        
-        try {
-          // 서버에 모금 요청
-          const response = await fetch(`${this.apiBase}/governance/proposals/${proposalId}/fund`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              amount: amount,
-              funderDID: this.currentUser.did
-            })
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-              // UI 업데이트
-              const proposal = this.governanceManager.currentProposal;
-              proposal.currentFunding = (proposal.currentFunding || 30) + amount;
-              
-              this.governanceManager.updateFundingStatus(proposal);
-              
-              alert(`${amount}B 모금이 완료되었습니다!`);
-              document.getElementById('fundingAmount').value = '1';
-            }
-          }
-        } catch (error) {
-          console.error('모금 실패:', error);
-          alert('모금 처리 중 오류가 발생했습니다.');
-        }
-      };
+
       
 
       
@@ -30078,7 +31082,7 @@ window.dapp.removeAllCoreStructure = function() {
             const userProposal = this.governanceManager.proposals.find(p => p.author.did === userDID);
             if (userProposal) {
               userInfo = {
-                username: userProposal.author.username,
+                username: userProposal.author.name || userProposal.author.username,
                 profilePhoto: null,
                 statusMessage: null
               };
@@ -30110,8 +31114,6 @@ window.dapp.removeAllCoreStructure = function() {
         const modal = document.getElementById('userProfileModal');
         const avatar = document.getElementById('userProfileAvatar');
         const name = document.getElementById('userProfileName');
-        const statusMessageContainer = document.querySelector('#userProfileModal .user-status-message');
-        const statusText = document.getElementById('userStatusText');
         const proposalsList = document.getElementById('userProposalsList');
         
         // 사용자 기본 정보 설정
@@ -30123,40 +31125,15 @@ window.dapp.removeAllCoreStructure = function() {
         
         name.textContent = userInfo.username;
         
-        // 상태메시지 표시
-        console.log('💬 상태메시지 처리:', {
-          statusMessage: userInfo.statusMessage,
-          hasStatus: userInfo.statusMessage && userInfo.statusMessage.trim(),
-          statusMessageElement: statusMessageContainer,
-          statusTextElement: statusText
-        });
-        
-        // 상태메시지 요소가 존재하는지 확인
-        if (!statusMessageContainer || !statusText) {
-          console.error('❌ 상태메시지 요소를 찾을 수 없습니다:', { statusMessageContainer, statusText });
-          // 상태메시지 요소가 없어도 계속 진행
-        } else {
-          // 상태메시지 설정
-          if (userInfo.statusMessage && userInfo.statusMessage.trim()) {
-            statusText.textContent = userInfo.statusMessage;
-            statusMessageContainer.style.display = 'flex';
-            statusMessageContainer.style.opacity = '1';
-          } else {
-            statusText.textContent = '상태메시지가 설정되지 않았습니다.';
-            statusMessageContainer.style.display = 'flex';
-            statusMessageContainer.style.opacity = '0.7';
-          }
-        }
-        
         // 사용자 제안 목록 표시
         if (userProposals.length > 0) {
           proposalsList.innerHTML = userProposals.map(proposal => `
             <div class="user-proposal-item" onclick="window.dapp.showGovernanceProposalDetail('${proposal.id}')">
               <div class="user-proposal-header">
                 <div class="user-proposal-title">${proposal.title}</div>
-                <div class="user-proposal-label ${proposal.label}">
-                  <i class="fas ${this.governanceManager.getLabelIcon(proposal.label)}"></i>
-                  ${this.governanceManager.getLabelText(proposal.label)}
+                <div class="user-proposal-label ${proposal.isCollaborationStage ? 'collaboration-stage' : proposal.label}">
+                  <i class="fas ${proposal.isCollaborationStage ? 'fa-handshake' : this.governanceManager.getLabelIcon(proposal.label)}"></i>
+                  ${proposal.isCollaborationStage ? '협업단계' : this.governanceManager.getLabelText(proposal.label)}
                 </div>
               </div>
               <div class="user-proposal-description">${proposal.description}</div>
@@ -30187,104 +31164,7 @@ window.dapp.removeAllCoreStructure = function() {
         modal.classList.remove('active');
       };
 
-      // 기여내역 모달 표시
-      window.dapp.showContributeHistoryModal = async function() {
-        const modal = document.getElementById('contributeHistoryModal');
-        const historyList = document.getElementById('contributeHistoryList');
-        
-        if (!this.isAuthenticated || !this.currentUser) {
-          historyList.innerHTML = `
-            <div class="dao-placeholder">
-              <i class="fas fa-sign-in-alt"></i>
-              <p>로그인이 필요합니다.</p>
-            </div>
-          `;
-          modal.classList.add('active');
-          return;
-        }
-        
-        // 로딩 표시
-        historyList.innerHTML = `
-          <div class="dao-placeholder">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>기여내역을 불러오는 중...</p>
-          </div>
-        `;
-        modal.classList.add('active');
-        
-        try {
-          // 서버에서 기여내역 가져오기
-          const response = await fetch(`/api/contributions/${this.currentUser.did}`);
-          const result = await response.json();
-          
-          if (result.success && result.contributions.length > 0) {
-            // 기여내역을 DAO별로 그룹화
-            const contributionsByDAO = {};
-            result.contributions.forEach(contrib => {
-              const daoId = contrib.daoId || contrib.dao || 'unknown';
-              if (!contributionsByDAO[daoId]) {
-                contributionsByDAO[daoId] = [];
-              }
-              contributionsByDAO[daoId].push(contrib);
-            });
-            
-            // HTML 생성
-            historyList.innerHTML = Object.entries(contributionsByDAO).map(([daoId, contributions]) => {
-              const daoName = this.getDAOName(daoId) || daoId;
-              const totalBTokens = contributions.reduce((sum, c) => sum + (c.bValue || 0), 0);
-              
-              return `
-                <div class="dao-contribution-section">
-                  <div class="dao-contribution-header">
-                    <h4>${daoName}</h4>
-                    <span class="total-tokens">총 ${totalBTokens} B</span>
-                  </div>
-                  <div class="contribution-list">
-                    ${contributions.map(contrib => `
-                      <div class="contribution-item">
-                        <div class="contribution-info">
-                          <div class="contribution-type">
-                            <i class="fas ${this.getContributionIcon(contrib.type)}"></i>
-                            <span>${this.getContributionTypeName(contrib.type)}</span>
-                          </div>
-                          <div class="contribution-title">${contrib.title || contrib.description}</div>
-                          <div class="contribution-date">${new Date(contrib.verifiedAt || contrib.createdAt).toLocaleDateString()}</div>
-                        </div>
-                        <div class="contribution-value">
-                          <span class="b-token-value">+${contrib.bValue || 0} B</span>
-                        </div>
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
-              `;
-            }).join('');
-          } else {
-            historyList.innerHTML = `
-              <div class="dao-placeholder">
-                <i class="fas fa-inbox"></i>
-                <p>아직 기여내역이 없습니다.</p>
-                <small>DAO 활동에 참여하여 기여내역을 쌓아보세요!</small>
-              </div>
-            `;
-          }
-        } catch (error) {
-          console.error('기여내역 로드 실패:', error);
-          historyList.innerHTML = `
-            <div class="dao-placeholder">
-              <i class="fas fa-exclamation-triangle"></i>
-              <p>기여내역을 불러올 수 없습니다.</p>
-              <small>잠시 후 다시 시도해주세요.</small>
-            </div>
-          `;
-        }
-      };
 
-      // 기여내역 모달 닫기
-      window.dapp.closeContributeHistoryModal = function() {
-        const modal = document.getElementById('contributeHistoryModal');
-        modal.classList.remove('active');
-      };
 
       // DAO 탭으로 이동
       window.dapp.goToDAOTab = function() {
@@ -30293,14 +31173,7 @@ window.dapp.removeAllCoreStructure = function() {
 
       // 거버넌스 접근 체크
       window.dapp.checkGovernanceAccess = function() {
-        if (!this.isAuthenticated) {
-          alert('거버넌스 기능을 이용하시려면 먼저 로그인해주세요.');
-          // 지갑 탭으로 이동
-          this.switchTab('wallet');
-          return;
-        }
-        
-        // 로그인 상태라면 거버넌스 탭 활성화
+        // 로그인 상태 관계없이 거버넌스 탭 활성화
         this.switchTab('governance');
       };
       
@@ -30333,511 +31206,4 @@ window.dapp.removeAllCoreStructure = function() {
       };
     }
   });
-=======
-} 
-
-// ==========================================
-// 간소화된 거버넌스 시스템 관련 함수들
-// ==========================================
-
-// 거버넌스 탭 전환
-BaekyaProtocolDApp.prototype.switchGovernanceTab = function(tabName) {
-  console.log('🏛️ 거버넌스 탭 전환:', tabName);
-  
-  // 모든 거버넌스 탭 비활성화
-  const allTabs = document.querySelectorAll('.governance-tab-content');
-  allTabs.forEach(tab => tab.classList.remove('active'));
-  
-  // 모든 거버넌스 네비게이션 버튼 비활성화
-  const allNavBtns = document.querySelectorAll('.dashboard-filter-btn[data-gov-tab]');
-  allNavBtns.forEach(btn => btn.classList.remove('active'));
-  
-  // 선택된 탭 활성화
-  const selectedTab = document.getElementById(`gov-${tabName}`);
-  if (selectedTab) {
-    selectedTab.classList.add('active');
-  }
-  
-  // 선택된 네비게이션 버튼 활성화
-  const selectedNavBtn = document.querySelector(`[data-gov-tab="${tabName}"]`);
-  if (selectedNavBtn) {
-    selectedNavBtn.classList.add('active');
-  }
-  
-  // 탭별 초기화
-  switch(tabName) {
-    case 'system':
-      this.loadSystemFiles();
-      break;
-    case 'collab':
-      this.loadCollabList();
-      break;
-    case 'forkspace':
-      this.loadForkList();
-      break;
-  }
-};
-
-// System 탭 - 파일 목록 로드
-BaekyaProtocolDApp.prototype.loadSystemFiles = function() {
-  const fileList = document.getElementById('systemFileList');
-  if (!fileList) return;
-  
-  // 백야프로토콜의 실제 파일 구조를 모방
-  const files = [
-    { name: 'src/', type: 'folder', size: '-', time: '2시간 전' },
-    { name: 'public/', type: 'folder', size: '-', time: '1시간 전' },
-    { name: 'docs/', type: 'folder', size: '-', time: '3시간 전' },
-    { name: 'tests/', type: 'folder', size: '-', time: '1일 전' },
-    { name: 'package.json', type: 'file', size: '2.1 KB', time: '2시간 전' },
-    { name: 'server.js', type: 'file', size: '15.2 KB', time: '1시간 전' },
-    { name: 'README.md', type: 'file', size: '4.5 KB', time: '3시간 전' },
-    { name: 'LICENSE', type: 'file', size: '1.1 KB', time: '1주 전' }
-  ];
-  
-  fileList.innerHTML = files.map(file => `
-    <div class="file-item" onclick="window.dapp.openFile('${file.name}')">
-      <i class="fas ${file.type === 'folder' ? 'fa-folder' : 'fa-file-alt'} file-icon ${file.type}"></i>
-      <span class="file-name">${file.name}</span>
-      <span class="file-size">${file.size}</span>
-      <span class="file-time">${file.time}</span>
-    </div>
-  `).join('');
-};
-
-// 파일 열기 (시뮬레이션)
-BaekyaProtocolDApp.prototype.openFile = function(fileName) {
-  console.log('📁 파일 열기:', fileName);
-  this.showNotification(`${fileName} 파일을 열었습니다`, 'info');
-};
-
-// Collab 탭 - 제안 목록 로드
-BaekyaProtocolDApp.prototype.loadCollabList = function() {
-  const collabList = document.getElementById('collabList');
-  if (!collabList) return;
-  
-  // 저장된 제안들 로드
-  const collabs = JSON.parse(localStorage.getItem('baekya_collabs') || '[]');
-  
-  if (collabs.length === 0) {
-    collabList.innerHTML = `
-      <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-        <i class="fas fa-handshake" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
-        <h3>아직 제안이 없습니다</h3>
-        <p>첫 번째 제안을 생성해보세요!</p>
-      </div>
-    `;
-    return;
-  }
-  
-  collabList.innerHTML = collabs.map(collab => this.createCollabCard(collab)).join('');
-};
-
-// Collab 카드 생성
-BaekyaProtocolDApp.prototype.createCollabCard = function(collab) {
-  const statusClass = collab.status === 'voting' ? 'voting' : collab.status === 'completed' ? 'completed' : 'pending';
-  const timeLeft = collab.status === 'voting' ? this.calculateTimeLeft(collab.votingEndTime) : '';
-  
-  return `
-    <div class="collab-card" onclick="window.dapp.openCollabDetail('${collab.id}')">
-      <div class="collab-card-header">
-        <div>
-          <div class="collab-card-title">${collab.title}</div>
-          <div class="collab-card-meta">
-            <span><i class="fas fa-user"></i> ${collab.author}</span>
-            <span><i class="fas fa-clock"></i> ${collab.createdAt}</span>
-            <span><i class="fas fa-tag"></i> ${collab.category}</span>
-          </div>
-        </div>
-        <div class="collab-card-status">
-          <span class="status-badge ${statusClass}">${this.getStatusText(collab.status)}</span>
-          ${timeLeft ? `<small style="color: var(--text-secondary);">${timeLeft}</small>` : ''}
-        </div>
-      </div>
-      <div class="collab-card-description">${collab.description.substring(0, 120)}${collab.description.length > 120 ? '...' : ''}</div>
-      <div class="collab-card-footer">
-        <div class="collab-stats">
-          <span class="collab-stat"><i class="fas fa-code-branch"></i> ${collab.prs?.length || 0}</span>
-          <span class="collab-stat"><i class="fas fa-vote-yea"></i> ${collab.totalVotes || 0}</span>
-          <span class="collab-stat"><i class="fas fa-coins"></i> ${collab.totalFunding || 0}B</span>
-        </div>
-        <div class="collab-reward">${collab.reward || 0}B</div>
-      </div>
-    </div>
-  `;
-};
-
-// 상태 텍스트 변환
-BaekyaProtocolDApp.prototype.getStatusText = function(status) {
-  switch(status) {
-    case 'voting': return '투표중';
-    case 'completed': return '완료';
-    case 'pending': return 'PR대기';
-    default: return '대기중';
-  }
-};
-
-// 남은 시간 계산
-BaekyaProtocolDApp.prototype.calculateTimeLeft = function(endTime) {
-  const now = new Date().getTime();
-  const end = new Date(endTime).getTime();
-  const diff = end - now;
-  
-  if (diff <= 0) return '투표 종료';
-  
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  
-  if (days > 0) return `${days}일 ${hours}시간`;
-  return `${hours}시간`;
-};
-
-// Collab 생성 모달 열기
-BaekyaProtocolDApp.prototype.openCollabCreateModal = function() {
-  const modal = document.getElementById('collabCreateModal');
-  if (modal) {
-    modal.style.display = 'block';
-    document.getElementById('collabCreateForm').reset();
-  }
-};
-
-// Collab 생성 모달 닫기
-BaekyaProtocolDApp.prototype.closeCollabCreateModal = function() {
-  const modal = document.getElementById('collabCreateModal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
-};
-
-// Collab 제안 제출
-BaekyaProtocolDApp.prototype.submitCollabProposal = function() {
-  const title = document.getElementById('collabTitle').value;
-  const description = document.getElementById('collabDescription').value;
-  const category = document.getElementById('collabCategory').value;
-  const reward = document.getElementById('collabReward').value;
-  
-  if (!title || !description || !category) {
-    this.showNotification('모든 필수 필드를 입력해주세요', 'error');
-    return;
-  }
-  
-  const collab = {
-    id: 'collab_' + Date.now(),
-    title,
-    description,
-    category,
-    reward: parseFloat(reward) || 0,
-    author: this.authData.userId || '익명',
-    createdAt: new Date().toLocaleString('ko-KR'),
-    status: 'pending',
-    prs: [],
-    totalVotes: 0,
-    totalFunding: 0,
-    votingStartTime: null,
-    votingEndTime: null
-  };
-  
-  // 로컬 스토리지에 저장
-  const collabs = JSON.parse(localStorage.getItem('baekya_collabs') || '[]');
-  collabs.unshift(collab);
-  localStorage.setItem('baekya_collabs', JSON.stringify(collabs));
-  
-  this.showNotification('제안이 성공적으로 생성되었습니다!', 'success');
-  this.closeCollabCreateModal();
-  this.loadCollabList();
-};
-
-// Collab 상세 모달 열기
-BaekyaProtocolDApp.prototype.openCollabDetail = function(collabId) {
-  const collabs = JSON.parse(localStorage.getItem('baekya_collabs') || '[]');
-  const collab = collabs.find(c => c.id === collabId);
-  
-  if (!collab) return;
-  
-  const modal = document.getElementById('collabDetailModal');
-  const titleEl = document.getElementById('collabDetailTitle');
-  const infoEl = document.getElementById('collabDetailInfo');
-  const prsEl = document.getElementById('collabPRs');
-  const votingEl = document.getElementById('collabVoting');
-  
-  if (!modal || !titleEl || !infoEl || !prsEl || !votingEl) return;
-  
-  titleEl.textContent = collab.title;
-  
-  // 제안 정보 표시
-  infoEl.innerHTML = `
-    <div style="margin-bottom: 1.5rem;">
-      <h4>제안 정보</h4>
-      <p><strong>작성자:</strong> ${collab.author}</p>
-      <p><strong>카테고리:</strong> ${collab.category}</p>
-      <p><strong>보상:</strong> ${collab.reward} B-Token</p>
-      <p><strong>생성일:</strong> ${collab.createdAt}</p>
-      <p><strong>상태:</strong> ${this.getStatusText(collab.status)}</p>
-    </div>
-    <div>
-      <h4>설명</h4>
-      <p style="line-height: 1.5; white-space: pre-wrap;">${collab.description}</p>
-    </div>
-  `;
-  
-  // PR 목록 표시
-  if (collab.prs && collab.prs.length > 0) {
-    prsEl.innerHTML = `
-      <h4>Pull Requests</h4>
-      ${collab.prs.map(pr => `
-        <div style="border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem;">
-          <h5 style="margin: 0 0 0.5rem 0;">${pr.title}</h5>
-          <p style="color: var(--text-secondary); margin: 0.25rem 0; font-size: 0.9rem;">${pr.description}</p>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <small>작성자: ${pr.author} | ${pr.createdAt}</small>
-            <span style="color: var(--primary-color); font-weight: 600;">${pr.votes || 0} 투표</span>
-          </div>
-        </div>
-      `).join('')}
-      <button class="btn-primary" onclick="window.dapp.openPRCreateModal('${collabId}')">
-        <i class="fas fa-plus"></i> PR 생성
-      </button>
-    `;
-  } else {
-    prsEl.innerHTML = `
-      <h4>Pull Requests</h4>
-      <p style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">
-        아직 PR이 없습니다. 첫 번째 PR을 생성해보세요!
-      </p>
-      <button class="btn-primary" onclick="window.dapp.openPRCreateModal('${collabId}')">
-        <i class="fas fa-plus"></i> PR 생성
-      </button>
-    `;
-  }
-  
-  // 투표 섹션 표시
-  if (collab.status === 'voting') {
-    votingEl.innerHTML = `
-      <h4>투표</h4>
-      <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 6px;">
-        <p><strong>투표 기간:</strong> ${this.calculateTimeLeft(collab.votingEndTime)}</p>
-        <p><strong>총 모금액:</strong> ${collab.totalFunding} B-Token</p>
-        <div style="margin-top: 0.75rem;">
-          ${collab.prs.map(pr => `
-            <button class="btn-secondary" style="margin: 0.2rem; display: block; width: 100%; font-size: 0.9rem;" onclick="window.dapp.voteForPR('${collabId}', '${pr.id}')">
-              ${pr.title} (${pr.votes || 0} 투표)
-            </button>
-          `).join('')}
-          <button class="btn-secondary" style="margin: 0.2rem; display: block; width: 100%; background: var(--status-offline); color: white; font-size: 0.9rem;" onclick="window.dapp.voteForNoMerge('${collabId}')">
-            No Merge (${collab.noMergeVotes || 0} 투표)
-          </button>
-        </div>
-      </div>
-    `;
-  } else {
-    votingEl.innerHTML = '';
-  }
-  
-  modal.style.display = 'block';
-};
-
-// Collab 상세 모달 닫기
-BaekyaProtocolDApp.prototype.closeCollabDetailModal = function() {
-  const modal = document.getElementById('collabDetailModal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
-};
-
-// PR 생성 모달 열기
-BaekyaProtocolDApp.prototype.openPRCreateModal = function(collabId) {
-  this.currentCollabId = collabId;
-  const modal = document.getElementById('prCreateModal');
-  if (modal) {
-    modal.style.display = 'block';
-    document.getElementById('prCreateForm').reset();
-  }
-};
-
-// PR 생성 모달 닫기
-BaekyaProtocolDApp.prototype.closePRCreateModal = function() {
-  const modal = document.getElementById('prCreateModal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
-  this.currentCollabId = null;
-};
-
-// PR 제출
-BaekyaProtocolDApp.prototype.submitPR = function() {
-  if (!this.currentCollabId) return;
-  
-  const title = document.getElementById('prTitle').value;
-  const description = document.getElementById('prDescription').value;
-  const testResults = document.getElementById('prTestResults').value;
-  
-  if (!title || !description) {
-    this.showNotification('제목과 설명을 입력해주세요', 'error');
-    return;
-  }
-  
-  const pr = {
-    id: 'pr_' + Date.now(),
-    title,
-    description,
-    testResults,
-    author: this.authData.userId || '익명',
-    createdAt: new Date().toLocaleString('ko-KR'),
-    votes: 0
-  };
-  
-  // Collab에 PR 추가
-  const collabs = JSON.parse(localStorage.getItem('baekya_collabs') || '[]');
-  const collabIndex = collabs.findIndex(c => c.id === this.currentCollabId);
-  
-  if (collabIndex !== -1) {
-    if (!collabs[collabIndex].prs) {
-      collabs[collabIndex].prs = [];
-    }
-    collabs[collabIndex].prs.push(pr);
-    
-    // 첫 번째 PR이 생성되면 투표 시작
-    if (collabs[collabIndex].prs.length === 1) {
-      collabs[collabIndex].status = 'voting';
-      collabs[collabIndex].votingStartTime = new Date().toISOString();
-      collabs[collabIndex].votingEndTime = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(); // 2주 후
-    }
-    
-    localStorage.setItem('baekya_collabs', JSON.stringify(collabs));
-    
-    this.showNotification('PR이 성공적으로 생성되었습니다!', 'success');
-    this.closePRCreateModal();
-    this.closeCollabDetailModal();
-    this.loadCollabList();
-  }
-};
-
-// Forkspace 탭 - 포크 목록 로드
-BaekyaProtocolDApp.prototype.loadForkList = function() {
-  const forkList = document.getElementById('forkList');
-  if (!forkList) return;
-  
-  const forks = JSON.parse(localStorage.getItem('baekya_forks') || '[]');
-  
-  if (forks.length === 0) {
-    forkList.innerHTML = `
-      <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-        <i class="fas fa-code-branch" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
-        <h3>아직 포크가 없습니다</h3>
-        <p>새 포크를 생성해서 개발을 시작해보세요!</p>
-      </div>
-    `;
-    return;
-  }
-  
-  forkList.innerHTML = forks.map(fork => `
-    <div class="fork-card">
-      <div class="fork-card-header">
-        <div class="fork-name">${fork.name}</div>
-        <div class="fork-actions">
-          <button class="fork-btn" onclick="window.dapp.openFork('${fork.id}')">열기</button>
-          <button class="fork-btn primary" onclick="window.dapp.createPRFromFork('${fork.id}')">PR 생성</button>
-        </div>
-      </div>
-      <div class="fork-description">${fork.description}</div>
-      <div class="fork-meta">
-        <span><i class="fas fa-clock"></i> ${fork.createdAt}</span>
-        <span><i class="fas fa-code"></i> ${fork.commits || 0} 커밋</span>
-        <span><i class="fas fa-file-alt"></i> ${fork.files || 0} 파일</span>
-      </div>
-    </div>
-  `).join('');
-};
-
-// 개인 포크 생성
-BaekyaProtocolDApp.prototype.createPersonalFork = function() {
-  const forkName = prompt('포크 이름을 입력하세요:', `${this.authData.userId || 'user'}-fork-${Date.now()}`);
-  if (!forkName) return;
-  
-  const description = prompt('포크 설명을 입력하세요:', '백야프로토콜 개인 포크');
-  if (description === null) return;
-  
-  const fork = {
-    id: 'fork_' + Date.now(),
-    name: forkName,
-    description: description || '백야프로토콜 개인 포크',
-    owner: this.authData.userId || '익명',
-    createdAt: new Date().toLocaleString('ko-KR'),
-    commits: 0,
-    files: 0
-  };
-  
-  const forks = JSON.parse(localStorage.getItem('baekya_forks') || '[]');
-  forks.unshift(fork);
-  localStorage.setItem('baekya_forks', JSON.stringify(forks));
-  
-  this.showNotification('포크가 성공적으로 생성되었습니다!', 'success');
-  this.loadForkList();
-};
-
-// 포크 열기
-BaekyaProtocolDApp.prototype.openFork = function(forkId) {
-  console.log('🍴 포크 열기:', forkId);
-  this.showNotification('포크 작업공간이 열렸습니다', 'info');
-};
-
-// 포크에서 PR 생성
-BaekyaProtocolDApp.prototype.createPRFromFork = function(forkId) {
-  console.log('🔀 포크에서 PR 생성:', forkId);
-  this.showNotification('포크에서 PR을 생성하는 기능은 개발 중입니다', 'info');
-};
-
-// Collab 필터링
-BaekyaProtocolDApp.prototype.filterCollabs = function(filter) {
-  console.log('🔍 Collab 필터:', filter);
-  
-  // 필터 버튼 상태 업데이트
-  const filterBtns = document.querySelectorAll('.filter-btn-simple');
-  filterBtns.forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
-  
-  // 실제 필터링 로직은 여기에 구현
-  this.loadCollabList();
-};
-
-// PR 투표 (간소화)
-BaekyaProtocolDApp.prototype.voteForPR = function(collabId, prId) {
-  console.log('🗳️ PR 투표:', collabId, prId);
-  this.showNotification('투표 기능은 개발 중입니다', 'info');
-};
-
-// No Merge 투표 (간소화)
-BaekyaProtocolDApp.prototype.voteForNoMerge = function(collabId) {
-  console.log('❌ No Merge 투표:', collabId);
-  this.showNotification('No Merge 투표 기능은 개발 중입니다', 'info');
-};
-
-// 거버넌스 탭 로드
-BaekyaProtocolDApp.prototype.loadGovernance = function() {
-  console.log('🏛️ 거버넌스 탭 로드');
-  
-  // 기본적으로 System 탭을 활성화
-  this.switchGovernanceTab('system');
-};
-
-// 거버넌스 페이지로 이동하는 함수
-function navigateToGovernance() {
-  console.log('🔄 거버넌스 페이지로 이동');
-  
-  // 거버넌스 탭 헤더 제목을 로딩 메시지로 변경
-  const governanceHeaderTitle = document.querySelector('#mobile-header-governance .mobile-governance-title span');
-  if (governanceHeaderTitle) {
-    governanceHeaderTitle.textContent = '거버넌스 페이지 이동중...';
-  }
-  
-  // 현재 탭을 비활성화하여 깜빡임 방지
-  document.querySelectorAll('.tab-content').forEach(content => {
-    content.style.opacity = '0';
-  });
-  
-  // 즉시 페이지 이동
-  setTimeout(() => {
-    window.location.replace('governance.html');
-  }, 100);
->>>>>>> 7230aeaa838b1735dff2fe65e3e96e7642a598e5
 } 

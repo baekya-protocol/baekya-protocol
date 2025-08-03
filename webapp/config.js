@@ -1,11 +1,18 @@
 // 백야 프로토콜 웹앱 설정
 
 // 릴레이 서버 URL 설정
-// 개발 환경: 로컬 서버
-// 프로덕션 환경: Railway 배포 서버
-window.RELAY_SERVER_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:3000'  // 개발 환경
-  : 'https://baekya-relay-production.up.railway.app'; // Railway 배포된 릴레이 서버
+// APK는 무조건 릴레이 서버 사용, 웹앱은 localhost에서만 로컬 서버 사용
+if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+  // APK 환경에서는 무조건 릴레이 서버 사용
+  window.RELAY_SERVER_URL = 'https://baekya-relay-production.up.railway.app';
+  console.log('🔥 APK 환경 감지 - 릴레이 서버 사용:', window.RELAY_SERVER_URL);
+} else {
+  // 웹앱 환경
+  window.RELAY_SERVER_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000'  // 개발 환경 (웹앱 테스트용)
+    : 'https://baekya-relay-production.up.railway.app'; // Railway 릴레이 서버
+  console.log('🌐 웹앱 환경 - 서버 URL:', window.RELAY_SERVER_URL);
+}
 
 // 기타 설정
 window.APP_CONFIG = {

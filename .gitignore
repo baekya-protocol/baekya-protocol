@@ -52,3 +52,35 @@ debug.html
 
 # 패키지 잠금 파일 (선택적)
 package-lock.json
+
+# Android 개발 관련 (로컬 개발용만)
+android/
+Android-SDK/
+*.zip
+*.apk
+
+# Java 개발 킷 (로컬 개발용만)
+jdk-*/
+jdk*/
+
+# Capacitor 빌드 결과물
+android/app/build/
+android/build/
+
+# 다운로드 파일들
+webapp/downloads/*.apk
+commandlinetools-*.zip
+jdk-*.zip
+
+# 임시 빌드 파일들
+*.dex
+*.ap_
+*.aab
+
+# Android Studio
+.gradle/
+local.properties
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/

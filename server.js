@@ -13,35 +13,7 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 
-// Firebase Admin SDK 추가
-const admin = require('firebase-admin');
 
-// Firebase Admin SDK 초기화 (서비스 계정 키 파일 필요)
-try {
-  // 실제 운영 환경에서는 서비스 계정 키를 안전하게 관리해야 합니다
-  const serviceAccount = {
-    type: "service_account",
-    project_id: "baekya-protocol",
-    private_key_id: "df4e535a76ad6525b31db8f1758ffb8af5cea5a2",
-    private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD2Aa3j9Ox0hSKV\nQ6r0sR6EtEtj9bBaick4Y+hm32a9QzQczCuHFypDTyNyVkmFGJqVdxRT7xYm1ric\nk9hkG7ms9bRihuKxzGx6mU+7ukqQBBv9nVNYrn4Vl7nygzjtngLMKjMoZhrqHYD7\nEObp6G/rDZCTqrZsiBRv8sDu8biOUA4bjBkYznEs68aijThEdciaMWj4+QyugEY1\ngU7BZ0pmaLqhoY0L+VwCGSeUnwUIrU1uPJidswFD2+CsGzohbNhSK5UX2jaXycgK\nnwkZqAR3yo9U44+qOaLhjfhtIxoFSzRdtam3SE9934KApi6Zp5EHJne2wj5nJnn3\nwXq2GMxxAgMBAAECggEAGMUPA/ShiVLtaj+Tu0sJMl3v+Frg3KDifpfKqu8ECnr1\niI/DMzkxI3FYtZa8FNdnGzUP+iqI3bTBhlx5jYzgG2rq9H+13Caj5o1AwrttbgZH\n5jec0IFTRyvNiH5PcVd3WyTFnWP4gkmhtsXbJkKl4DIvtDqcXx2thx8Xb4etqEBz\nPRxMkCOy7Ef6Um7zWoUq4q+rBgfxkFFXsftPmf1ZkbLNaLZQCATZ+Sw1Oca0Ekxd\nK4mZUgTcVyTcvLPdxpSXKhahIAtyB9MY9nZjSh/lZeG/nGyeYtMHtncsN4n8p7sD\nnTWGx+OhaiIJkqM0dcUpO+9Urc99C+f/8CEpSyi4MQKBgQD9p2AZqAzkvIrYHq1K\nPBm9OJcYXyuF9yUTNGMwXrsUQ9RqaRLjmwAppN8fbPzFg1W4iPJcRGlTKGIIBQ8p\njey/J41ABKcVnrOwzJN5PdXPUlYWdpvWvq9GUEFV28M7SfzY53w0ZCR8F5qoqFpc\nYX0l7PeqVYufHd2eepaREOqseQKBgQD4SDItzZotwBPcaTFDN+l3Zw0rb9tVarDZ\nUQ4S2gI6V6z0MDojFKA9VSP7D+JYACaiCpdCbORLUyYhfPDK5G6y569xQz6v1exT\nhx8sQF8DlZY+YLXjhPqVxXRLy0wshu0LpETYV9jo/Q7jdZcg7RoYWSyOs1iXzYkl\nqQ+Bv7cxuQKBgQDvyURdvLHDokEXIZjr7njemhqsHXvFfud7ijCiT0tHUwABQCdt\nJuA2ffe3e45RIWDtu/hxJPL0e96AelflDpfZ9QfglwVkuMxhvGNFYCE5hjp/rcyQ\na17Cd6fsBH5BFCaE3gBafrjG3oGEIvKZFkf6jFNsoMYGu3MAGB8yL+3I8QKBgQDy\n+HwatNVIJmuJTGxIMsRH9FJACuQjMBjHYvoZ2r1JaRm5kiSixgGWY+alQEMqCWPF\nOgYSnEvBpypupT1j4K6wZ+kaN0t2eiwfBeGsxYX2FQKGItB9SlqMDUKlFduCy7vY\no7Y33ahJQbS7Rg1SzJW39DSVpc9yJ1MqxsqFGB/oCQKBgBXPTVUkSPbH/MPPXtqW\nT0k90mUCYyNqni6qSiYTpp19wibsDuYxTMFs0AeZ9VCtQP9+AM+JBsaqfcc6TY8e\nwpYN174h36G+8MZkq75Rzuk2/8/7ApOCXXssv0HKj8Ym86KBD27TV4Nm3ZN+a7/d\nq5Ke/mptBDUF7+nh4vqr674Z\n-----END PRIVATE KEY-----\n",
-    client_email: "firebase-adminsdk-fbsvc@baekya-protocol.iam.gserviceaccount.com",
-    client_id: "112430965355841449474",
-    auth_uri: "https://accounts.google.com/o/oauth2/auth",
-    token_uri: "https://oauth2.googleapis.com/token",
-    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-    client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40baekya-protocol.iam.gserviceaccount.com",
-    universe_domain: "googleapis.com"
-  };
-  
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://baekya-protocol.firebaseio.com"
-  });
-  
-  console.log('🔥 Firebase Admin SDK 초기화 완료');
-} catch (error) {
-  console.log('⚠️  Firebase Admin SDK 초기화 건너뜀 (개발 모드)');
-}
 
 const WebSocket = require('ws');
 const http = require('http');
@@ -388,6 +360,43 @@ async function initializeServer() {
   } catch (error) {
     console.error('❌ 서버 초기화 실패:', error);
     throw error;
+  }
+}
+
+// 자동 협업 단계 전환 체크 함수
+function checkAndAutoTransitionToCollaboration() {
+  try {
+    // 모든 거버넌스 제안 조회
+    const allProposals = protocol.components.storage.getGovernanceProposals();
+    if (!allProposals || allProposals.length === 0) return;
+    
+    // 동의율이 50% 이상인 제안들 필터링
+    const eligibleProposals = allProposals.filter(proposal => {
+      const totalVotes = proposal.voteCount || 0;
+      const agreeVotes = proposal.agreeCount || 0;
+      return totalVotes > 0 && (agreeVotes / totalVotes) >= 0.5;
+    });
+    
+    if (eligibleProposals.length > 0) {
+      // 동의자 수가 가장 많은 제안 찾기
+      const activeProposal = eligibleProposals.reduce((prev, current) => 
+        (current.agreeCount > prev.agreeCount) ? current : prev
+      );
+      
+      // 새로운 협업 단계 제안이면 로그 출력
+      if (!global.lastActiveProposalId || global.lastActiveProposalId !== activeProposal.id) {
+        console.log(`🚀 자동 전환: ${activeProposal.id}가 협업 단계로 진입했습니다! (동의자 ${activeProposal.agreeCount}명)`);
+        global.lastActiveProposalId = activeProposal.id;
+        
+        // 보완구조 목록 초기화 (없으면)
+        if (!activeProposal.complements) {
+          activeProposal.complements = [];
+          protocol.components.storage.updateGovernanceProposal(activeProposal.id, activeProposal);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('자동 협업 단계 전환 체크 실패:', error);
   }
 }
 
@@ -1009,7 +1018,7 @@ async function processHttpRequest(method, path, headers, body, query) {
         console.log('📦 요청 본문:', JSON.stringify(body, null, 2));
         console.log('🔐 헤더:', headers);
         
-        const { fromDID, toAddress, amount, tokenType = 'B-Token', authData, governanceData } = body;
+        const { fromDID, toAddress, amount, tokenType = 'B-Token', authData } = body;
         
         console.log('📋 파싱된 데이터:');
         console.log(`  - fromDID: ${fromDID} (타입: ${typeof fromDID})`);
@@ -1017,7 +1026,6 @@ async function processHttpRequest(method, path, headers, body, query) {
         console.log(`  - amount: ${amount} (타입: ${typeof amount})`);
         console.log(`  - tokenType: ${tokenType}`);
         console.log(`  - authData: ${JSON.stringify(authData)}`);
-        console.log(`  - governanceData: ${JSON.stringify(governanceData)}`);
         
         if (!fromDID || !toAddress || !amount || amount <= 0) {
           console.log('❌ 파라미터 검증 실패:');
@@ -1041,49 +1049,40 @@ async function processHttpRequest(method, path, headers, body, query) {
         // toAddress가 DID인지, 통신주소인지, 아이디인지 확인하고 DID로 변환
         let toDID = toAddress;
         if (!toAddress.startsWith('did:baekya:')) {
-          // 거버넌스 풀 주소 처리
-          if (toAddress === 'GOVERNANCE_POOL') {
-            toDID = 'did:baekya:governance0000000000000000000000000000001'; // 거버넌스 풀 전용 DID
-            console.log(`🏛️ 거버넌스 풀 주소 변환: ${toAddress} → ${toDID}`);
+          // 통신주소나 아이디로 DID 찾기
+          const authSystem = protocol.components.authSystem;
+          
+          console.log(`🔍 주소 변환 시도: ${toAddress}`);
+          
+          // 하이픈 없는 전화번호 형식이면 하이픈 추가
+          let normalizedAddress = toAddress;
+          if (/^010\d{8}$/.test(toAddress)) {
+            // 01012345678 → 010-1234-5678
+            normalizedAddress = `${toAddress.slice(0, 3)}-${toAddress.slice(3, 7)}-${toAddress.slice(7)}`;
+            console.log(`📱 전화번호 형식 변환: ${toAddress} → ${normalizedAddress}`);
+          }
+          
+          // 먼저 통신주소로 시도
+          const byCommAddress = authSystem.getDIDByCommAddress(normalizedAddress);
+          console.log('통신주소 검색 결과:', byCommAddress);
+          
+          if (byCommAddress.success) {
+            toDID = byCommAddress.didHash;
+            console.log(`✅ 통신주소로 DID 찾기 성공: ${toDID}`);
           } else {
-            // 통신주소나 아이디로 DID 찾기
-            const authSystem = protocol.components.authSystem;
+            // 아이디로 시도 (원래 주소 그대로 사용)
+            const byUserId = authSystem.getDIDByUsername(toAddress);
+            console.log('아이디 검색 결과:', byUserId);
             
-            console.log(`🔍 주소 변환 시도: ${toAddress}`);
-            
-            // 하이픈 없는 전화번호 형식이면 하이픈 추가
-            let normalizedAddress = toAddress;
-            if (/^010\d{8}$/.test(toAddress)) {
-              // 01012345678 → 010-1234-5678
-              normalizedAddress = `${toAddress.slice(0, 3)}-${toAddress.slice(3, 7)}-${toAddress.slice(7)}`;
-              console.log(`📱 전화번호 형식 변환: ${toAddress} → ${normalizedAddress}`);
-            }
-            
-            // 먼저 통신주소로 시도
-            const byCommAddress = authSystem.getDIDByCommAddress(normalizedAddress);
-            console.log('통신주소 검색 결과:', byCommAddress);
-            
-            if (byCommAddress.success) {
-              toDID = byCommAddress.didHash;
-              console.log(`✅ 통신주소로 DID 찾기 성공: ${toDID}`);
+            if (byUserId.success) {
+              toDID = byUserId.didHash;
+              console.log(`✅ 아이디로 DID 찾기 성공: ${toDID}`);
             } else {
-              // 아이디로 시도 (원래 주소 그대로 사용)
-              const byUserId = authSystem.getDIDByUsername(toAddress);
-              console.log('아이디 검색 결과:', byUserId);
-              
-              if (byUserId.success) {
-                toDID = byUserId.didHash;
-                console.log(`✅ 아이디로 DID 찾기 성공: ${toDID}`);
-              } else {
-                console.log(`❌ 주소 찾기 실패: ${toAddress}`);
-                return {
-                  status: 404,
-                  data: {
-                    success: false,
-                    error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
-                  }
-                };
-              }
+              console.log(`❌ 주소 찾기 실패: ${toAddress}`);
+              return res.status(404).json({
+                success: false,
+                error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
+              });
             }
           }
         }
@@ -1096,12 +1095,38 @@ async function processHttpRequest(method, path, headers, body, query) {
         // 통합 인증 검증 (SimpleAuth 사용)
         const authResult = protocol.components.authSystem.verifyForAction(fromDID, authData, 'token_transfer');
         if (!authResult.authorized) {
-          return res.status(401).json({ 
-            success: false, 
-            error: '인증 실패', 
-            details: authResult.message 
-          });
+          return {
+            status: 401,
+            data: { 
+              success: false, 
+              error: '인증 실패', 
+              details: authResult.message 
+            }
+          };
         }
+
+        // 🔒 보안 강화: 발신자 계정 활성 상태 확인
+        const senderAccountStatus = protocol.components.storage.isAccountActive(fromDID);
+        
+        if (!senderAccountStatus.isActive) {
+          console.log(`❌ 일시정지된 계정의 토큰 전송 차단: ${fromDID}`);
+          console.log(`   활성 디바이스: ${senderAccountStatus.activeDeviceCount}개`);
+          
+          return {
+            status: 403,
+            data: {
+              success: false,
+              error: '계정이 일시정지 상태입니다. 토큰을 전송할 수 없습니다.',
+              details: {
+                senderDID: fromDID,
+                senderStatus: senderAccountStatus.status,
+                reason: '발신자 계정에 연결된 활성 디바이스가 없습니다'
+              }
+            }
+          };
+        }
+        
+        console.log(`✅ 발신자 계정 활성 상태 확인됨: ${fromDID} (활성 디바이스 ${senderAccountStatus.activeDeviceCount}개)`);
         
         // 수수료 계산 (0.1%)
         const fee = amount * 0.001;
@@ -1128,9 +1153,6 @@ async function processHttpRequest(method, path, headers, body, query) {
         try {
           const Transaction = require('./src/blockchain/Transaction');
           
-          // 거버넌스 트랜잭션인지 확인
-          const isGovernanceTransaction = governanceData && governanceData.type;
-          
           // 수수료 포함 토큰 전송 트랜잭션 생성 (발신자가 실제 지불하는 총액)
           const transferTx = new Transaction(
             fromDID,
@@ -1138,14 +1160,13 @@ async function processHttpRequest(method, path, headers, body, query) {
             amount, // 받는 사람이 받을 실제 금액
             tokenType,
             { 
-              type: isGovernanceTransaction ? 'governance_transaction' : 'token_transfer',
+              type: 'token_transfer',
               fee: fee,
               totalAmountPaid: totalAmount, // 발신자가 지불한 총액
               validatorFee: feeToValidator,
               daoFee: feeToDAO,
               originalToAddress: originalToAddress, // 원본 주소 저장
-              memo: req.body.memo || '',
-              governanceData: governanceData // 거버넌스 데이터 포함
+              memo: req.body.memo || ''
             }
           );
           transferTx.sign('test-key');
@@ -1176,60 +1197,18 @@ async function processHttpRequest(method, path, headers, body, query) {
           
           if (!addResult1.success) {
             console.error('❌ 전송 트랜잭션 추가 실패:', addResult1.error);
-            return {
-              status: 400,
-              data: {
-                success: false,
-                error: `전송 트랜잭션 추가 실패: ${addResult1.error}`
-              }
-            };
+            throw new Error(`전송 트랜잭션 추가 실패: ${addResult1.error}`);
           }
           
           if (!addResult2.success) {
             console.error('❌ 수수료 트랜잭션 추가 실패:', addResult2.error);
-            return {
-              status: 400,
-              data: {
-                success: false,
-                error: `수수료 트랜잭션 추가 실패: ${addResult2.error}`
-              }
-            };
+            throw new Error(`수수료 트랜잭션 추가 실패: ${addResult2.error}`);
           }
           
           // 트랜잭션은 추가되었고 검증자가 블록을 생성할 예정
-          if (isGovernanceTransaction) {
-            console.log(`🏛️ 거버넌스 트랜잭션 추가됨 (대기 중): ${governanceData.type}`);
-          } else {
-            console.log(`💸 토큰 전송 트랜잭션 추가됨 (대기 중)`);
-          }
+          console.log(`💸 토큰 전송 트랜잭션 추가됨 (대기 중)`);
           
-          // 즉시 블록 생성 시도 (동기적으로 처리)
-          console.log('⛏️ 블록 생성 시도...');
-          console.log('📋 대기 중인 트랜잭션 수:', protocol.getBlockchain().pendingTransactions.length);
-          
-          let mineResult;
-          if (protocol.getBlockchain().pendingTransactions.length === 0) {
-            console.log('⚠️ 대기 중인 트랜잭션이 없습니다. 트랜잭션 추가 후 즉시 블록 생성...');
-            // 트랜잭션이 방금 추가되었으므로 강제로 블록 생성
-            mineResult = protocol.getBlockchain().mineBlock([transferTx, feeTx]);
-          } else {
-            mineResult = protocol.getBlockchain().mineBlock();
-          }
-          
-          console.log('⛏️ 블록 생성 결과:', mineResult);
-          
-          if (!mineResult.success) {
-            console.error('❌ 블록 생성 실패:', mineResult.error);
-            return {
-              status: 500,
-              data: {
-                success: false,
-                error: `블록 생성 실패: ${mineResult.error}`
-              }
-            };
-          }
-          
-          // 블록 생성 성공 시 응답 처리
+          // 트랜잭션이 추가되었으므로 응답은 바로 처리
           if (true) {
             
             // 검증자 풀 업데이트는 BlockchainCore의 updateStorageFromBlock에서 처리됨
@@ -1347,7 +1326,26 @@ async function processHttpRequest(method, path, headers, body, query) {
     // 거버넌스 제안 목록 조회
     if (path === '/governance/proposals' && method === 'GET') {
       try {
-        const proposals = protocol.components.storage.getGovernanceProposals() || [];
+        const allProposals = protocol.components.storage.getGovernanceProposals() || [];
+        
+        // 협업 단계 제안 찾기
+        let activeCollaborationProposal = null;
+        const eligibleProposals = allProposals.filter(proposal => {
+          const totalVotes = proposal.voteCount || 0;
+          const agreeVotes = proposal.agreeCount || 0;
+          return totalVotes > 0 && (agreeVotes / totalVotes) >= 0.5;
+        });
+        
+        if (eligibleProposals.length > 0) {
+          activeCollaborationProposal = eligibleProposals.reduce((prev, current) => 
+            (current.agreeCount > prev.agreeCount) ? current : prev
+          );
+        }
+        
+        // 협업 단계 제안을 제외한 제안들만 반환
+        const proposals = allProposals.filter(proposal => 
+          !activeCollaborationProposal || proposal.id !== activeCollaborationProposal.id
+        );
         
         return {
           status: 200,
@@ -1458,12 +1456,22 @@ async function processHttpRequest(method, path, headers, body, query) {
           };
         }
         
+        // B-토큰 잔액 확인 (투표 비용 0.1B)
+        const voteCost = 0.1;
+        const voterBalance = protocol.getBlockchain().getBalance(voterDID, 'B-Token');
+        if (voterBalance < voteCost) {
+          return {
+            status: 400,
+            data: { success: false, error: `B-토큰 잔액이 부족합니다 (투표 비용: ${voteCost}B, 보유: ${voterBalance}B)` }
+          };
+        }
+        
         // 투표 트랜잭션 생성
         const Transaction = require('./src/blockchain/Transaction');
         const voteTx = new Transaction(
           voterDID,
           'did:baekya:system0000000000000000000000000000000001',
-          0, // 투표 수수료 없음
+          0.1, // 투표 비용: 0.1B
           'B-Token',
           { 
             type: 'governance_vote',
@@ -1488,6 +1496,9 @@ async function processHttpRequest(method, path, headers, body, query) {
         // 저장
         protocol.components.storage.updateGovernanceProposal(proposalId, proposal);
         
+        // 자동 협업 단계 전환 체크
+        checkAndAutoTransitionToCollaboration();
+        
         return {
           status: 200,
           data: {
@@ -1505,84 +1516,7 @@ async function processHttpRequest(method, path, headers, body, query) {
       }
     }
 
-    // 거버넌스 제안 모금
-    if (path.match(/^\/governance\/proposals\/([^\/]+)\/fund$/) && method === 'POST') {
-      try {
-        const proposalId = path.match(/^\/governance\/proposals\/([^\/]+)\/fund$/)[1];
-        const { amount, funderDID } = body;
-        
-        if (!amount || !funderDID || amount < 1) {
-          return {
-            status: 400,
-            data: { success: false, error: '최소 1B 이상 모금해야 합니다' }
-          };
-        }
-        
-        // 제안 찾기
-        const proposal = protocol.components.storage.getGovernanceProposal(proposalId);
-        if (!proposal) {
-          return {
-            status: 404,
-            data: { success: false, error: '제안을 찾을 수 없습니다' }
-          };
-        }
-        
-        // 잔액 확인
-        const currentBalance = protocol.components.storage.getBalance(funderDID, 'B-Token');
-        if (currentBalance < amount) {
-          return {
-            status: 400,
-            data: { success: false, error: 'B-토큰 잔액이 부족합니다' }
-          };
-        }
-        
-        // 모금 트랜잭션 생성
-        const Transaction = require('./src/blockchain/Transaction');
-        const systemAddress = 'did:baekya:system0000000000000000000000000000000001';
-        const fundTx = new Transaction(
-          funderDID,
-          systemAddress,
-          amount,
-          'B-Token',
-          { 
-            type: 'governance_funding',
-            proposalId: proposalId
-          }
-        );
-        fundTx.sign('test-key');
-        
-        // 블록체인에 트랜잭션 추가
-        const addResult = protocol.getBlockchain().addTransaction(fundTx);
-        if (!addResult.success) {
-          throw new Error(addResult.error || '트랜잭션 추가 실패');
-        }
-        
-        // 모금 정보 업데이트
-        if (!proposal.funders[funderDID]) {
-          proposal.funders[funderDID] = 0;
-        }
-        proposal.funders[funderDID] += amount;
-        proposal.currentFunding += amount;
-        
-        // 저장
-        protocol.components.storage.updateGovernanceProposal(proposalId, proposal);
-        
-        return {
-          status: 200,
-          data: {
-            success: true,
-            message: '모금이 완료되었습니다',
-            proposal: proposal
-          }
-        };
-      } catch (error) {
-        console.error('모금 처리 실패:', error);
-        return {
-          status: 500,
-          data: { success: false, error: '모금 처리 실패', details: error.message }
-        };
-      }
-    }
+    
 
     // 거버넌스 제안 신고
     if (path.match(/^\/governance\/proposals\/([^\/]+)\/report$/) && method === 'POST') {
@@ -1651,12 +1585,21 @@ async function processHttpRequest(method, path, headers, body, query) {
     // 거버넌스 제안 생성
     if (path === '/governance/proposals' && method === 'POST') {
       try {
-        const { title, description, label, hasStructure, structureFiles, cost, authorDID } = body;
+        const { title, description, label, hasStructure, structureFiles, authorDID } = body;
+       const cost = 5; // 제안 생성 비용 고정: 5B
         
         if (!title || !description || !label || !authorDID) {
           return {
             status: 400,
             data: { success: false, error: '필수 필드가 누락되었습니다' }
+          };
+        }
+        
+        // 코어구조 파일 필수 검증
+        if (!hasStructure || !structureFiles || structureFiles.length === 0) {
+          return {
+            status: 400,
+            data: { success: false, error: '코어구조 파일을 업로드해주세요. 제안에는 반드시 코어구조가 포함되어야 합니다.' }
           };
         }
         
@@ -1706,8 +1649,7 @@ async function processHttpRequest(method, path, headers, body, query) {
           agreeCount: 0,
           abstainCount: 0,
           disagreeCount: 0,
-          currentFunding: cost, // 생성 비용이 초기 모금액
-          funders: {},
+          
           participantCount: 1 // 생성자 포함
         };
         
@@ -1758,6 +1700,148 @@ async function processHttpRequest(method, path, headers, body, query) {
         return {
           status: 500,
           data: { success: false, error: '거버넌스 제안 생성 실패', details: error.message }
+        };
+      }
+    }
+
+    // 활성 협업 제안 조회
+    if (path === '/governance/collaboration/active' && method === 'GET') {
+      try {
+        // 모든 거버넌스 제안 조회
+        const allProposals = protocol.components.storage.getGovernanceProposals();
+        
+        // 먼저 이미 협업 단계에 진입한 제안이 있는지 확인
+        let activeProposal = null;
+        const eligibleProposals = allProposals.filter(proposal => {
+          const totalVotes = proposal.voteCount || 0;
+          const agreeVotes = proposal.agreeCount || 0;
+          return totalVotes > 0 && (agreeVotes / totalVotes) >= 0.5;
+        });
+        
+        if (eligibleProposals.length > 0) {
+          activeProposal = eligibleProposals.reduce((prev, current) => 
+            (current.agreeCount > prev.agreeCount) ? current : prev
+          );
+          
+          // 보완구조 목록 초기화 (없으면)
+          if (!activeProposal.complements) {
+            activeProposal.complements = [];
+          }
+          
+          // 이미 협업 단계에 진입한 제안이 있으면 상태 확인만 로그 출력
+          if (!global.lastActiveProposalId || global.lastActiveProposalId !== activeProposal.id) {
+            console.log(`📊 전체 거버넌스 제안 수: ${allProposals.length}`);
+            console.log(`✅ 협업 조건 충족 제안 수: ${eligibleProposals.length}`);
+            console.log(`🤝 협업 단계 제안: ${activeProposal.id} (동의자 ${activeProposal.agreeCount}명)`);
+            global.lastActiveProposalId = activeProposal.id;
+          }
+        } else {
+          // 협업 단계 제안이 없는 경우에만 상세 로그 출력
+          if (global.lastActiveProposalId) {
+            console.log(`📊 전체 거버넌스 제안 수: ${allProposals.length}`);
+            
+            // 각 제안의 투표 현황 로그
+            allProposals.forEach(proposal => {
+              const totalVotes = proposal.voteCount || 0;
+              const agreeVotes = proposal.agreeCount || 0;
+              const agreeRate = totalVotes > 0 ? ((agreeVotes / totalVotes) * 100).toFixed(1) : 0;
+              console.log(`🗳️ 제안 ${proposal.id}: 총투표 ${totalVotes}, 동의 ${agreeVotes} (${agreeRate}%)`);
+            });
+            
+            console.log(`❌ 협업 단계로 진입한 제안이 없습니다`);
+            global.lastActiveProposalId = null;
+          }
+        }
+        
+        return {
+          status: 200,
+          data: {
+            success: true,
+            proposal: activeProposal
+          }
+        };
+      } catch (error) {
+        console.error('활성 협업 제안 조회 실패:', error);
+        return {
+          status: 500,
+          data: { success: false, error: '활성 협업 제안 조회 실패' }
+        };
+      }
+    }
+
+    // 보완구조 업로드
+    if (path.match(/^\/governance\/proposals\/([^\/]+)\/complement$/) && method === 'POST') {
+      try {
+        const proposalId = path.match(/^\/governance\/proposals\/([^\/]+)\/complement$/)[1];
+        const { title, description, structureFiles, fileCount, authorDID } = body;
+        
+        if (!title || !description || !structureFiles || !authorDID) {
+          return {
+            status: 400,
+            data: { success: false, error: '필수 필드가 누락되었습니다' }
+          };
+        }
+        
+        // 제안 찾기
+        const proposal = protocol.components.storage.getGovernanceProposal(proposalId);
+        if (!proposal) {
+          return {
+            status: 404,
+            data: { success: false, error: '제안을 찾을 수 없습니다' }
+          };
+        }
+        
+        // 사용자 정보 조회
+        const userInfo = protocol.components.storage.getUserInfo(authorDID);
+        let username = 'Unknown';
+        
+        if (userInfo && userInfo.username) {
+          username = userInfo.username;
+        } else {
+          // SimpleAuth에서 DID 정보 조회 시도
+          const didInfo = protocol.components.authSystem.getDIDInfo(authorDID);
+          if (didInfo.success && didInfo.didData) {
+            username = didInfo.didData.username;
+          }
+        }
+        
+        // 보완구조 데이터 구성
+        const complementData = {
+          id: `COMP-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          title: title,
+          description: description,
+          structureFiles: structureFiles,
+          fileCount: fileCount,
+          author: {
+            did: authorDID,
+            username: username
+          },
+          createdAt: Date.now()
+        };
+        
+        // 제안에 보완구조 추가
+        if (!proposal.complements) {
+          proposal.complements = [];
+        }
+        proposal.complements.push(complementData);
+        
+        // 제안 업데이트
+        protocol.components.storage.updateGovernanceProposal(proposalId, proposal);
+        
+        return {
+          status: 200,
+          data: {
+            success: true,
+            message: '보완구조가 성공적으로 업로드되었습니다',
+            complement: complementData
+          }
+        };
+        
+      } catch (error) {
+        console.error('보완구조 업로드 실패:', error);
+        return {
+          status: 500,
+          data: { success: false, error: '보완구조 업로드 실패', details: error.message }
         };
       }
     }
@@ -2720,6 +2804,27 @@ async function processInviteCode(inviteCode, newUserDID) {
         error: '자기 자신을 초대할 수 없습니다'
       };
     }
+
+    // 🔒 보안 강화: 초대자 계정 활성 상태 확인
+    const inviterAccountStatus = protocol.components.storage.isAccountActive(inviterDID);
+    
+    if (!inviterAccountStatus.isActive) {
+      console.log(`❌ 일시정지된 계정의 초대코드 사용 차단: ${inviterDID}`);
+      console.log(`   초대코드: ${inviteCode}, 활성 디바이스: ${inviterAccountStatus.activeDeviceCount}개`);
+      
+      return {
+        success: false,
+        error: '초대자의 계정이 일시정지 상태입니다. 사용할 수 없는 초대코드입니다.',
+        details: {
+          inviterDID: inviterDID,
+          inviterStatus: inviterAccountStatus.status,
+          reason: '초대자 계정에 연결된 활성 디바이스가 없습니다'
+        }
+      };
+    }
+    
+    console.log(`✅ 초대자 계정 활성 상태 확인됨: ${inviterDID} (활성 디바이스 ${inviterAccountStatus.activeDeviceCount}개)`);
+    
     
     // 초대자에게 30B, 생성자에게 20B 지급
     const Transaction = require('./src/blockchain/Transaction');
@@ -3038,6 +3143,26 @@ app.post('/api/transfer', async (req, res) => {
         details: authResult.message 
       });
     }
+
+    // 🔒 보안 강화: 발신자 계정 활성 상태 확인
+    const senderAccountStatus = protocol.components.storage.isAccountActive(fromDID);
+    
+    if (!senderAccountStatus.isActive) {
+      console.log(`❌ 일시정지된 계정의 토큰 전송 차단: ${fromDID}`);
+      console.log(`   활성 디바이스: ${senderAccountStatus.activeDeviceCount}개`);
+      
+      return res.status(403).json({
+        success: false,
+        error: '계정이 일시정지 상태입니다. 토큰을 전송할 수 없습니다.',
+        details: {
+          senderDID: fromDID,
+          senderStatus: senderAccountStatus.status,
+          reason: '발신자 계정에 연결된 활성 디바이스가 없습니다'
+        }
+      });
+    }
+    
+    console.log(`✅ 발신자 계정 활성 상태 확인됨: ${fromDID} (활성 디바이스 ${senderAccountStatus.activeDeviceCount}개)`);
     
     // 수수료 계산 (0.1%)
     const fee = amount * 0.001;
@@ -4174,134 +4299,23 @@ app.post('/api/github/simulate-pr', async (req, res) => {
   }
 });
 
-// Firebase Auth 토큰 검증 미들웨어
-const verifyFirebaseToken = async (req, res, next) => {
-  try {
-    const { idToken, githubUsername } = req.body;
-    
-    console.log('🔐 Firebase 토큰 검증 시작:', { hasIdToken: !!idToken, githubUsername });
-    
-    // 개발 모드에서는 Firebase 검증 건너뛰기
-    if (!admin.apps.length) {
-      console.log('⚠️  개발 모드: Firebase 토큰 검증 건너뛰기');
-      req.firebaseUser = {
-        uid: 'dev_user',
-        email: githubUsername ? `${githubUsername}@github.local` : 'dev@localhost',
-        name: githubUsername || 'dev_user'
-      };
-      return next();
-    }
-    
-    if (!idToken) {
-      console.log('❌ Firebase ID 토큰이 없습니다');
-      return res.status(400).json({
-        success: false,
-        error: 'Firebase ID 토큰이 필요합니다'
-      });
-    }
-    
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      console.log('✅ Firebase 토큰 검증 성공:', decodedToken.email);
-      req.firebaseUser = decodedToken;
-      next();
-    } catch (error) {
-      console.error('❌ Firebase 토큰 검증 실패:', error);
-      return res.status(401).json({
-        success: false,
-        error: 'Firebase 토큰 검증 실패',
-        details: error.message
-      });
-    }
-  } catch (error) {
-    console.error('❌ Firebase 토큰 검증 미들웨어 오류:', error);
-    return res.status(500).json({
-      success: false,
-      error: '토큰 검증 중 오류 발생',
-      details: error.message
-    });
-  }
-};
 
-// GitHub 계정 연동 설정 (Firebase Auth 방식)
-app.post('/api/github/link-account', verifyFirebaseToken, async (req, res) => {
+
+// GitHub 계정 연동 설정 (Firebase 제거됨)
+app.post('/api/github/link-account', async (req, res) => {
   try {
-    console.log('🔗 GitHub 계정 연동 요청 수신');
-    const { idToken, accessToken, githubUsername, userDID: clientUserDID } = req.body;
-    const firebaseUser = req.firebaseUser;
-    
-    console.log('📝 요청 데이터:', {
-      hasIdToken: !!idToken,
-      hasAccessToken: !!accessToken,
-      githubUsername,
-      clientUserDID,
-      firebaseUser: firebaseUser ? { uid: firebaseUser.uid, email: firebaseUser.email } : null
-    });
-    
-    if (!githubUsername) {
-      console.log('❌ GitHub 사용자명이 없습니다');
-      return res.status(400).json({
-        success: false,
-        error: 'githubUsername이 필요합니다'
-      });
-    }
-    
-    if (!firebaseUser) {
-      console.log('❌ Firebase 사용자 정보가 없습니다');
-      return res.status(401).json({
-        success: false,
-        error: 'Firebase 인증이 필요합니다'
-      });
-    }
-    
-    // Firebase 사용자 정보 확인
-    const firebaseUID = firebaseUser.uid;
-    const userEmail = firebaseUser.email;
-    const displayName = firebaseUser.name || githubUsername;
-    
-    console.log(`🔥 Firebase 사용자 인증: ${displayName} (${githubUsername})`);
-    console.log(`📧 이메일: ${userEmail}`);
-    console.log(`🆔 Firebase UID: ${firebaseUID}`);
-    
-    // 백야 프로토콜 사용자 DID 확인
-    let userDID = null;
-    
-    // 1. 클라이언트에서 전달된 DID 사용 (최우선)
-    if (clientUserDID) {
-      userDID = clientUserDID;
-      console.log(`🔗 클라이언트 백야 사용자와 연동: ${userDID}`);
-    } 
-    // 2. Authorization 헤더에서 가져오기
-    else {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        userDID = authHeader.substring(7);
-        console.log(`🔗 헤더 백야 사용자와 연동: ${userDID}`);
-      } else {
-        return res.status(400).json({
-          success: false,
-          error: '백야 프로토콜에 먼저 로그인해주세요'
-        });
-      }
-    }
-    
-    if (!userDID) {
-      return res.status(400).json({
-        success: false,
-        error: 'userDID 처리 실패'
-      });
-    }
+    console.log('🔗 GitHub 계정 연동 요청 수신 (기능 비활성화됨)');
     
     // GitHub 연동 기능이 제거됨
-          res.json({
-            success: true,
+    res.json({
+      success: true,
       message: 'GitHub 연동 기능이 비활성화되었습니다'
-      });
+    });
   } catch (error) {
-    console.error('Firebase 연동 처리 실패:', error);
+    console.error('GitHub 연동 처리 실패:', error);
     res.status(500).json({
       success: false,
-      error: 'Firebase 연동 처리 실패',
+      error: 'GitHub 연동 처리 실패',
       details: error.message
     });
   }
@@ -4992,6 +5006,141 @@ app.get('/api/github/verify-webhook/:integrationId', async (req, res) => {
 
 
 // 중계 서버 관련 함수들 제거됨 - 로컬 직접 연결 모드 사용
+
+// 🔒 디바이스 관리 API (보안 강화)
+app.post('/api/device/register', async (req, res) => {
+  try {
+    const { deviceUUID, platform, timestamp } = req.body;
+    
+    if (!deviceUUID) {
+      return res.status(400).json({
+        success: false,
+        error: '디바이스 UUID가 필요합니다'
+      });
+    }
+    
+    // 디바이스 정보 저장
+    protocol.components.storage.saveDeviceInfo(deviceUUID, {
+      platform: platform || 'unknown',
+      isActive: true,
+      registeredAt: timestamp || Date.now(),
+      lastSeen: Date.now()
+    });
+    
+    console.log(`📱 새 디바이스 등록: ${deviceUUID} (${platform})`);
+    
+    res.json({ success: true, message: '디바이스 등록 완료' });
+  } catch (error) {
+    console.error('❌ 디바이스 등록 실패:', error);
+    res.status(500).json({ success: false, error: '디바이스 등록 실패' });
+  }
+});
+
+app.post('/api/device/link-account', async (req, res) => {
+  try {
+    const { deviceUUID, userDID } = req.body;
+    
+    if (!deviceUUID || !userDID) {
+      return res.status(400).json({
+        success: false,
+        error: '디바이스 UUID와 사용자 DID가 필요합니다'
+      });
+    }
+    
+    // 디바이스와 계정 연결
+    const deviceInfo = protocol.components.storage.getDeviceInfo(deviceUUID);
+    if (deviceInfo) {
+      protocol.components.storage.saveDeviceInfo(deviceUUID, {
+        ...deviceInfo,
+        linkedAccount: userDID,
+        linkedAt: Date.now(),
+        lastSeen: Date.now()
+      });
+      
+      console.log(`🔗 디바이스-계정 연결: ${deviceUUID} ↔ ${userDID}`);
+      
+      res.json({ success: true, message: '계정 연결 완료' });
+    } else {
+      res.status(404).json({ success: false, error: '디바이스를 찾을 수 없습니다' });
+    }
+  } catch (error) {
+    console.error('❌ 계정 연결 실패:', error);
+    res.status(500).json({ success: false, error: '계정 연결 실패' });
+  }
+});
+
+app.post('/api/device/status', async (req, res) => {
+  try {
+    const { deviceUUID } = req.body;
+    
+    if (!deviceUUID) {
+      return res.status(400).json({
+        success: false,
+        error: '디바이스 UUID가 필요합니다'
+      });
+    }
+    
+    const validation = protocol.components.storage.isValidDeviceUUID(deviceUUID);
+    
+    res.json({
+      success: true,
+      isValid: validation.valid,
+      reason: validation.reason,
+      device: validation.device || null
+    });
+  } catch (error) {
+    console.error('❌ 디바이스 상태 확인 실패:', error);
+    res.status(500).json({ success: false, error: '디바이스 상태 확인 실패' });
+  }
+});
+
+app.post('/api/device/suspend', async (req, res) => {
+  try {
+    const { deviceUUID, userDID } = req.body;
+    
+    if (!deviceUUID || !userDID) {
+      return res.status(400).json({
+        success: false,
+        error: '디바이스 UUID와 사용자 DID가 필요합니다'
+      });
+    }
+    
+    // 디바이스 일시정지
+    const deviceInfo = protocol.components.storage.getDeviceInfo(deviceUUID);
+    if (deviceInfo && deviceInfo.linkedAccount === userDID) {
+      protocol.components.storage.saveDeviceInfo(deviceUUID, {
+        ...deviceInfo,
+        isActive: false,
+        suspendedAt: Date.now(),
+        suspendedBy: userDID
+      });
+      
+      console.log(`⏸️ 디바이스 일시정지: ${deviceUUID} (사용자: ${userDID})`);
+      
+      // 🔒 보안 체크: 해당 계정의 모든 디바이스가 비활성화되었는지 확인
+      const accountStatus = protocol.components.storage.isAccountActive(userDID);
+      
+      if (!accountStatus.isActive) {
+        console.log(`🚨 계정 자동 일시정지: ${userDID} (모든 디바이스 비활성화)`);
+        // 계정 상태는 디바이스 상태로 자동 결정되므로 별도 저장 불필요
+      }
+      
+      res.json({ 
+        success: true, 
+        message: '디바이스 일시정지 완료',
+        accountStatus: accountStatus
+      });
+    } else {
+      res.status(404).json({ 
+        success: false, 
+        error: '디바이스를 찾을 수 없거나 권한이 없습니다' 
+      });
+    }
+  } catch (error) {
+    console.error('❌ 디바이스 일시정지 실패:', error);
+    res.status(500).json({ success: false, error: '디바이스 일시정지 실패' });
+  }
+});
 
 // 서버 시작 후 터미널 인터페이스 시작
 startServer().then(() => {

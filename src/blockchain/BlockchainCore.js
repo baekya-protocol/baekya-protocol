@@ -366,9 +366,7 @@ class BlockchainCore {
       'dca_verification',
       'system_notification',
       'metadata_update',
-      'governance_vote',  // 거버넌스 투표는 무료
-      'governance_proposal_creation', // 거버넌스 제안 생성
-      'governance_funding'  // 거버넌스 모금
+      'governance_proposal_creation' // 거버넌스 제안 생성
     ];
     
     const isZeroAmountAllowed = transaction.data?.type && 
@@ -418,8 +416,7 @@ class BlockchainCore {
         'issue_resolved_reward',  // Issue 해결 보상
         'github_integration_bonus', // GitHub 연동 보너스
         'governance_proposal_creation', // 거버넌스 제안 생성
-        'governance_vote',        // 거버넌스 투표
-        'governance_funding'      // 거버넌스 모금
+        'governance_vote'         // 거버넌스 투표
       ];
       
       if (!allowedSystemTypes.includes(transaction.data?.type || transaction.data)) {

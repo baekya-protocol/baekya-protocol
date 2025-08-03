@@ -726,6 +726,155 @@ class DataStorage {
     console.log(`🧹 모든 거버넌스 제안 삭제됨: ${count}개`);
     return count;
   }
+
+  // ===== 디바이스 UUID 관리 =====
+  
+  // 디바이스 정보 저장
+  setDeviceInfo(deviceUUID, deviceInfo) {
+    if (!this.data.devices) {
+      this.data.devices = {};
+    }
+    this.data.devices[deviceUUID] = deviceInfo;
+    this.saveData();
+  }
+
+  // 디바이스 정보 조회
+  getDeviceInfo(deviceUUID) {
+    if (!this.data.devices) {
+      this.data.devices = {};
+    }
+    return this.data.devices[deviceUUID] || null;
+  }
+
+  // 모든 디바이스 정보 조회
+  getAllDeviceInfo() {
+    if (!this.data.devices) {
+      this.data.devices = {};
+    }
+    return this.data.devices;
+  }
+
+  // 디바이스 정보 삭제
+  deleteDeviceInfo(deviceUUID) {
+    if (!this.data.devices) {
+      this.data.devices = {};
+    }
+    delete this.data.devices[deviceUUID];
+    this.saveData();
+  }
+
+  // 특정 계정에 연결된 디바이스 목록 조회
+  getDevicesForAccount(userDID) {
+    const allDevices = this.getAllDeviceInfo();
+    const userDevices = [];
+    
+    for (const [uuid, info] of Object.entries(allDevices)) {
+      if (info.linkedAccount === userDID) {
+        userDevices.push({
+          uuid,
+          ...info
+        });
+      }
+    }
+    
+    return userDevices;
+  }
+
+  // 활성화된 디바이스만 조회
+  getActiveDevices() {
+    const allDevices = this.getAllDeviceInfo();
+    const activeDevices = {};
+    
+    for (const [uuid, info] of Object.entries(allDevices)) {
+      if (info.isActive) {
+        activeDevices[uuid] = info;
+      }
+    }
+    
+    return activeDevices;
+  }
+
+  // 일시정지된 디바이스만 조회
+  getSuspendedDevices() {
+    const allDevices = this.getAllDeviceInfo();
+    const suspendedDevices = {};
+    
+    for (const [uuid, info] of Object.entries(allDevices)) {
+      if (!info.isActive) {
+        suspendedDevices[uuid] = info;
+      }
+    }
+    
+    return suspendedDevices;
+  }
+
+  // 계정의 활성 디바이스 수 확인
+  getActiveDeviceCountForAccount(userDID) {
+    const userDevices = this.getDevicesForAccount(userDID);
+    return userDevices.filter(device => device.isActive).length;
+  }
+
+  // 디바이스 UUID 유효성 검사
+  isValidDeviceUUID(deviceUUID, userDID = null) {
+    const deviceInfo = this.getDeviceInfo(deviceUUID);
+    
+    if (!deviceInfo) {
+      return { valid: false, reason: 'DEVICE_NOT_FOUND' };
+    }
+    
+    if (!deviceInfo.isActive) {
+      return { valid: false, reason: 'DEVICE_SUSPENDED', suspendedAt: deviceInfo.suspendedAt };
+    }
+    
+    if (userDID && deviceInfo.linkedAccount !== userDID) {
+      return { valid: false, reason: 'ACCOUNT_MISMATCH' };
+    }
+    
+    return { valid: true, device: deviceInfo };
+  }
+
+  // 계정 활성 상태 확인 (활성 UUID가 하나 이상 연결되어 있는지)
+  isAccountActive(userDID) {
+    const activeDevices = this.getActiveDeviceCountForAccount(userDID);
+    const isActive = activeDevices > 0;
+    
+    console.log(`🔍 계정 활성 상태 확인: ${userDID} → 활성 디바이스 ${activeDevices}개, 상태: ${isActive ? '활성' : '일시정지'}`);
+    
+    return {
+      isActive: isActive,
+      activeDeviceCount: activeDevices,
+      status: isActive ? 'ACTIVE' : 'SUSPENDED',
+      reason: isActive ? null : 'NO_ACTIVE_DEVICES'
+    };
+  }
+
+  // 계정 상태 상세 정보 조회
+  getAccountStatusDetail(userDID) {
+    const allDevices = this.getDevicesForAccount(userDID);
+    const activeDevices = allDevices.filter(device => device.isActive);
+    const suspendedDevices = allDevices.filter(device => !device.isActive);
+    
+    const isActive = activeDevices.length > 0;
+    
+    return {
+      userDID,
+      isActive,
+      status: isActive ? 'ACTIVE' : 'SUSPENDED',
+      devices: {
+        total: allDevices.length,
+        active: activeDevices.length,
+        suspended: suspendedDevices.length
+      },
+      deviceList: {
+        active: activeDevices,
+        suspended: suspendedDevices
+      },
+      lastActiveDevice: activeDevices.length > 0 ? 
+        activeDevices.sort((a, b) => b.lastSeen - a.lastSeen)[0] : null,
+      suspendedAt: activeDevices.length === 0 && suspendedDevices.length > 0 ? 
+        Math.max(...suspendedDevices.map(d => d.suspendedAt || 0)) : null
+    };
+  }
 }
 
 module.exports = DataStorage; 

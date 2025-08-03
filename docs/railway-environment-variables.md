@@ -38,9 +38,7 @@ GITHUB_TOKEN=ghp_your_github_token_here
 WEBHOOK_SECRET=your_webhook_secret_here
 ```
 
-### Firebase 설정 (선택사항)
-```
-FIREBASE_PROJECT_ID=baekya-protocol
+
 FIREBASE_PRIVATE_KEY=your_private_key_here
 FIREBASE_CLIENT_EMAIL=your_client_email_here
 ```

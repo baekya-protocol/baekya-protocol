@@ -1,0 +1,13 @@
+# 큰 바이너리 파일들 (APK 제외)
+*.zip
+*.aab
+
+# 빌드 관련
+node_modules/
+.env
+.env.local
+
+# 개발 파일들
+*.log
+*.tmp
+*.backup
