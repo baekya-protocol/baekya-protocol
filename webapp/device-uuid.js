@@ -1,5 +1,5 @@
 /**
- * 백야 프로토콜 디바이스 UUID 관리 시스템
+ * BROTHERHOOD 디바이스 UUID 관리 시스템
  * 
  * 기능:
  * - 앱 설치 시 고유 UUID 생성
@@ -133,7 +133,7 @@ class DeviceUUIDManager {
     const ctx = canvas.getContext('2d');
     ctx.textBaseline = 'top';
     ctx.font = '14px Arial';
-    ctx.fillText('백야 프로토콜 UUID', 2, 2);
+            ctx.fillText('BROTHERHOOD UUID', 2, 2);
     
     const fingerprint = [
       navigator.userAgent,
@@ -333,12 +333,26 @@ class DeviceUUIDManager {
 // 전역 인스턴스 생성
 window.deviceUUIDManager = new DeviceUUIDManager();
 
-// 앱 로드 시 자동 초기화
+// 즉시 초기화 시도 (APK 환경 대응)
+(async () => {
+  try {
+    console.log('📱 Device UUID Manager 즉시 초기화 시작');
+    await window.deviceUUIDManager.initialize();
+    console.log('✅ UUID 매니저 즉시 초기화 성공');
+  } catch (error) {
+    console.error('❌ UUID 매니저 즉시 초기화 실패:', error);
+  }
+})();
+
+// DOMContentLoaded 백업 초기화
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    await window.deviceUUIDManager.initialize();
+    if (!window.deviceUUIDManager.isReady()) {
+      console.log('🔄 DOMContentLoaded에서 UUID 매니저 재시도');
+      await window.deviceUUIDManager.initialize();
+    }
   } catch (error) {
-    console.error('❌ UUID 매니저 자동 초기화 실패:', error);
+    console.error('❌ UUID 매니저 DOMContentLoaded 초기화 실패:', error);
   }
 });
 

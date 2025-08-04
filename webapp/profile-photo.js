@@ -1,8 +1,8 @@
 // 프로필 사진 관리 스크립트
 
 // DApp 클래스에 프로필 사진 메서드 추가
-if (typeof BaekyaProtocolDApp !== 'undefined') {
-  Object.assign(BaekyaProtocolDApp.prototype, {
+if (typeof BrotherhoodDApp !== 'undefined') {
+  Object.assign(BrotherhoodDApp.prototype, {
     
     // 프로필 사진 모달 열기
     openProfilePhotoModal() {

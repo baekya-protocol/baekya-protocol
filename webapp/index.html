@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>백야 프로토콜 - 탈중앙화 기여기반 블록체인 사회시스템</title>
+    <title>BROTHERHOOD - 탈중앙화 기여기반 블록체인 사회시스템</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="additional.css">
     <link rel="stylesheet" href="input-fix.css">
@@ -167,7 +167,7 @@
                             <div class="balance-section">
                                 <div class="balance-grid">
                                     <div class="balance-item">
-                                        <div class="balance-label">B-Token (화폐)</div>
+                                        <div class="balance-label">B-Token</div>
                                         <div class="balance-value" id="bTokenBalance">0 B</div>
                                         <!-- 기여 관련 메시지 제거됨 -->
                                         <button class="token-action-btn transfer-btn" onclick="window.dapp.goToTokenTransfer()" id="bTokenTransferButton" style="display: none;">
@@ -226,10 +226,10 @@
                         <div class="card-content">
                             <div class="protocol-info">
                                 <p class="protocol-description">
-                                    프로토콜의 철학과 구조에 대해 알아보세요.
+                                    인류 해방 프로토콜의 비전과 철학을 만나보세요.
                                 </p>
-                                <button class="btn-primary protocol-overview-btn" onclick="window.open('https://github.com/baekya-protocol/baekya-protocol/blob/main/docs/protocol_overview.md', '_blank')">
-                                    <i class="fas fa-external-link-alt"></i> 프로토콜 개요 보기
+                                <button class="btn-primary protocol-overview-btn" onclick="window.location.href='/intro.html'">
+                                    <i class="fas fa-info-circle"></i> BROTHERHOOD 소개 보기
                                 </button>
                             </div>
                         </div>
@@ -290,7 +290,7 @@
                                 <h3><i class="fas fa-user-circle"></i> 아이디 생성/로그인</h3>
                             </div>
                             <div class="card-content">
-                                <p class="description">백야 프로토콜 참여를 위해 아이디를 생성하거나 로그인하세요.</p>
+                                <p class="description">BROTHERHOOD 참여를 위해 아이디를 생성하거나 로그인하세요.</p>
                                 <div class="biometric-options">
                                     <button class="biometric-btn" onclick="startUserAuth()">
                                         <i class="fas fa-user-plus"></i>
@@ -311,7 +311,7 @@
                         <div class="balance-overview wallet-full-width">
                             <div class="balance-card-large">
                                 <div class="balance-header">
-                                    <h3>B-Token (화폐)</h3>
+                                    <h3>B-Token</h3>
                                     <div class="balance-main" id="bTokenMain">0 B</div>
                                 </div>
                                 <div class="mining-info">
@@ -333,23 +333,23 @@
                                                 <div class="address-label">지갑 주소</div>
                                         <div class="address-container">
                                                     <div class="address-value" id="myWalletAddress">-</div>
-                                                    <button class="copy-btn" onclick="window.dapp.copyToClipboard('myWalletAddress', '지갑주소')" title="지갑주소 복사">
-                                                <i class="fas fa-copy"></i>
-                                            </button>
+                                                    <div class="qr-button-group">
+                                                        <button class="copy-btn" onclick="window.dapp.copyToClipboard('myWalletAddress', '지갑주소')" title="지갑주소 복사">
+                                                            <i class="fas fa-copy"></i>
+                                                        </button>
+                
+                                                    </div>
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <!-- QR 이미지 섹션 (버튼 없이) -->
                                 <div class="qr-section">
                                     <div class="qr-container">
                                         <canvas id="qrCanvas" width="150" height="150"></canvas>
                                     </div>
-                                    <div class="qr-controls">
-                                        <button class="btn-secondary" onclick="window.dapp.downloadQR()">
-                                            <i class="fas fa-download"></i> QR 저장
-                                        </button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                </div>
+                                
                                 </div>
                             </div>
                         </div>
@@ -371,11 +371,12 @@
                                     <form id="transferForm">
                                         <div class="form-group">
                                             <label for="recipientAddress">받는 주소</label>
-                                            <div class="address-input-group">
-                                                <input type="text" id="recipientAddress" placeholder="지갑 주소, 아이디, 전화번호 입력">
-                                                <button type="button" class="qr-scan-btn" onclick="window.dapp.scanQRCode()" title="QR 코드 스캔">
-                                                    <i class="fas fa-qrcode"></i>
+                                            <div class="input-with-qr">
+                                                <input type="text" id="recipientAddress" placeholder="지갑 주소">
+                                                <button type="button" class="qr-btn" onclick="window.qrManager.openQRScanner((result) => document.getElementById('recipientAddress').value = result)" title="QR 코드 스캔">
+                                                    <i class="fas fa-camera"></i>
                                                 </button>
+                                            </div>
                                             </div>
                                         </div>
                                         <div class="form-group">
@@ -617,40 +618,7 @@
                         관심 제안
                     </button>
                     
-                    <!-- 라벨 필터 구분선 -->
-                    <div class="filter-divider"></div>
-                    
-                    <!-- 라벨 탭들 -->
-                    <button class="label-btn" data-label="" onclick="window.dapp.governanceManager.setLabelFilter('')">
-                        전체
-                    </button>
-                    <button class="label-btn" data-label="bugfix" onclick="window.dapp.governanceManager.setLabelFilter('bugfix')">
-                        버그수정
-                    </button>
-                    <button class="label-btn" data-label="feature" onclick="window.dapp.governanceManager.setLabelFilter('feature')">
-                        기능추가
-                    </button>
-                    <button class="label-btn" data-label="improvement" onclick="window.dapp.governanceManager.setLabelFilter('improvement')">
-                        개선사항
-                    </button>
-                    <button class="label-btn" data-label="security" onclick="window.dapp.governanceManager.setLabelFilter('security')">
-                        보안
-                    </button>
-                    <button class="label-btn" data-label="governance" onclick="window.dapp.governanceManager.setLabelFilter('governance')">
-                        거버넌스
-                    </button>
-                    <button class="label-btn" data-label="performance" onclick="window.dapp.governanceManager.setLabelFilter('performance')">
-                        성능
-                    </button>
-                    <button class="label-btn" data-label="ui" onclick="window.dapp.governanceManager.setLabelFilter('ui')">
-                        UI/UX
-                    </button>
-                    <button class="label-btn" data-label="documentation" onclick="window.dapp.governanceManager.setLabelFilter('documentation')">
-                        문서화
-                    </button>
-                    <button class="label-btn" data-label="etc" onclick="window.dapp.governanceManager.setLabelFilter('etc')">
-                        기타
-                    </button>
+
 
                 </div>
 
@@ -803,7 +771,7 @@
                     <div class="form-section">
                         <h4><i class="fas fa-tags"></i> 라벨</h4>
                         <div class="form-group">
-                            <select id="proposalLabel" required>
+                            <select id="proposalLabel">
                                 <option value="">라벨을 선택하세요</option>
                                 <option value="bugfix">버그수정</option>
                                 <option value="feature">기능추가</option>
@@ -1180,7 +1148,7 @@
                         <div class="proposal-requirements">
                             <h4>DAO생성제안 요구사항</h4>
                             <ul>
-                                <li>전체 백야 프로토콜 구성원의 <strong>5%</strong>만큼의 B-token이 모이면 투표 진입</li>
+                                <li>전체 BROTHERHOOD 구성원의 <strong>5%</strong>만큼의 B-token이 모이면 투표 진입</li>
                                 <li>1달 내 투표 진입 실패시 제안 및 담보 소각</li>
                                 <li>투표 시 정족수 <strong>50%</strong> 필요</li>
                                 <li>찬성 비율 <strong>60%</strong> 이상 필요</li>
@@ -1383,7 +1351,7 @@
                     <div class="form-group">
                         <label for="publicChatTags">태그</label>
                         <input type="text" id="publicChatTags" name="tags" 
-                               placeholder="#백야 #개발 #커뮤니티 (쉼표로 구분)">
+                               placeholder="#BROTHERHOOD #개발 #커뮤니티 (쉼표로 구분)">
                         <small>검색에 도움이 되는 태그를 추가하세요</small>
                     </div>
                     
@@ -2043,18 +2011,18 @@
         </div>
     </div>
 
-    <!-- 백야 네트워크 친구 검색 모달 -->
+                <!-- BROTHERHOOD 네트워크 친구 검색 모달 -->
     <div id="friendSearchModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fas fa-search"></i> 백야 네트워크 친구 검색</h3>
+                <h3><i class="fas fa-search"></i> BROTHERHOOD 네트워크 친구 검색</h3>
                 <button class="modal-close" onclick="window.dapp.closeFriendSearchModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="network-search-section">
                     <p class="search-description">
                         <i class="fas fa-network-wired"></i>
-                        백야 네트워크에 등록된 사용자의 통신주소 또는 아이디를 검색하여 친구로 추가할 수 있습니다.
+                        BROTHERHOOD 네트워크에 등록된 사용자의 통신주소 또는 아이디를 검색하여 친구로 추가할 수 있습니다.
                     </p>
                     
                     <div class="search-input-section">
@@ -2077,7 +2045,7 @@
                 <div class="search-status" id="searchStatus" style="display: none;">
                     <div class="searching-indicator">
                         <i class="fas fa-spinner fa-spin"></i>
-                        <span>백야 네트워크에서 검색 중...</span>
+                        <span>BROTHERHOOD 네트워크에서 검색 중...</span>
                     </div>
                 </div>
 
@@ -2132,5 +2100,9 @@
 
 
     <!-- 제안하기 모달 -->
+
+    <!-- QR 코드 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="qr-manager.js"></script>
 </body>
 </html> 

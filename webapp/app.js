@@ -1,6 +1,6 @@
-// 백야 프로토콜 DApp - 메인 애플리케이션 로직
+// BROTHERHOOD DApp - 메인 애플리케이션 로직
 
-class BaekyaProtocolDApp {
+class BrotherhoodDApp {
   constructor() {
     this.currentUser = null;
     this.protocol = null;
@@ -100,7 +100,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   }
 
   async init() {
-    console.log('🌅 백야 프로토콜 DApp 초기화 중...');
+            console.log('🌅 BROTHERHOOD DApp 초기화 중...');
     
     // Capacitor 환경 감지 및 설정
     this.detectCapacitorEnvironment();
@@ -140,7 +140,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     // 초기 프로필 상태 설정
     this.updateProfileStatus('offline');
     
-    console.log('✅ 백야 프로토콜 DApp 초기화 완료');
+            console.log('✅ BROTHERHOOD DApp 초기화 완료');
   }
 
   // WebSocket 연결 관리
@@ -986,7 +986,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   
   // 환영 화면 표시 (실제 첫 시작) - 팝업 제거
   showWelcomeScreen() {
-    console.log('🌅 백야 프로토콜에 오신 것을 환영합니다!');
+            console.log('🌅 BROTHERHOOD에 오신 것을 환영합니다!');
     console.log('👤 첫 번째 사용자가 되어 모든 DAO의 이니셜 OP가 될 수 있습니다!');
     // 생체인증 등록을 위해 지갑 탭으로 이동하고 인증되지 않은 상태로 설정
     this.isAuthenticated = false;
@@ -1074,7 +1074,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       const progressMessage = document.getElementById('progressMessage');
       const modalBody = document.querySelector('#biometricModal .modal-body');
       
-      progressMessage.textContent = '백야 프로토콜에 오신 것을 환영합니다!';
+              progressMessage.textContent = 'BROTHERHOOD에 오신 것을 환영합니다!';
       
       // 선택 UI 추가
       const authSelection = document.createElement('div');
@@ -1205,14 +1205,29 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           if (result.success) {
             console.log('🔐 서버 로그인 성공:', result);
             
-            // 디바이스와 계정 연결
+            // 디바이스와 계정 연결 (확실한 초기화 보장)
             try {
-              const linkResult = await window.deviceUUIDManager.linkAccountToDevice(result.didHash);
-              if (!linkResult) {
-                console.warn('⚠️ 디바이스-계정 연결 실패');
+              console.log('🔍 UUID 매니저 상태 확인');
+              
+              // UUID 매니저가 준비되지 않았으면 강제 초기화
+              if (!window.deviceUUIDManager.isReady()) {
+                console.log('⚠️ UUID 매니저 미준비 상태 - 강제 초기화 시도');
+                await window.deviceUUIDManager.initialize();
+              }
+              
+              if (window.deviceUUIDManager.isReady()) {
+                console.log('✅ UUID 매니저 준비 완료, 계정 연결 시도');
+                const linkResult = await window.deviceUUIDManager.linkAccountToDevice(result.didHash);
+                if (linkResult) {
+                  console.log('✅ 디바이스-계정 연결 성공');
+                } else {
+                  console.error('❌ 디바이스-계정 연결 실패');
+                }
+              } else {
+                console.error('❌ UUID 매니저 초기화 최종 실패');
               }
             } catch (error) {
-              console.error('❌ 디바이스 연결 오류:', error);
+              console.error('❌ 디바이스 연결 전체 오류:', error);
             }
             
             // 사용자 데이터 설정
@@ -1422,14 +1437,29 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           if (result.success) {
             console.log('🔐 서버 로그인 성공:', result);
             
-            // 디바이스와 계정 연결
+            // 디바이스와 계정 연결 (확실한 초기화 보장)
             try {
-              const linkResult = await window.deviceUUIDManager.linkAccountToDevice(result.didHash);
-              if (!linkResult) {
-                console.warn('⚠️ 디바이스-계정 연결 실패');
+              console.log('🔍 UUID 매니저 상태 확인 (2차 로그인)');
+              
+              // UUID 매니저가 준비되지 않았으면 강제 초기화
+              if (!window.deviceUUIDManager.isReady()) {
+                console.log('⚠️ UUID 매니저 미준비 상태 - 강제 초기화 시도');
+                await window.deviceUUIDManager.initialize();
+              }
+              
+              if (window.deviceUUIDManager.isReady()) {
+                console.log('✅ UUID 매니저 준비 완료, 계정 연결 시도');
+                const linkResult = await window.deviceUUIDManager.linkAccountToDevice(result.didHash);
+                if (linkResult) {
+                  console.log('✅ 디바이스-계정 연결 성공');
+                } else {
+                  console.error('❌ 디바이스-계정 연결 실패');
+                }
+              } else {
+                console.error('❌ UUID 매니저 초기화 최종 실패');
               }
             } catch (error) {
-              console.error('❌ 디바이스 연결 오류:', error);
+              console.error('❌ 디바이스 연결 전체 오류:', error);
             }
             
             // 다른 기기에서 로그아웃되었다면 알림
@@ -1652,7 +1682,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       userIdSetup.innerHTML = `
         <div class="user-id-form" style="color: var(--text-primary); background: var(--bg-secondary); padding: 1.5rem; border-radius: 8px;">
           <h4 style="color: var(--text-primary);"><i class="fas fa-user"></i> 아이디 생성</h4>
-          <p style="color: var(--text-secondary);">백야 프로토콜에서 사용할 고유한 아이디를 만들어주세요.</p>
+                      <p style="color: var(--text-secondary);">BROTHERHOOD에서 사용할 고유한 아이디를 만들어주세요.</p>
           
           <div class="form-group">
             <label for="newUserId" style="color: var(--text-primary);">아이디 (4-20자, 영문/숫자)</label>
@@ -2223,7 +2253,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         
         // 생체인증 실행
         const result = await BiometricAuth.verify({
-          title: '백야 프로토콜',
+                          title: 'BROTHERHOOD',
           subtitle: '지문 인증',
           reason: '본인 확인을 위해 생체인증이 필요합니다',
           cancelTitle: '취소',
@@ -2265,7 +2295,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         
         // 새로운 지문 등록을 위한 생체인증 (검증 없이)
         const result = await BiometricAuth.verify({
-          title: '백야 프로토콜',
+                          title: 'BROTHERHOOD',
           subtitle: '새로운 지문 등록',
           reason: '새로운 지문을 등록해주세요',
           cancelTitle: '취소',
@@ -2290,190 +2320,6 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       console.error(`❌ ${type} 등록 오류:`, error);
       throw error;
     }
-  }
-
-  // QR 코드 스캔 함수
-  async scanQRCode() {
-    try {
-      // Capacitor Camera 플러그인이 있는지 확인
-      if (window.Capacitor && window.Capacitor.Plugins.Camera) {
-        return await this.scanQRWithCamera();
-      } else {
-        // 웹 환경에서는 브라우저 카메라 사용
-        return await this.scanQRWithWebCamera();
-      }
-    } catch (error) {
-      console.error('❌ QR 스캔 오류:', error);
-      this.showErrorMessage('QR 코드 스캔 중 오류가 발생했습니다: ' + error.message);
-    }
-  }
-
-  // Capacitor Camera를 사용한 QR 스캔
-  async scanQRWithCamera() {
-    try {
-      const { Camera, CameraResultType, CameraSource } = window.Capacitor.Plugins;
-      
-      const image = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera
-      });
-      
-      // QR 코드 디코딩을 위해 Canvas 사용
-      const qrResult = await this.decodeQRFromImage(image.webPath);
-      
-      if (qrResult) {
-        document.getElementById('recipientAddress').value = qrResult;
-        this.showSuccessMessage('QR 코드가 성공적으로 읽혔습니다!');
-      } else {
-        this.showErrorMessage('QR 코드를 찾을 수 없습니다. 다시 시도해주세요.');
-      }
-      
-    } catch (error) {
-      if (error.message?.includes('cancelled') || error.message?.includes('canceled')) {
-        console.log('⏹️ 사용자가 카메라를 취소했습니다');
-      } else {
-        console.error('❌ Capacitor 카메라 오류:', error);
-        this.showErrorMessage('카메라 접근에 실패했습니다: ' + error.message);
-      }
-    }
-  }
-
-  // 웹 브라우저 카메라를 사용한 QR 스캔
-  async scanQRWithWebCamera() {
-    try {
-      // 카메라 권한 요청
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment' // 후면 카메라 사용
-        } 
-      });
-      
-      // QR 스캐너 모달 생성
-      const modal = document.createElement('div');
-      modal.className = 'qr-scanner-modal';
-      modal.innerHTML = `
-        <div class="qr-scanner-container">
-          <div class="qr-scanner-header">
-            <h3>📷 QR 코드 스캔</h3>
-            <button class="qr-scanner-close">&times;</button>
-          </div>
-          <video class="qr-scanner-video" autoplay></video>
-          <p style="text-align: center; margin-top: 1rem; color: var(--text-secondary);">
-            QR 코드를 카메라 중앙에 맞춰주세요
-          </p>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      const video = modal.querySelector('.qr-scanner-video');
-      const closeBtn = modal.querySelector('.qr-scanner-close');
-      
-      video.srcObject = stream;
-      
-      // QR 코드 스캔 시작
-      this.startQRScanning(video, modal, stream);
-      
-      // 닫기 버튼 이벤트
-      closeBtn.onclick = () => {
-        this.stopQRScanning(stream, modal);
-      };
-      
-      // 모달 배경 클릭 시 닫기
-      modal.onclick = (e) => {
-        if (e.target === modal) {
-          this.stopQRScanning(stream, modal);
-        }
-      };
-      
-    } catch (error) {
-      console.error('❌ 웹 카메라 접근 실패:', error);
-      if (error.name === 'NotAllowedError') {
-        this.showErrorMessage('카메라 권한이 필요합니다. 브라우저 설정에서 카메라 권한을 허용해주세요.');
-      } else if (error.name === 'NotFoundError') {
-        this.showErrorMessage('카메라를 찾을 수 없습니다.');
-      } else {
-        this.showErrorMessage('카메라 접근에 실패했습니다: ' + error.message);
-      }
-    }
-  }
-
-  // QR 코드 스캔 시작
-  startQRScanning(video, modal, stream) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    const scanInterval = setInterval(() => {
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
-        // jsQR 라이브러리가 있다면 사용, 없다면 간단한 QR 패턴 감지
-        if (window.jsQR) {
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
-          if (code) {
-            clearInterval(scanInterval);
-            this.stopQRScanning(stream, modal);
-            document.getElementById('recipientAddress').value = code.data;
-            this.showSuccessMessage('QR 코드가 성공적으로 읽혔습니다!');
-          }
-        } else {
-          // jsQR가 없는 경우 시뮬레이션
-          // 실제로는 QR 라이브러리를 추가해야 함
-          console.log('📷 QR 스캔 시뮬레이션 중...');
-        }
-      }
-    }, 300); // 300ms마다 스캔
-    
-    // 10초 후 타임아웃
-    setTimeout(() => {
-      clearInterval(scanInterval);
-      if (modal.parentNode) {
-        this.stopQRScanning(stream, modal);
-        this.showErrorMessage('QR 코드를 찾을 수 없습니다. 다시 시도해주세요.');
-      }
-    }, 10000);
-  }
-
-  // QR 코드 스캔 중지
-  stopQRScanning(stream, modal) {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    if (modal && modal.parentNode) {
-      modal.remove();
-    }
-  }
-
-  // 이미지에서 QR 코드 디코딩 (Capacitor용)
-  async decodeQRFromImage(imagePath) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
-        if (window.jsQR) {
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
-          resolve(code ? code.data : null);
-        } else {
-          // jsQR가 없는 경우 시뮬레이션
-          resolve('did:baekya:example123456789');
-        }
-      };
-      img.src = imagePath;
-    });
   }
 
   // 지문 재인증 (신규 사용자 등록 시 보안 강화)
@@ -2682,7 +2528,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       personalInfoSetup.innerHTML = `
         <div class="personal-info-form" style="color: var(--text-primary); background: var(--bg-secondary); padding: 1.5rem; border-radius: 8px;">
           <h4 style="color: var(--text-primary);">개인정보 입력</h4>
-          <p style="color: var(--text-secondary);">백야 프로토콜 가입을 위한 기본 정보를 입력하세요.</p>
+                      <p style="color: var(--text-secondary);">BROTHERHOOD 가입을 위한 기본 정보를 입력하세요.</p>
           
           <div class="form-group">
             <label for="userNameInput" style="color: var(--text-primary);">이름</label>
@@ -2802,14 +2648,29 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       if (result.success) {
         console.log('🎉 사용자 등록 성공:', result);
         
-        // 디바이스와 계정 연결
+        // 디바이스와 계정 연결 (확실한 초기화 보장)
         try {
-          const linkResult = await window.deviceUUIDManager.linkAccountToDevice(result.didHash);
-          if (!linkResult) {
-            console.warn('⚠️ 회원가입 후 디바이스-계정 연결 실패');
+          console.log('🔍 UUID 매니저 상태 확인 (회원가입 후)');
+          
+          // UUID 매니저가 준비되지 않았으면 강제 초기화
+          if (!window.deviceUUIDManager.isReady()) {
+            console.log('⚠️ UUID 매니저 미준비 상태 - 강제 초기화 시도');
+            await window.deviceUUIDManager.initialize();
+          }
+          
+          if (window.deviceUUIDManager.isReady()) {
+            console.log('✅ UUID 매니저 준비 완료, 계정 연결 시도');
+            const linkResult = await window.deviceUUIDManager.linkAccountToDevice(result.didHash);
+            if (linkResult) {
+              console.log('✅ 회원가입 후 디바이스-계정 연결 성공');
+            } else {
+              console.error('❌ 회원가입 후 디바이스-계정 연결 실패');
+            }
+          } else {
+            console.error('❌ UUID 매니저 초기화 최종 실패');
           }
         } catch (error) {
-          console.error('❌ 회원가입 후 디바이스 연결 오류:', error);
+          console.error('❌ 회원가입 후 디바이스 연결 전체 오류:', error);
         }
         
         // 초대코드 보상 정보 저장
@@ -3944,6 +3805,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   async loadWallet() {
     const biometricSection = document.getElementById('biometricSection');
     const walletInfo = document.getElementById('walletInfo');
+    const transactionHistorySection = document.querySelector('.transaction-history-section');
     
     // 먼저 모든 요소 숨기기
     if (biometricSection) biometricSection.style.display = 'none';
@@ -3951,15 +3813,21 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       walletInfo.style.display = 'none';
       walletInfo.classList.remove('authenticated');
     }
+    if (transactionHistorySection) {
+      transactionHistorySection.style.display = 'none';
+    }
     
     if (!this.isAuthenticated) {
       // 비인증 상태에서는 생체인증 섹션만 표시
       if (biometricSection) biometricSection.style.display = 'block';
     } else {
-      // 인증 완료 후에는 지갑 정보 표시
+      // 인증 완료 후에는 지갑 정보와 거래내역 표시
       if (walletInfo) {
         walletInfo.classList.add('authenticated');
         walletInfo.style.display = 'block';
+      }
+      if (transactionHistorySection) {
+        transactionHistorySection.style.display = 'block';
       }
       
       await this.updateTokenBalances();
@@ -4595,7 +4463,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
               <h5>🖥️ PC에서 진행 방법:</h5>
               <ol>
                 <li>PC 브라우저에서 <code>localhost:3000</code> 접속</li>
-                <li>백야 프로토콜에 로그인</li>
+                                    <li>BROTHERHOOD에 로그인</li>
                 <li>DAO 탭 → 개발DAO 참여하기 → GitHub 계정 연동</li>
                 <li>연동 완료 후 모바일에서도 이용 가능</li>
               </ol>
@@ -4685,7 +4553,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
               
               <div class="quick-actions">
                 <button class="btn-primary" onclick="window.dapp.openTargetRepository(); this.closest('.modal').remove();">
-                  <i class="fab fa-github"></i> 백야 프로토콜 저장소 바로가기
+                  <i class="fab fa-github"></i> BROTHERHOOD 저장소 바로가기
                 </button>
               </div>
             </div>
@@ -4753,7 +4621,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
             
             <div class="quick-actions">
               <button class="btn-primary" onclick="window.dapp.openTargetRepository(); this.closest('.modal').remove();">
-                <i class="fab fa-github"></i> 백야 프로토콜 저장소 바로가기
+                <i class="fab fa-github"></i> BROTHERHOOD 저장소 바로가기
               </button>
             </div>
           </div>
@@ -4775,7 +4643,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   openTargetRepository() {
     const targetRepoUrl = 'https://github.com/baekya-protocol/baekya-protocol';
     window.open(targetRepoUrl, '_blank');
-    this.showSuccessMessage('백야 프로토콜 저장소를 새 탭에서 열었습니다. 포크하여 개발을 시작하세요!');
+            this.showSuccessMessage('BROTHERHOOD 저장소를 새 탭에서 열었습니다. 포크하여 개발을 시작하세요!');
   }
 
   openGitHubProfile(githubUsername) {
@@ -6099,7 +5967,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         {
           id: 'comm-prop-3',
           title: '글로벌 번역 봉사단 운영',
-          description: '다국어 번역 봉사단을 구성하여 백야 프로토콜 글로벌화를 추진합니다.',
+                      description: '다국어 번역 봉사단을 구성하여 BROTHERHOOD 글로벌화를 추진합니다.',
           proposer: '글로벌매니저',
           status: 'proposal',
           proposalFunding: 15,
@@ -6276,7 +6144,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           // DAO 생성 제안 특화 데이터
           proposalType: 'dao-creation',
           proposedDAOName: 'Innovation DAO',
-          proposedDAODescription: '백야 프로토콜의 기술적 발전을 이끌어갈 혁신적인 연구와 실험을 전담하는 DAO입니다. 새로운 합의 알고리즘, 확장성 솔루션, 사용자 경험 개선 등 프로토콜의 미래를 설계합니다.',
+                      proposedDAODescription: 'BROTHERHOOD의 기술적 발전을 이끌어갈 혁신적인 연구와 실험을 전담하는 DAO입니다. 새로운 합의 알고리즘, 확장성 솔루션, 사용자 경험 개선 등 시스템의 미래를 설계합니다.',
           proposedDAOJustification: '현재 Development DAO는 일반적인 개발 업무에 집중하고 있어 혁신적이고 실험적인 연구에는 한계가 있습니다. 별도의 Innovation DAO를 통해 장기적 비전과 실험적 프로젝트를 추진할 필요가 있습니다.',
           proposedDCAs: [
             {
@@ -6305,7 +6173,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
             }
           ],
           proposedInitialOP: 'innovation-researcher-did-12345',
-          proposedOPQualification: '블록체인 연구 5년 경력, 다수의 혁신 프로젝트 리딩 경험, 백야 프로토콜 핵심 기여자로서 기술적 비전과 실행력을 겸비한 적합한 후보',
+                      proposedOPQualification: '블록체인 연구 5년 경력, 다수의 혁신 프로젝트 리딩 경험, BROTHERHOOD 핵심 기여자로서 기술적 비전과 실행력을 겸비한 적합한 후보',
           collateralPaid: 30,
           targetDAO: 'Political DAO',
           eligibleVoters: 'political-dao-members',
@@ -6328,7 +6196,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           // DAO 생성 제안 특화 데이터
           proposalType: 'dao-creation',
           proposedDAOName: 'Finance DAO',
-          proposedDAODescription: '백야 프로토콜의 재정 건전성을 유지하고 토큰 이코노믹스를 관리하는 전문 DAO입니다. B토큰과 P토큰의 가치 안정성, 프로토콜 수익 분배, 장기적 재정 계획 등을 담당합니다.',
+                      proposedDAODescription: 'BROTHERHOOD의 재정 건전성을 유지하고 토큰 이코노믹스를 관리하는 전문 DAO입니다. B토큰과 P토큰의 가치 안정성, 시스템 수익 분배, 장기적 재정 계획 등을 담당합니다.',
           proposedDAOJustification: '현재 각 DAO가 개별적으로 재정을 관리하고 있어 전체적인 토큰 이코노믹스 조율에 어려움이 있습니다. 전문적인 Finance DAO를 통해 체계적이고 투명한 재정 관리가 필요합니다.',
           proposedDCAs: [
             {
@@ -6393,7 +6261,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           // DAO 생성 제안 특화 데이터
           proposalType: 'dao-creation',
           proposedDAOName: 'Security DAO',
-          proposedDAODescription: '백야 프로토콜의 보안을 전담하는 전문 DAO입니다. 스마트 컨트랙트 감사, 취약점 분석, 보안 업데이트, 침입 탐지 등 프로토콜의 전반적인 보안 강화를 담당합니다.',
+                      proposedDAODescription: 'BROTHERHOOD의 보안을 전담하는 전문 DAO입니다. 스마트 컨트랙트 감사, 취약점 분석, 보안 업데이트, 침입 탐지 등 시스템의 전반적인 보안 강화를 담당합니다.',
           proposedDAOJustification: '분산형 시스템의 보안은 매우 중요하며, 전문적인 보안 관리가 필요합니다. 기존 Operations DAO는 일반적인 운영 업무에 집중하고 있어, 보안 전문 DAO를 통한 체계적인 보안 관리가 필요합니다.',
           proposerCommunicationAddress: '010-9990-4718', // 제안자 통신주소 (전화번호)
           proposedDCAs: [
@@ -7322,12 +7190,12 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
 
   // 제안 공유 기능
   shareProposal(proposalId) {
-    const shareText = `백야 프로토콜에서 진행중인 제안을 확인해보세요!\n제안 ID: ${proposalId}`;
+            const shareText = `BROTHERHOOD에서 진행중인 제안을 확인해보세요!\n제안 ID: ${proposalId}`;
     
     if (navigator.share) {
       // 웹 공유 API 사용 (모바일에서 지원)
       navigator.share({
-        title: '백야 프로토콜 제안',
+                        title: 'BROTHERHOOD 제안',
         text: shareText,
         url: window.location.href
       }).catch(console.error);
@@ -9277,7 +9145,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     modal.innerHTML = `
       <div class="modal-content" style="max-width: 90vw; max-height: 90vh; width: 1200px;">
         <div class="modal-header">
-          <h3><i class="fas fa-shield-alt"></i> 백야 프로토콜 검증자 가이드</h3>
+                      <h3><i class="fas fa-shield-alt"></i> BROTHERHOOD 검증자 가이드</h3>
           <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
         </div>
         <div class="modal-body" style="max-height: 80vh; overflow-y: auto; padding: 0;">
@@ -9290,7 +9158,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
             <div style="margin-bottom: 2rem;">
               <i class="fas fa-file-alt" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
               <h4>검증자 가이드를 확인하세요</h4>
-              <p>백야 프로토콜 풀노드 및 검증자 운영에 대한 완전한 가이드입니다.</p>
+              <p>BROTHERHOOD 풀노드 및 검증자 운영에 대한 완전한 가이드입니다.</p>
             </div>
             <div style="display: flex; gap: 1rem; justify-content: center;">
               <a href="docs/validator-guide.md" target="_blank" class="btn-primary">
@@ -9353,7 +9221,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
               <ul>
                 <li>네트워크 보안 강화에 기여</li>
                 <li>검증자들의 안정적인 운영 지원</li>
-                <li>백야 프로토콜 생태계 발전에 참여</li>
+                <li>BROTHERHOOD 생태계 발전에 참여</li>
                 <li>후원 내역은 투명하게 공개됩니다</li>
               </ul>
             </div>
@@ -11052,7 +10920,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         <div class="empty-state">
           <i class="fas fa-address-book" style="font-size: 3rem; color: var(--text-tertiary); margin-bottom: 1rem;"></i>
           <p>연락처가 없습니다</p>
-          <small>연락처 추가 버튼을 눌러 백야 네트워크에서 친구를 찾아보세요</small>
+                          <small>연락처 추가 버튼을 눌러 BROTHERHOOD 네트워크에서 친구를 찾아보세요</small>
         </div>
       `;
       return;
@@ -11136,7 +11004,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     }).join('');
   }
 
-  // 연락처 추가 기능 (백야 네트워크 검색으로 변경)
+      // 연락처 추가 기능 (BROTHERHOOD 네트워크 검색으로 변경)
   showAddContact() {
     // 로그인 체크
     if (!this.isAuthenticated) {
@@ -11146,7 +11014,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       return;
     }
     
-    console.log('🔍 백야 네트워크 친구 검색 모달 표시');
+            console.log('🔍 BROTHERHOOD 네트워크 친구 검색 모달 표시');
     const modal = document.getElementById('friendSearchModal');
     if (modal) {
       // 모달 초기화
@@ -11164,7 +11032,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   }
 
   closeFriendSearchModal() {
-    console.log('🔍 백야 네트워크 친구 검색 모달 닫기');
+            console.log('🔍 BROTHERHOOD 네트워크 친구 검색 모달 닫기');
     const modal = document.getElementById('friendSearchModal');
     if (modal) {
       modal.classList.remove('active');
@@ -11189,7 +11057,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     if (noResults) noResults.style.display = 'none';
   }
 
-  // 백야 네트워크 사용자 검색
+      // BROTHERHOOD 네트워크 사용자 검색
   async searchNetworkUsers() {
     const searchInput = document.getElementById('networkSearchInput');
     const searchTerm = searchInput ? searchInput.value.trim() : '';
@@ -11199,13 +11067,13 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       return;
     }
     
-    console.log('🔍 백야 네트워크 검색:', searchTerm);
+            console.log('🔍 BROTHERHOOD 네트워크 검색:', searchTerm);
     
     // UI 상태 업데이트
     this.showSearchStatus(true);
     
     try {
-      // 시뮬레이션: 실제로는 백야 네트워크 API 호출
+              // 시뮬레이션: 실제로는 BROTHERHOOD 네트워크 API 호출
       await this.simulateNetworkSearch(searchTerm);
     } catch (error) {
       console.error('🚨 네트워크 검색 오류:', error);
@@ -12205,7 +12073,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
               <div class="detail-info-grid">
                 <div class="detail-info-item">
                   <label>네트워크</label>
-                  <div class="detail-value">백야 프로토콜</div>
+                  <div class="detail-value">BROTHERHOOD</div>
                 </div>
                 <div class="detail-info-item">
                   <label>확인 상태</label>
@@ -12632,7 +12500,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         '더 자세히 설명해주세요.',
         '감사합니다!',
         '확인했습니다.',
-        '백야 프로토콜 정말 혁신적이네요! 🚀',
+                    'BROTHERHOOD 정말 혁신적이네요! 🚀',
         'DAO 참여에 관심이 많아요',
         '언제 한번 만나서 이야기해보면 좋겠어요'
       ];
@@ -13207,54 +13075,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     });
   }
 
-  downloadQR() {
-    const canvas = document.getElementById('qrCanvas');
-    const qrContainer = canvas ? canvas.parentElement : null;
-
-    // QRCode.js로 생성된 canvas 찾기
-    const qrGenerated = qrContainer ? qrContainer.querySelector('.qr-code-generated canvas') : null;
-    
-    if (qrGenerated) {
-      // QRCode.js로 생성된 canvas 다운로드
-    const link = document.createElement('a');
-      link.download = `baekya-communication-address-qr.png`;
-      link.href = qrGenerated.toDataURL('image/png');
-    link.click();
-      this.showSuccessMessage('QR 코드가 다운로드되었습니다.');
-    } else if (qrContainer) {
-      // QRCode.js로 생성된 img 태그 찾기 (일부 버전에서는 img로 생성됨)
-      const qrImg = qrContainer.querySelector('.qr-code-generated img');
-      if (qrImg) {
-        // img를 canvas로 변환하여 다운로드
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = 150;
-        tempCanvas.height = 150;
-        const ctx = tempCanvas.getContext('2d');
-        
-        const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, 150, 150);
-          const link = document.createElement('a');
-          link.download = `baekya-communication-address-qr.png`;
-          link.href = tempCanvas.toDataURL('image/png');
-          link.click();
-          this.showSuccessMessage('QR 코드가 다운로드되었습니다.');
-        };
-        img.src = qrImg.src;
-      } else if (canvas && canvas.style.display !== 'none') {
-        // 폴백: 원래 canvas로 그려진 경우
-        const link = document.createElement('a');
-        link.download = `baekya-communication-address-qr.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        this.showSuccessMessage('QR 코드가 다운로드되었습니다.');
-      } else {
-        this.showErrorMessage('다운로드할 QR 코드가 없습니다.');
-      }
-    } else {
-      this.showErrorMessage('QR 코드를 찾을 수 없습니다.');
-    }
-  }
+// QR 다운로드 기능 제거됨 - 캡쳐로 충분함
 
   async scanQRCode() {
     const input = document.getElementById('recipientAddress');
@@ -13900,7 +13721,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
 
   // 완전 초기화 (개발자용)
   resetAll() {
-    console.log('🔄 백야 프로토콜 완전 초기화 시작...');
+            console.log('🔄 BROTHERHOOD 완전 초기화 시작...');
     
     // 모든 로컬 저장소 데이터 삭제
     const keys = Object.keys(localStorage);
@@ -14804,11 +14625,11 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
             </div>
             <div class="dao-info-item full-width">
               <label>DAO 목적 및 설명</label>
-              <div class="dao-description-display">백야 프로토콜의 보안 강화와 감사를 전담하는 전문 DAO입니다. 시스템 보안 취약점 점검, 스마트 컨트랙트 감사, 보안 가이드라인 수립 등을 통해 안전한 블록체인 환경을 구축하고 유지합니다.</div>
+                              <div class="dao-description-display">BROTHERHOOD의 보안 강화와 감사를 전담하는 전문 DAO입니다. 시스템 보안 취약점 점검, 스마트 컨트랙트 감사, 보안 가이드라인 수립 등을 통해 안전한 블록체인 환경을 구축하고 유지합니다.</div>
             </div>
             <div class="dao-info-item full-width">
               <label>DAO 필요성</label>
-              <div class="dao-justification-display">백야 프로토콜의 성장과 함께 보안 위협도 증가하고 있습니다. 기존 DAO들은 각각 운영, 개발, 커뮤니티, 정치 영역을 담당하지만, 보안 전문성을 가진 별도의 조직이 필요합니다. Security DAO는 전문적인 보안 감사와 지속적인 보안 모니터링을 통해 프로토콜의 신뢰성을 높이고 사용자 자산을 보호할 것입니다.</div>
+                              <div class="dao-justification-display">BROTHERHOOD의 성장과 함께 보안 위협도 증가하고 있습니다. 기존 DAO들은 각각 운영, 개발, 커뮤니티, 정치 영역을 담당하지만, 보안 전문성을 가진 별도의 조직이 필요합니다. Security DAO는 전문적인 보안 감사와 지속적인 보안 모니터링을 통해 시스템의 신뢰성을 높이고 사용자 자산을 보호할 것입니다.</div>
             </div>
           </div>
         </div>
@@ -17296,7 +17117,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     // 실제로는 서버에서 가져와야 함
     return {
       id: chatId,
-      name: '백야 프로토콜 개발팀',
+                  name: 'BROTHERHOOD 개발팀',
       type: 'group',
       memberCount: 5,
       createdAt: '2024-01-01',
@@ -17456,7 +17277,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
             <div class="schedule-item">
               <div class="schedule-date">2024년 1월 15일</div>
               <div class="schedule-event">
-                <div class="event-title">백야 프로토콜 회의</div>
+                <div class="event-title">BROTHERHOOD 회의</div>
                 <div class="event-time">오후 2:00 - 4:00</div>
                 <div class="event-location">온라인 회의실</div>
               </div>
@@ -17499,7 +17320,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
                 <div class="announcement-date">2024.01.10</div>
               </div>
               <div class="announcement-content">
-                백야 프로토콜 업데이트 안내입니다. 새로운 기능들이 추가되었으니 확인해주세요.
+                BROTHERHOOD 업데이트 안내입니다. 새로운 기능들이 추가되었으니 확인해주세요.
               </div>
             </div>
             <div class="announcement-item">
@@ -17733,7 +17554,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
             <div class="file-item">
               <div class="file-icon">📄</div>
               <div class="file-info">
-                <div class="file-name">백야프로토콜_개요.pdf</div>
+                <div class="file-name">BROTHERHOOD_개요.pdf</div>
                 <div class="file-meta">2.5MB • 2024.01.10</div>
               </div>
               <button class="file-download" onclick="window.dapp.downloadChatFile('protocol.pdf')">⬇️</button>
@@ -17783,7 +17604,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
               <div class="link-preview">
                 <div class="link-favicon">🌐</div>
                 <div class="link-info">
-                  <div class="link-title">백야 프로토콜 공식 문서</div>
+                  <div class="link-title">BROTHERHOOD 공식 문서</div>
                   <div class="link-url">https://baekya-protocol.org/docs</div>
                   <div class="link-date">2024.01.10 공유됨</div>
                 </div>
@@ -17794,7 +17615,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
               <div class="link-preview">
                 <div class="link-favicon">📺</div>
                 <div class="link-info">
-                  <div class="link-title">백야 프로토콜 소개 영상</div>
+                  <div class="link-title">BROTHERHOOD 소개 영상</div>
                   <div class="link-url">https://youtube.com/watch?v=example</div>
                   <div class="link-date">2024.01.08 공유됨</div>
                 </div>
@@ -17858,8 +17679,8 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
 
     // 모의 검색 결과
     const mockResults = [
-      { type: 'text', content: '안녕하세요! 백야 프로토콜에 대해 논의해봐요', date: '2024.01.10 14:30' },
-      { type: 'file', content: '백야프로토콜_개요.pdf', date: '2024.01.10 15:45' },
+                  { type: 'text', content: '안녕하세요! BROTHERHOOD에 대해 논의해봐요', date: '2024.01.10 14:30' },
+                  { type: 'file', content: 'BROTHERHOOD_개요.pdf', date: '2024.01.10 15:45' },
       { type: 'text', content: '새로운 기능들이 정말 인상적이네요', date: '2024.01.09 16:20' }
     ];
 
@@ -19293,7 +19114,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   // 채팅방 목록 가져오기
   getChatsList() {
     return [
-      { id: 'chat_1', name: '김개발', type: 'private', lastMessage: '백야 프로토콜 정말 흥미롭네요!', timestamp: '14:32', avatar: 'K' },
+              { id: 'chat_1', name: '김개발', type: 'private', lastMessage: 'BROTHERHOOD 정말 흥미롭네요!', timestamp: '14:32', avatar: 'K' },
       { id: 'chat_group_1', name: 'Development DAO', type: 'group', lastMessage: '새로운 PR이 올라왔습니다', timestamp: '12:15', memberCount: 12, avatar: 'D' },
       { id: 'chat_2', name: '이기여', type: 'private', lastMessage: 'P-Token 전송 완료했습니다', timestamp: '11:45', avatar: 'L' },
       { id: 'chat_group_2', name: 'Governance DAO', type: 'group', lastMessage: '[공지] 새로운 제안 투표가 시작되었습니다', timestamp: '어제', memberCount: 28, avatar: 'G' },
@@ -20701,7 +20522,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
               </div>
               <div class="form-group">
                 <label for="proposedDAOJustification">DAO 필요성</label>
-                <textarea id="proposedDAOJustification" placeholder="왜 이 DAO가 백야 프로토콜에 필요한지, 기존 DAO들과 어떻게 차별화되는지 설명해주세요..." rows="4" required></textarea>
+                <textarea id="proposedDAOJustification" placeholder="왜 이 DAO가 BROTHERHOOD에 필요한지, 기존 DAO들과 어떻게 차별화되는지 설명해주세요..." rows="4" required></textarea>
               </div>
             </div>
 
@@ -20727,7 +20548,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
                   <div class="op-candidate-profile">
                     <div class="candidate-avatar">${this.currentUser?.name?.charAt(0) || 'U'}</div>
                     <div class="candidate-info">
-                      <div class="candidate-name">${this.currentUser?.name || '김백야'}</div>
+                      <div class="candidate-name">${this.currentUser?.name || '김BROTHERHOOD'}</div>
                       <div class="candidate-address">${this.maskAddress(this.currentUser?.communicationAddress || '010-9990-4718')}</div>
                     </div>
                   </div>
@@ -21104,7 +20925,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         <div class="dao-info-grid">
           <div class="dao-info-item">
             <label>제안자 이름</label>
-            <div class="dao-name-display">${proposal.proposer || '김백야'}</div>
+                            <div class="dao-name-display">${proposal.proposer || '김BROTHERHOOD'}</div>
           </div>
           <div class="dao-info-item full-width">
             <label>제안자 DID</label>
@@ -26770,7 +26591,7 @@ style.textContent = additionalCSS;
 document.head.appendChild(style);
 
 // DApp 초기화
-const dapp = new BaekyaProtocolDApp();
+const dapp = new BrotherhoodDApp();
 window.dapp = dapp;
 
 // 초기 인증 상태 복원
@@ -26934,7 +26755,7 @@ window.clearContactSearch = () => dapp.clearContactSearch();
 window.searchChats = (searchTerm) => dapp.searchChats(searchTerm);
 window.clearChatSearch = () => dapp.clearChatSearch();
 
-// 백야 네트워크 친구 검색 전역 함수
+    // BROTHERHOOD 네트워크 친구 검색 전역 함수
 window.searchNetworkUsers = function() {
   if (window.dapp) {
     window.dapp.searchNetworkUsers();
@@ -27487,7 +27308,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-console.log('🚀 백야 프로토콜 DApp 로드 완료!'); 
+        console.log('🚀 BROTHERHOOD DApp 로드 완료!'); 
 
 // 개발자 콘솔용 전역 함수들
 window.resetApp = () => {
@@ -27565,7 +27386,7 @@ class SystemFileManager {
             content: `# DevDAO 기여 가이드
 
 ## 개요
-Development DAO는 백야 프로토콜의 핵심 개발을 담당하는 자율분산조직입니다.
+        Development DAO는 BROTHERHOOD의 핵심 개발을 담당하는 자율분산조직입니다.
 
 ## 기여 방법
 
@@ -27602,7 +27423,7 @@ Development DAO는 백야 프로토콜의 핵심 개발을 담당하는 자율�
             content: `# Firebase 설정 가이드
 
 ## 개요
-백야 프로토콜에서 Firebase를 설정하는 방법을 안내합니다.
+            BROTHERHOOD에서 Firebase를 설정하는 방법을 안내합니다.
 
 ## 필요한 서비스
 - Firebase Authentication
@@ -27646,7 +27467,7 @@ const firebaseConfig = {
           },
           'protocol_overview.md': {
             type: 'file',
-            content: `# 백야 프로토콜 개요
+            content: `# BROTHERHOOD 개요
 
 ## 비전
 "기여한 만큼 보장받는" 사회규약을 실현하는 블록체인 기반 사회시스템
@@ -27698,7 +27519,7 @@ const firebaseConfig = {
             content: `# Railway 배포 가이드
 
 ## 개요
-백야 프로토콜을 Railway 플랫폼에 배포하는 방법을 안내합니다.
+            BROTHERHOOD를 Railway 플랫폼에 배포하는 방법을 안내합니다.
 
 ## 사전 준비
 - Railway 계정 생성
@@ -28201,7 +28022,7 @@ node server.js
   }
 }
 
-// BaekyaProtocolDApp 클래스에 시스템 파일 관리자 추가
+// BrotherhoodDApp 클래스에 시스템 파일 관리자 추가
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
     if (window.dapp) {
@@ -28765,10 +28586,7 @@ class GovernanceManager {
       return;
     }
 
-    if (!labelSelect || !labelSelect.value) {
-      alert('라벨을 선택해주세요.');
-      return;
-    }
+
 
     // 코어구조 파일 업로드 필수 검증
     if (!this.currentUploadedFiles || this.currentUploadedFiles.length === 0) {
@@ -30837,7 +30655,7 @@ module.exports = sampleFunction;`
   }
 }
 
-// BaekyaProtocolDApp 클래스에 거버넌스 관리자 추가
+// BrotherhoodDApp 클래스에 거버넌스 관리자 추가
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
     if (window.dapp) {
@@ -31132,8 +30950,8 @@ window.dapp.removeAllCoreStructure = function() {
               <div class="user-proposal-header">
                 <div class="user-proposal-title">${proposal.title}</div>
                 <div class="user-proposal-label ${proposal.isCollaborationStage ? 'collaboration-stage' : proposal.label}">
-                  <i class="fas ${proposal.isCollaborationStage ? 'fa-handshake' : this.governanceManager.getLabelIcon(proposal.label)}"></i>
-                  ${proposal.isCollaborationStage ? '협업단계' : this.governanceManager.getLabelText(proposal.label)}
+                  <i class="fas ${proposal.isCollaborationStage ? 'fa-vote-yea' : this.governanceManager.getLabelIcon(proposal.label)}"></i>
+                  ${proposal.isCollaborationStage ? '본투표단계' : this.governanceManager.getLabelText(proposal.label)}
                 </div>
               </div>
               <div class="user-proposal-description">${proposal.description}</div>

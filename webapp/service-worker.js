@@ -1,4 +1,4 @@
-// 백야 프로토콜 서비스 워커
+// BROTHERHOOD 서비스 워커
 const CACHE_NAME = 'baekya-protocol-v1';
 const urlsToCache = [
   '/',

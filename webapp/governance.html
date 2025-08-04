@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>백야 프로토콜 - 거버넌스</title>
+    <title>BROTHERHOOD - 거버넌스</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="additional.css">
     <link rel="stylesheet" href="input-fix.css">
@@ -83,7 +83,7 @@
                     <!-- 시스템 헤더 -->
                     <div class="governance-header">
                         <h2><i class="fas fa-code"></i> 시스템 구조</h2>
-                        <p class="governance-subtitle">백야 프로토콜 코드베이스</p>
+                        <p class="governance-subtitle">BROTHERHOOD 코드베이스</p>
                     </div>
 
                     <div class="system-container">
@@ -113,8 +113,8 @@
                                 제안단계
                             </button>
                             <button class="dashboard-filter-btn" data-gov-sub="collab" onclick="window.governanceApp.switchGovernanceSubTab('collab')">
-                                <i class="fas fa-handshake"></i>
-                                협업단계
+                                <i class="fas fa-vote-yea"></i>
+                                본투표단계
                             </button>
                             <button class="dashboard-filter-btn" data-gov-sub="evaluation" onclick="window.governanceApp.switchGovernanceSubTab('evaluation')">
                                 <i class="fas fa-star"></i>
@@ -152,14 +152,14 @@
                         </div>
                     </div>
 
-                    <!-- 협업단계 탭 -->
+                    <!-- 본투표단계 탭 -->
                     <div id="gov-collab" class="governance-sub-content">
                         <div class="collab-container" id="collabContainer">
-                            <!-- 협업 단계 내용이 동적으로 생성됩니다 -->
+                            <!-- 본투표단계 내용이 동적으로 생성됩니다 -->
                             <div class="collab-empty-state">
-                                <i class="fas fa-handshake"></i>
-                                <p>현재 진행 중인 협업 안건이 없습니다.</p>
-                                <p class="collab-empty-subtitle">제안 단계의 협업대기 안건이 자동으로 진입합니다.</p>
+                                <i class="fas fa-vote-yea"></i>
+                                <p>현재 진행 중인 본투표 안건이 없습니다.</p>
+                                <p class="collab-empty-subtitle">제안 단계의 투표대기 안건이 자동으로 진입합니다.</p>
                             </div>
                         </div>
                     </div>

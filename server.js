@@ -47,6 +47,59 @@ let validatorUsername = null;
 let blockGenerationTimer = null;
 let blocksGenerated = 0;
 
+// 지갑주소 관련 유틸리티 함수들
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // 32bit 정수로 변환
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0') + 
+         Math.abs(hash * 7919).toString(16).padStart(8, '0') +
+         Math.abs(hash * 65537).toString(16).padStart(8, '0') +
+         Math.abs(hash * 982451653).toString(16).padStart(8, '0') +
+         Math.abs(hash * 1073741827).toString(16).padStart(10, '0');
+}
+
+function generateWalletAddress(did) {
+  // DID를 기반으로 고유한 지갑 주소 생성
+  const hash = hashString(did + 'wallet');
+  return hash.substring(0, 42); // 42자리 지갑 주소
+}
+
+function findDIDByWalletAddress(walletAddress) {
+  try {
+    // 모든 사용자의 DID를 순회하면서 지갑주소 매칭
+    const storage = protocol.components.storage;
+    const allUsers = storage.data.users || {};
+    
+    for (const [didHash, userData] of Object.entries(allUsers)) {
+      const userWalletAddress = generateWalletAddress(didHash);
+      if (userWalletAddress.toLowerCase() === walletAddress.toLowerCase()) {
+        console.log(`✅ 지갑주소 매칭 성공: ${walletAddress} → ${didHash}`);
+        return {
+          success: true,
+          didHash: didHash,
+          username: userData.username
+        };
+      }
+    }
+    
+    console.log(`❌ 지갑주소 매칭 실패: ${walletAddress}`);
+    return {
+      success: false,
+      error: '해당 지갑주소를 가진 사용자를 찾을 수 없습니다'
+    };
+  } catch (error) {
+    console.error('지갑주소 검색 중 오류:', error);
+    return {
+      success: false,
+      error: '지갑주소 검색 중 오류가 발생했습니다'
+    };
+  }
+}
+
 
 
 // 릴레이 서버 연결 관련 변수
@@ -1046,44 +1099,64 @@ async function processHttpRequest(method, path, headers, body, query) {
         // 원본 주소 저장 (거래내역 표시용)
         const originalToAddress = toAddress;
         
-        // toAddress가 DID인지, 통신주소인지, 아이디인지 확인하고 DID로 변환
+        // toAddress가 DID인지, 통신주소인지, 아이디인지, 지갑주소인지 확인하고 DID로 변환
         let toDID = toAddress;
         if (!toAddress.startsWith('did:baekya:')) {
-          // 통신주소나 아이디로 DID 찾기
           const authSystem = protocol.components.authSystem;
           
           console.log(`🔍 주소 변환 시도: ${toAddress}`);
           
-          // 하이픈 없는 전화번호 형식이면 하이픈 추가
-          let normalizedAddress = toAddress;
-          if (/^010\d{8}$/.test(toAddress)) {
-            // 01012345678 → 010-1234-5678
-            normalizedAddress = `${toAddress.slice(0, 3)}-${toAddress.slice(3, 7)}-${toAddress.slice(7)}`;
-            console.log(`📱 전화번호 형식 변환: ${toAddress} → ${normalizedAddress}`);
+          let found = false;
+          
+          // 1. 지갑주소로 시도 (42자리 16진수)
+          if (/^[a-f0-9]{42}$/i.test(toAddress)) {
+            console.log('💰 지갑주소 형식으로 DID 검색 중...');
+            const byWalletAddress = findDIDByWalletAddress(toAddress);
+            if (byWalletAddress.success) {
+              toDID = byWalletAddress.didHash;
+              console.log(`✅ 지갑주소로 DID 찾기 성공: ${toDID}`);
+              found = true;
+            } else {
+              console.log('지갑주소 검색 결과: 찾을 수 없음');
+            }
           }
           
-          // 먼저 통신주소로 시도
-          const byCommAddress = authSystem.getDIDByCommAddress(normalizedAddress);
-          console.log('통신주소 검색 결과:', byCommAddress);
-          
-          if (byCommAddress.success) {
-            toDID = byCommAddress.didHash;
-            console.log(`✅ 통신주소로 DID 찾기 성공: ${toDID}`);
-          } else {
-            // 아이디로 시도 (원래 주소 그대로 사용)
-            const byUserId = authSystem.getDIDByUsername(toAddress);
-            console.log('아이디 검색 결과:', byUserId);
-            
-            if (byUserId.success) {
-              toDID = byUserId.didHash;
-              console.log(`✅ 아이디로 DID 찾기 성공: ${toDID}`);
-            } else {
-              console.log(`❌ 주소 찾기 실패: ${toAddress}`);
-              return res.status(404).json({
-                success: false,
-                error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
-              });
+          if (!found) {
+            // 2. 하이픈 없는 전화번호 형식이면 하이픈 추가
+            let normalizedAddress = toAddress;
+            if (/^010\d{8}$/.test(toAddress)) {
+              // 01012345678 → 010-1234-5678
+              normalizedAddress = `${toAddress.slice(0, 3)}-${toAddress.slice(3, 7)}-${toAddress.slice(7)}`;
+              console.log(`📱 전화번호 형식 변환: ${toAddress} → ${normalizedAddress}`);
             }
+            
+            // 3. 통신주소로 시도
+            const byCommAddress = authSystem.getDIDByCommAddress(normalizedAddress);
+            console.log('통신주소 검색 결과:', byCommAddress);
+            
+            if (byCommAddress.success) {
+              toDID = byCommAddress.didHash;
+              console.log(`✅ 통신주소로 DID 찾기 성공: ${toDID}`);
+              found = true;
+            } else {
+              // 4. 아이디로 시도 (원래 주소 그대로 사용)
+              const byUserId = authSystem.getDIDByUsername(toAddress);
+              console.log('아이디 검색 결과:', byUserId);
+              
+              if (byUserId.success) {
+                toDID = byUserId.didHash;
+                console.log(`✅ 아이디로 DID 찾기 성공: ${toDID}`);
+                found = true;
+              }
+            }
+          }
+          
+          if (!found) {
+            console.log(`❌ 주소 찾기 실패: ${toAddress}`);
+            return res.status(404).json({
+              success: false,
+              error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
+            });
           }
         }
         
@@ -3093,44 +3166,64 @@ app.post('/api/transfer', async (req, res) => {
     // 원본 주소 저장 (거래내역 표시용)
     const originalToAddress = toAddress;
     
-    // toAddress가 DID인지, 통신주소인지, 아이디인지 확인하고 DID로 변환
+    // toAddress가 DID인지, 통신주소인지, 아이디인지, 지갑주소인지 확인하고 DID로 변환
     let toDID = toAddress;
     if (!toAddress.startsWith('did:baekya:')) {
-      // 통신주소나 아이디로 DID 찾기
       const authSystem = protocol.components.authSystem;
       
       console.log(`🔍 주소 변환 시도: ${toAddress}`);
       
-      // 하이픈 없는 전화번호 형식이면 하이픈 추가
-      let normalizedAddress = toAddress;
-      if (/^010\d{8}$/.test(toAddress)) {
-        // 01012345678 → 010-1234-5678
-        normalizedAddress = `${toAddress.slice(0, 3)}-${toAddress.slice(3, 7)}-${toAddress.slice(7)}`;
-        console.log(`📱 전화번호 형식 변환: ${toAddress} → ${normalizedAddress}`);
+      let found = false;
+      
+      // 1. 지갑주소로 시도 (42자리 16진수)
+      if (/^[a-f0-9]{42}$/i.test(toAddress)) {
+        console.log('💰 지갑주소 형식으로 DID 검색 중...');
+        const byWalletAddress = findDIDByWalletAddress(toAddress);
+        if (byWalletAddress.success) {
+          toDID = byWalletAddress.didHash;
+          console.log(`✅ 지갑주소로 DID 찾기 성공: ${toDID}`);
+          found = true;
+        } else {
+          console.log('지갑주소 검색 결과: 찾을 수 없음');
+        }
       }
       
-      // 먼저 통신주소로 시도
-      const byCommAddress = authSystem.getDIDByCommAddress(normalizedAddress);
-      console.log('통신주소 검색 결과:', byCommAddress);
-      
-      if (byCommAddress.success) {
-        toDID = byCommAddress.didHash;
-        console.log(`✅ 통신주소로 DID 찾기 성공: ${toDID}`);
-      } else {
-        // 아이디로 시도 (원래 주소 그대로 사용)
-        const byUserId = authSystem.getDIDByUsername(toAddress);
-        console.log('아이디 검색 결과:', byUserId);
-        
-        if (byUserId.success) {
-          toDID = byUserId.didHash;
-          console.log(`✅ 아이디로 DID 찾기 성공: ${toDID}`);
-        } else {
-          console.log(`❌ 주소 찾기 실패: ${toAddress}`);
-          return res.status(404).json({
-            success: false,
-            error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
-          });
+      if (!found) {
+        // 2. 하이픈 없는 전화번호 형식이면 하이픈 추가
+        let normalizedAddress = toAddress;
+        if (/^010\d{8}$/.test(toAddress)) {
+          // 01012345678 → 010-1234-5678
+          normalizedAddress = `${toAddress.slice(0, 3)}-${toAddress.slice(3, 7)}-${toAddress.slice(7)}`;
+          console.log(`📱 전화번호 형식 변환: ${toAddress} → ${normalizedAddress}`);
         }
+        
+        // 3. 통신주소로 시도
+        const byCommAddress = authSystem.getDIDByCommAddress(normalizedAddress);
+        console.log('통신주소 검색 결과:', byCommAddress);
+        
+        if (byCommAddress.success) {
+          toDID = byCommAddress.didHash;
+          console.log(`✅ 통신주소로 DID 찾기 성공: ${toDID}`);
+          found = true;
+        } else {
+          // 4. 아이디로 시도 (원래 주소 그대로 사용)
+          const byUserId = authSystem.getDIDByUsername(toAddress);
+          console.log('아이디 검색 결과:', byUserId);
+          
+          if (byUserId.success) {
+            toDID = byUserId.didHash;
+            console.log(`✅ 아이디로 DID 찾기 성공: ${toDID}`);
+            found = true;
+          }
+        }
+      }
+      
+      if (!found) {
+        console.log(`❌ 주소 찾기 실패: ${toAddress}`);
+        return res.status(404).json({
+          success: false,
+          error: `받는 주소를 찾을 수 없습니다: ${toAddress}`
+        });
       }
     }
     
@@ -5020,7 +5113,7 @@ app.post('/api/device/register', async (req, res) => {
     }
     
     // 디바이스 정보 저장
-    protocol.components.storage.saveDeviceInfo(deviceUUID, {
+    protocol.components.storage.setDeviceInfo(deviceUUID, {
       platform: platform || 'unknown',
       isActive: true,
       registeredAt: timestamp || Date.now(),
@@ -5050,11 +5143,12 @@ app.post('/api/device/link-account', async (req, res) => {
     // 디바이스와 계정 연결
     const deviceInfo = protocol.components.storage.getDeviceInfo(deviceUUID);
     if (deviceInfo) {
-      protocol.components.storage.saveDeviceInfo(deviceUUID, {
+      protocol.components.storage.setDeviceInfo(deviceUUID, {
         ...deviceInfo,
         linkedAccount: userDID,
         linkedAt: Date.now(),
-        lastSeen: Date.now()
+        lastSeen: Date.now(),
+        isActive: true
       });
       
       console.log(`🔗 디바이스-계정 연결: ${deviceUUID} ↔ ${userDID}`);
@@ -5108,7 +5202,7 @@ app.post('/api/device/suspend', async (req, res) => {
     // 디바이스 일시정지
     const deviceInfo = protocol.components.storage.getDeviceInfo(deviceUUID);
     if (deviceInfo && deviceInfo.linkedAccount === userDID) {
-      protocol.components.storage.saveDeviceInfo(deviceUUID, {
+      protocol.components.storage.setDeviceInfo(deviceUUID, {
         ...deviceInfo,
         isActive: false,
         suspendedAt: Date.now(),

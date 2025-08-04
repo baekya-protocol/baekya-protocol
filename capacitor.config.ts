@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.baekya.protocol',
-  appName: '백야 프로토콜',
+  appId: 'com.brotherhood.app',
+  appName: 'BROTHERHOOD',
   webDir: 'webapp',
   server: {
     androidScheme: 'https'

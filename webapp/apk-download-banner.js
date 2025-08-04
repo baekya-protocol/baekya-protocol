@@ -42,7 +42,7 @@ class APKDownloadBanner {
             <i class="fas fa-mobile-alt"></i>
           </div>
           <div class="banner-text">
-            <h3>📱 백야 프로토콜 앱 다운로드</h3>
+                            <h3>📱 BROTHERHOOD 앱 다운로드</h3>
             <p>더 나은 모바일 경험을 위해 앱을 설치하세요</p>
           </div>
         </div>
@@ -135,7 +135,7 @@ class APKDownloadBanner {
   getAPKDownloadURL() {
     // 빌드된 APK의 URL을 반환
     // GitHub Releases, Firebase App Distribution, 또는 직접 호스팅
-    return '/downloads/baekya-protocol-latest.apk';
+    return '/downloads/brotherhood-latest.apk';
   }
 
   showInstallGuide() {
@@ -158,7 +158,7 @@ class APKDownloadBanner {
             <div class="success-icon">
               <i class="fas fa-check-circle"></i>
             </div>
-            <h4>백야 프로토콜 APK 다운로드</h4>
+                            <h4>BROTHERHOOD APK 다운로드</h4>
             <p>APK 파일 다운로드가 시작되었습니다.</p>
             
             <div class="install-instructions">
@@ -173,7 +173,7 @@ class APKDownloadBanner {
             
             <div class="security-note">
               <i class="fas fa-shield-alt"></i>
-              <small>이 APK는 공식 백야 프로토콜 팀에서 배포하는 안전한 파일입니다.</small>
+                              <small>이 APK는 공식 BROTHERHOOD 팀에서 배포하는 안전한 파일입니다.</small>
             </div>
           </div>
           
