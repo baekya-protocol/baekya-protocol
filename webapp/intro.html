@@ -49,6 +49,27 @@
         </div>
     </section>
 
+    <!-- 섹션 네비게이션 -->
+    <nav class="section-nav" id="sectionNav">
+        <div class="nav-container">
+            <div class="nav-item" data-section="problem-section">
+                <span class="nav-label">문제</span>
+            </div>
+            <div class="nav-item" data-section="solution-section">
+                <span class="nav-label">대안</span>
+            </div>
+            <div class="nav-item" data-section="features-section">
+                <span class="nav-label">기능</span>
+            </div>
+            <div class="nav-item" data-section="roadmap-section">
+                <span class="nav-label">질문</span>
+            </div>
+            <div class="nav-item" data-section="cta-section">
+                <span class="nav-label">시작</span>
+            </div>
+        </div>
+    </nav>
+
     <!-- 섹션 2: 문제 -->
     <section class="problem-section">
         <div class="container">
@@ -151,7 +172,7 @@
                         <h3>직접민주적 정치구조</h3>
                     </div>
                     <div class="solution-content">
-                        <p>기여자에게 발행되는 토큰으로 하여금 '시스템 수정제안'을 가능하게 합니다.</p>
+                        <p>시스템 수정에 대한 '제안, 투표, 반영'의 모든 의사결정은 특정 개인이 아닌 '기여자들의 합의'로 이루어집니다.</p>
                         
                         <div class="democracy-visual">
                             <div class="participant">
@@ -165,7 +186,7 @@
                             </div>
                         </div>
                         
-                        <p class="solution-benefit">이로써 <span class="highlight">"공동체 기여자가 곧 공동체 의사결정 참여자"</span>라는 합리적인 사회계약을 구축합니다.</p>
+                        <p class="solution-benefit">이로써 모든 참여자는 권한에 대한 평등을 보장받으며, "공동체 기여자가 곧 공동체 의사결정 참여자"라는 합리적인 사회계약을 구축합니다.</p>
                     </div>
                 </div>
             </div>
@@ -193,34 +214,13 @@
                         <i class="fas fa-users"></i>
                     </div>
                     <h3>DAO 시스템</h3>
-                    <p>탈중앙화 자율 조직으로 운영되는 다양한 공동체</p>
+                    <p>공통목적과 이에 대한 기여활동이 지정된 '탈중앙화 자율 공동체'로, 기여에 대한 토큰발행처의 기능을 가집니다.</p>
                     <div class="feature-visual">
                         <div class="dao-network">
-                            <div class="dao-node">운영DAO</div>
-                            <div class="dao-node">개발DAO</div>
-                            <div class="dao-node">커뮤니티DAO</div>
-                            <div class="dao-node">정치DAO</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 토큰 이코노미 -->
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <i class="fas fa-coins"></i>
-                    </div>
-                    <h3>듀얼 토큰 시스템</h3>
-                    <p>B-Token(화폐)과 P-Token(참정권)의 균형잡힌 경제</p>
-                    <div class="feature-visual">
-                        <div class="token-system">
-                            <div class="token b-token">
-                                <i class="fas fa-coins"></i>
-                                <span>B-Token</span>
-                            </div>
-                            <div class="token p-token">
-                                <i class="fas fa-gavel"></i>
-                                <span>P-Token</span>
-                            </div>
+                            <div class="dao-node">공통목적</div>
+                            <div class="dao-node">기여활동</div>
+                            <div class="dao-node">토큰발행</div>
+                            <div class="dao-node">자율운영</div>
                         </div>
                     </div>
                 </div>
@@ -231,12 +231,37 @@
                         <i class="fas fa-certificate"></i>
                     </div>
                     <h3>기여 증명 시스템</h3>
-                    <p>모든 기여가 블록체인에 기록되고 보상받는 시스템</p>
+                    <p>구성원이 DAO 내 지정된 기여활동(DCA)을 자율적으로 행하면, 고유한 증명기준을 거쳐 토큰이 발행됩니다.</p>
                     <div class="feature-visual">
                         <div class="contribution-flow">
                             <div class="step">기여</div>
-                            <div class="step">검증</div>
-                            <div class="step">보상</div>
+                            <div class="step">증명</div>
+                            <div class="step">발행</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 거버넌스 시스템 -->
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-vote-yea"></i>
+                    </div>
+                    <h3>거버넌스 시스템</h3>
+                    <p>모든 구성원이 시스템구조에 대한 제안, 투표, 반영의 권한을 평등하게 가지는 '직접민주적 정치시스템'을 제공합니다.</p>
+                    <div class="feature-visual">
+                        <div class="governance-system">
+                            <div class="governance-step">
+                                <i class="fas fa-lightbulb"></i>
+                                <span>제안</span>
+                            </div>
+                            <div class="governance-step">
+                                <i class="fas fa-vote-yea"></i>
+                                <span>투표</span>
+                            </div>
+                            <div class="governance-step">
+                                <i class="fas fa-check-circle"></i>
+                                <span>반영</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -247,7 +272,7 @@
     <!-- 섹션 5: 로드맵 -->
     <section class="roadmap-section">
         <div class="container">
-            <h2 class="section-title">발전 로드맵</h2>
+            <h2 class="section-title">Q & A</h2>
             
             <div class="roadmap-timeline">
                 <div class="timeline-line"></div>
@@ -255,33 +280,52 @@
                 <div class="roadmap-item completed">
                     <div class="roadmap-dot"></div>
                     <div class="roadmap-content">
-                        <h3>Phase 1: 기반 구축</h3>
-                        <p>핵심 프로토콜 개발 및 웹앱 출시</p>
+                        <h3>기여에 대한 발행은 노동임금인가요?</h3>
+                        <p>그렇지 않습니다. 구성원의 기여에 대한 공동체의 분배권 '보장'의 개념으로, '점진적 분배권 상실의 특성'을 지닌 기존질서를 탈피하고, '지속가능한 공동체' 구현을 위한 새로운이론입니다.</p>
                     </div>
                 </div>
                 
                 <div class="roadmap-item active">
                     <div class="roadmap-dot"></div>
                     <div class="roadmap-content">
-                        <h3>Phase 2: 생태계 확장</h3>
-                        <p>모바일 앱 출시 및 DAO 활성화</p>
+                        <h3>기여증명으로 발행되는 토큰은 어떤 가치를 지니나요?</h3>
+                        <p>독립성을 위해 기존 화폐와의 교환가치를 지원하지 않기 때문에 실물과의 교환가치는 오로지 자유시장경제에 달려있습니다. 초기에는 '기여에 대한 발행량'이 가치척도의 기반으로써 작용할 수 있습니다.</p>
                     </div>
                 </div>
                 
                 <div class="roadmap-item">
                     <div class="roadmap-dot"></div>
                     <div class="roadmap-content">
-                        <h3>Phase 3: 대중화</h3>
-                        <p>글로벌 확장 및 실물경제 연동</p>
+                        <h3>토큰은 왜 기존화폐와의 교환가치를 지원하지 않나요?</h3>
+                        <p>기존화폐와 연동되는 순간 '대체 화폐'의 기능을 잃고 '암호화의 탈을 쓴 달러'로 전락합니다. 이는 현존하는 수많은 암호화폐가 달러를 대체하여 통용될 수 없는 이유입니다.</p>
                     </div>
                 </div>
                 
                 <div class="roadmap-item">
                     <div class="roadmap-dot"></div>
                     <div class="roadmap-content">
-                        <h3>Phase 4: 완전한 탈중앙화</h3>
-                        <p>완전한 자율 운영 체제 구현</p>
+                        <h3>'기여'와, 기여의 목적을 지니는 'DAO'는 어떻게 수정 및 생성되나요?</h3>
+                        <p>기여와 DAO공동체 뿐만 아니라 지금 보고있는 페이지의 Q&A섹션 조차 거버넌스 참여자의 합의(제안, 투표, 반영)로 수정될 수 있습니다.</p>
                     </div>
+                </div>
+            </div>
+            
+            <!-- 특별한 Q&A - 박스 안에 텍스트 -->
+            <div class="roadmap-item brotherhood-qa">
+                <div class="roadmap-dot"></div>
+                <div class="roadmap-content">
+                    <h3>이것이 왜 필요한가요?</h3>
+                    <p>인류는 '만물의 협동'이란 상호부조론를 뒤로한 채 사회진화론을 정설로 받아드렸고, '무한한 경쟁'이란 그릇된 발전원리로 하여금 인간은 문명을 위한 부품으로 전락하였습니다.</p>
+                    
+                    <p>공동체를 이루는 것은 우리이지만, 발전이란 명목 하에 우리들의 희생은 당연시되고 있으며, 건물들과 이상은 높아져만 가는데, 우리들의 마음속 불꽃은 한없이 작아지고만 있습니다.</p>
+                    
+                    <p>기술들은 미래를 이야기하지만, 우리들은 과거의 것에서 정답을 찾으려 하고 있고, 우리들은 자유를 이야기하지만, 존재의 의미를 시스템 속에서 찾으려 하고 있습니다.</p>
+
+                    <p>우리들은 이제, 이것을 바로잡아야 합니다.</p>
+
+                    <p>그리고 이것의 해답은 우리들의 행동을 재설정하는 '새로운 사회규약의 탄생'에 있습니다.</p>
+                    
+                    <p class="brotherhood-highlight"><strong>BROTHERHOOD 프로토콜은 인류가 '미래와 자유'란 가치를 추구하는 과정이 탐욕과 증오의 길이 아닌, 협동과 공존의 길을 통해 찾아가도록 돕기 위한 '새로운 사회규약'의 첫걸음입니다.</strong></p>
                 </div>
             </div>
         </div>
@@ -291,12 +335,28 @@
     <section class="cta-section">
         <div class="container">
             <div class="cta-content">
-                <h2>지금 바로 시작하세요</h2>
-                <p>인류 해방의 첫 걸음, BROTHERHOOD와 함께</p>
-                <a href="/index.html" class="cta-button">
-                    <span>웹앱 시작하기</span>
-                    <i class="fas fa-arrow-right"></i>
-                </a>
+                <h2>지금, 시작하세요</h2>
+                <p>해방의 첫 걸음, BROTHERHOOD와 함께</p>
+                
+                <!-- 다운로드 버튼들 -->
+                <div class="download-buttons">
+                    <a href="/index.html" class="download-btn webapp active">
+                        <i class="fas fa-globe"></i>
+                        <span>웹앱</span>
+                    </a>
+                    <button class="download-btn android" disabled>
+                        <i class="fab fa-android"></i>
+                        <span>Android</span>
+                    </button>
+                    <button class="download-btn ios" disabled>
+                        <i class="fab fa-apple"></i>
+                        <span>iOS</span>
+                    </button>
+                    <button class="download-btn desktop" disabled>
+                        <i class="fas fa-desktop"></i>
+                        <span>Desktop</span>
+                    </button>
+                </div>
             </div>
         </div>
     </section>

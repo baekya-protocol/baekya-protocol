@@ -43,16 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     document.head.appendChild(style);
 
-    // 스크롤 인디케이터 클릭
-    const scrollIndicator = document.querySelector('.scroll-indicator');
-    if (scrollIndicator) {
-        scrollIndicator.addEventListener('click', () => {
-            window.scrollTo({
-                top: window.innerHeight,
-                behavior: 'smooth'
-            });
-        });
-    }
+    // 스크롤 인디케이터 (기능 제거됨)
 
     // 다운로드 버튼 효과
     const downloadBtns = document.querySelectorAll('.download-btn:not(:disabled)');
@@ -87,23 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 플로팅 요소 마우스 따라가기 효과
-    let mouseX = 0;
-    let mouseY = 0;
-
-    document.addEventListener('mousemove', (e) => {
-        mouseX = e.clientX / window.innerWidth;
-        mouseY = e.clientY / window.innerHeight;
-        
-        const floatElements = document.querySelectorAll('.float-element');
-        floatElements.forEach((el, index) => {
-            const speed = (index + 1) * 0.01;
-            const x = (mouseX - 0.5) * 100 * speed;
-            const y = (mouseY - 0.5) * 100 * speed;
-            
-            el.style.transform = `translate(${x}px, ${y}px)`;
-        });
-    });
+    // 플로팅 요소 마우스 따라가기 효과 (기능 제거됨)
 
     // 타이핑 효과 (섹션 제목)
     const typeWriter = (element, text, speed = 50) => {
@@ -172,19 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statsObserver.observe(stat);
     });
 
-    // 부드러운 스크롤
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        });
-    });
+    // 부드러운 스크롤 (기능 제거됨)
 
     // 페이지 로드 시 히어로 섹션 애니메이션
     window.addEventListener('load', () => {
@@ -199,53 +162,79 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 500);
     });
 
-    // 모바일 터치 이벤트
-    let touchStartX = 0;
-    let touchEndX = 0;
+    // 모바일 터치 이벤트와 패럴랙스 효과 (기능 제거됨)
 
-    document.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-    });
-
-    document.addEventListener('touchend', (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        handleSwipe();
-    });
-
-    function handleSwipe() {
-        if (touchEndX < touchStartX - 50) {
-            // 왼쪽 스와이프 - 다음 섹션으로
-            const currentSection = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
-            const nextSection = currentSection?.closest('section')?.nextElementSibling;
-            if (nextSection && nextSection.tagName === 'SECTION') {
-                nextSection.scrollIntoView({ behavior: 'smooth' });
+    // 섹션 네비게이션 기능
+    const sectionNav = document.getElementById('sectionNav');
+    const navItems = document.querySelectorAll('.nav-item');
+    const sections = document.querySelectorAll('section');
+    
+    // 섹션 네비게이션 클릭 이벤트
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const sectionId = item.dataset.section;
+            const targetSection = document.querySelector(`.${sectionId}`);
+            if (targetSection) {
+                targetSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
             }
-        }
-        if (touchEndX > touchStartX + 50) {
-            // 오른쪽 스와이프 - 이전 섹션으로
-            const currentSection = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
-            const prevSection = currentSection?.closest('section')?.previousElementSibling;
-            if (prevSection && prevSection.tagName === 'SECTION') {
-                prevSection.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-    }
-
-    // 패럴랙스 효과
-    window.addEventListener('scroll', () => {
-        const scrolled = window.pageYOffset;
-        
-        // 히어로 배경 패럴랙스
-        const heroBg = document.querySelector('.hero-bg');
-        if (heroBg) {
-            heroBg.style.transform = `translateY(${scrolled * 0.5}px)`;
-        }
-        
-        // 플로팅 요소 패럴랙스
-        const floatElements = document.querySelectorAll('.float-element');
-        floatElements.forEach((el, index) => {
-            const speed = (index + 1) * 0.2;
-            el.style.transform = `translateY(${scrolled * speed}px)`;
         });
     });
+
+    // 스크롤에 따른 섹션 네비게이션 표시/숨김 및 활성 섹션 업데이트
+    let isNavVisible = false;
+    
+    function updateSectionNav() {
+        const scrollY = window.scrollY;
+        const heroHeight = document.querySelector('.hero-section').offsetHeight;
+        
+        // 섹션2(문제 섹션)부터 네비게이션 표시
+        if (scrollY > heroHeight - 100 && !isNavVisible) {
+            sectionNav.classList.add('visible');
+            isNavVisible = true;
+        } else if (scrollY <= heroHeight - 100 && isNavVisible) {
+            sectionNav.classList.remove('visible');
+            isNavVisible = false;
+        }
+        
+        // 현재 활성 섹션 감지
+        let currentSection = '';
+        const offset = 200; // 섹션 전환을 위한 오프셋
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        // 페이지 하단 근처(90% 이상 스크롤)에서는 CTA 섹션을 활성화
+        if (scrollY + windowHeight >= documentHeight * 0.9) {
+            currentSection = 'cta-section';
+        } else {
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+                
+                if (scrollY >= sectionTop - offset && scrollY < sectionTop + sectionHeight - offset) {
+                    const sectionClass = section.className.split(' ')[0];
+                    // 히어로 섹션은 제외
+                    if (sectionClass !== 'hero-section') {
+                        currentSection = sectionClass;
+                    }
+                }
+            });
+        }
+        
+        // 네비게이션 아이템 활성화 업데이트
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            if (item.dataset.section === currentSection) {
+                item.classList.add('active');
+            }
+        });
+    }
+    
+    // 스크롤 이벤트 리스너
+    window.addEventListener('scroll', updateSectionNav);
+    
+    // 초기 실행
+    updateSectionNav();
 });

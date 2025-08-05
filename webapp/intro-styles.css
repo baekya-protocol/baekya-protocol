@@ -62,6 +62,7 @@ body {
     font-weight: 900;
     background: linear-gradient(90deg, var(--primary-blue), var(--red-accent));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 0.5rem;
     letter-spacing: -2px;
@@ -506,6 +507,47 @@ body {
     color: var(--primary-blue);
 }
 
+.governance-system {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.governance-step {
+    background: var(--white);
+    padding: 0.5rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    text-align: center;
+}
+
+.governance-step i {
+    font-size: 1.2rem;
+    color: var(--primary-blue);
+}
+
+.contribution-flow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.step {
+    background: var(--white);
+    padding: 0.5rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    text-align: center;
+}
+
 .token-system {
     display: flex;
     justify-content: center;
@@ -610,9 +652,89 @@ body {
     margin-left: auto;
 }
 
+/* BROTHERHOOD Q&A 특별 스타일 */
+.roadmap-item.brotherhood-qa {
+    flex-direction: row !important;
+    justify-content: center;
+}
+
+.roadmap-item.brotherhood-qa .roadmap-dot {
+    display: none !important;
+}
+
+.roadmap-item.brotherhood-qa .roadmap-content {
+    width: 80% !important;
+    max-width: 800px;
+    margin: 0 auto !important;
+    text-align: left;
+}
+
+.roadmap-item.brotherhood-qa .roadmap-content h3 {
+    font-size: 1.8rem;
+    color: var(--primary-blue);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.roadmap-item.brotherhood-qa .brotherhood-highlight {
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: bold;
+}
+
+/* 섹션 네비게이션 */
+.section-nav {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.section-nav.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.nav-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 5px;
+}
+
+.nav-item {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: right;
+}
+
+.nav-item:hover .nav-label {
+    color: var(--primary-blue);
+}
+
+.nav-item.active .nav-label {
+    color: var(--red-accent);
+    font-weight: 700;
+}
+
+.nav-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.6);
+    transition: all 0.3s ease;
+    display: block;
+}
+
 /* CTA 섹션 */
 .cta-section {
-    padding: 5rem 0;
+    padding: 8rem 0;
     background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
     color: var(--white);
     text-align: center;
@@ -621,6 +743,32 @@ body {
 .cta-content h2 {
     font-size: 3rem;
     margin-bottom: 1rem;
+}
+
+/* CTA 섹션 내 다운로드 버튼들 */
+.cta-section .download-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.cta-section .download-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.cta-section .download-btn.active {
+    background: var(--white);
+    color: var(--primary-blue);
+    border-color: var(--white);
+}
+
+.cta-section .download-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 .cta-button {
@@ -659,7 +807,7 @@ body {
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    opacity: 0.1;
+    opacity: 0.02;
 }
 
 .element-1 {
@@ -791,6 +939,29 @@ body {
     
     .roadmap-content {
         width: 100%;
+    }
+    
+    .roadmap-item.brotherhood-qa .roadmap-content {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    /* 모바일에서 Q&A 섹션의 핀 모형 제거 */
+    .roadmap-section .roadmap-dot {
+        display: none;
+    }
+    
+    .section-nav {
+        top: 10px;
+        right: 10px;
+    }
+    
+    .nav-container {
+        gap: 4px;
+    }
+    
+    .nav-label {
+        font-size: 0.75rem;
     }
     
     .timeline-line {
