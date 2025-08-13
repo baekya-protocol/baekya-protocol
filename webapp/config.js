@@ -1,18 +1,20 @@
 // BROTHERHOOD 웹앱 설정
 
 // 릴레이 서버 URL 설정
-// APK는 무조건 릴레이 서버 사용, 웹앱은 localhost에서만 로컬 서버 사용
-if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-  // APK 환경에서는 무조건 릴레이 서버 사용
-  window.RELAY_SERVER_URL = 'https://baekya-relay-production.up.railway.app';
-  console.log('🔥 APK 환경 감지 - 릴레이 서버 사용:', window.RELAY_SERVER_URL);
+// Capacitor 환경 감지
+const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform();
+
+if (isCapacitor) {
+  // 모바일 앱 - PC의 IP 주소로 접근
+  window.RELAY_SERVER_URL = 'http://192.168.219.103:3000';
+  console.log('📱 모바일 앱 - PC 서버 접근:', window.RELAY_SERVER_URL);
 } else {
-  // 웹앱 환경
-  window.RELAY_SERVER_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000'  // 개발 환경 (웹앱 테스트용)
-    : 'https://baekya-relay-production.up.railway.app'; // Railway 릴레이 서버
-  console.log('🌐 웹앱 환경 - 서버 URL:', window.RELAY_SERVER_URL);
+  // 웹 브라우저 - localhost 사용
+  window.RELAY_SERVER_URL = 'http://localhost:3000';
+  console.log('🌐 웹 브라우저 - 로컬 서버 사용:', window.RELAY_SERVER_URL);
 }
+
+window.USE_RELAY_NODES = false;
 
 // 기타 설정
 window.APP_CONFIG = {
@@ -20,7 +22,7 @@ window.APP_CONFIG = {
   version: '1.0.0',
   
   // 디버그 모드
-  debug: window.location.hostname === 'localhost',
+  debug: true,
   
   // API 타임아웃 (밀리초)
   apiTimeout: 30000,
@@ -37,13 +39,10 @@ window.APP_CONFIG = {
   // 기능 플래그
   features: {
     // P2P 기능 활성화 (모바일 앱에서만)
-    p2p: false,
-    
-    // QR 코드 스캔 (모바일 앱에서만)
-    qrScan: false,
+    p2p: isCapacitor,
     
     // 생체인증 (추후 구현)
-    biometric: false,
+    biometric: isCapacitor,
     
     // 자동 로그인
     autoLogin: true,

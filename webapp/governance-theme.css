@@ -1221,7 +1221,7 @@ textarea.form-control {
 
 .pr-badge.core {
     background: #dbeafe;
-    color: #1e40af;
+    color: #3b82f6;
 }
 
 .pr-badge.complementary {
@@ -1863,7 +1863,7 @@ textarea.form-control {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #1e40af;
+    color: #3b82f6;
     font-size: 14px;
 }
 

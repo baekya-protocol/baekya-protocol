@@ -416,7 +416,8 @@ class BlockchainCore {
         'issue_resolved_reward',  // Issue 해결 보상
         'github_integration_bonus', // GitHub 연동 보너스
         'governance_proposal_creation', // 거버넌스 제안 생성
-        'governance_vote'         // 거버넌스 투표
+        'governance_vote',        // 거버넌스 투표
+        'relay_reward'           // 릴레이 노드 보상
       ];
       
       if (!allowedSystemTypes.includes(transaction.data?.type || transaction.data)) {
@@ -700,6 +701,9 @@ class BlockchainCore {
         result.block.transactions.push(rewardTransaction);
         result.block.merkleRoot = result.block.calculateMerkleRoot();
         result.block.hash = result.block.calculateHash();
+        
+        // 보상 트랜잭션이 추가된 블록을 다시 저장소에 반영
+        this.updateStorageFromBlock(result.block);
         
         return result.block;
       } else {
@@ -1182,6 +1186,117 @@ class BlockchainCore {
       this.difficulty = Math.max(1, this.difficulty - 1);
       console.log(`⬇️ 채굴 난이도 감소: ${this.difficulty}`);
     }
+  }
+
+  // 외부 릴레이에서 전파된 블록 추가 (검증 후)
+  addExternalBlock(blockData) {
+    try {
+      // 블록 데이터 유효성 검사
+      if (!blockData || !blockData.index || !blockData.hash || !blockData.previousHash) {
+        return { success: false, error: '블록 데이터 불완전' };
+      }
+
+      // 이미 존재하는 블록인지 확인
+      const existingBlock = this.chain.find(block => block.index === blockData.index);
+      if (existingBlock) {
+        if (existingBlock.hash === blockData.hash) {
+          return { success: true, message: '이미 존재하는 블록 (중복 방지)' };
+        } else {
+          return { success: false, error: '같은 인덱스의 다른 블록이 이미 존재' };
+        }
+      }
+
+      // 현재 체인보다 뒤에 있는 블록인지 확인
+      const latestBlock = this.getLatestBlock();
+      if (blockData.index <= latestBlock.index) {
+        return { success: false, error: '이미 처리된 블록' };
+      }
+
+      // 블록 무결성 검증
+      const block = new Block();
+      Object.assign(block, blockData);
+      
+      // 트랜잭션 객체 복원
+      if (blockData.transactions) {
+        block.transactions = blockData.transactions.map(txData => {
+          const tx = new Transaction();
+          Object.assign(tx, txData);
+          return tx;
+        });
+      }
+
+      // 해시 검증
+      const calculatedHash = block.calculateHash();
+      if (calculatedHash !== block.hash) {
+        return { success: false, error: '블록 해시 검증 실패' };
+      }
+
+      // 이전 블록과의 연결 검증
+      if (block.previousHash !== latestBlock.hash) {
+        // 연속되지 않은 블록인 경우 - 체인 동기화 필요할 수 있음
+        console.warn(`⚠️ 블록 체인 불연속 감지: 예상 ${latestBlock.hash}, 실제 ${block.previousHash}`);
+        
+        // 간단한 처리: 인덱스가 바로 다음이 아니면 거부
+        if (block.index !== latestBlock.index + 1) {
+          return { success: false, error: '블록 순서 불일치 - 체인 동기화 필요' };
+        }
+      }
+
+      // 트랜잭션 검증
+      for (const transaction of block.transactions) {
+        if (!this.isValidTransaction(transaction)) {
+          return { success: false, error: '유효하지 않은 트랜잭션 포함' };
+        }
+      }
+
+      // 블록을 체인에 추가
+      this.chain.push(block);
+
+      // 트랜잭션 처리 (잔액 업데이트 등)
+      this.processBlockTransactions(block);
+
+      // 저장소에 저장
+      if (this.dataStorage) {
+        this.dataStorage.saveBlockchain(this.chain);
+      }
+
+      console.log(`✅ 외부 블록 #${block.index} 체인에 추가 완료 (${block.transactions.length}개 트랜잭션)`);
+      
+      return { 
+        success: true, 
+        block: block,
+        message: `블록 #${block.index} 추가 완료`
+      };
+
+    } catch (error) {
+      console.error('❌ 외부 블록 추가 실패:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 블록의 트랜잭션들을 처리하여 상태 업데이트
+  processBlockTransactions(block) {
+    try {
+      for (const transaction of block.transactions) {
+        // 잔액 검증은 이미 했으므로 바로 적용
+        this.applyTransaction(transaction);
+      }
+    } catch (error) {
+      console.error('❌ 블록 트랜잭션 처리 실패:', error.message);
+    }
+  }
+
+  // 트랜잭션을 실제 상태에 적용
+  applyTransaction(transaction) {
+    if (transaction.fromAddress !== 'did:baekya:system000000000000000000000000000000000') {
+      // 송신자 잔액 차감
+      const fromBalance = this.getBalance(transaction.fromAddress, transaction.tokenType);
+      this.setBalance(transaction.fromAddress, transaction.tokenType, fromBalance - transaction.amount);
+    }
+    
+    // 수신자 잔액 증가
+    const toBalance = this.getBalance(transaction.toAddress, transaction.tokenType);
+    this.setBalance(transaction.toAddress, transaction.tokenType, toBalance + transaction.amount);
   }
 }
 

@@ -205,23 +205,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const documentHeight = document.documentElement.scrollHeight;
         const windowHeight = window.innerHeight;
         
-        // 페이지 하단 근처(90% 이상 스크롤)에서는 CTA 섹션을 활성화
-        if (scrollY + windowHeight >= documentHeight * 0.9) {
-            currentSection = 'cta-section';
-        } else {
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                const sectionHeight = section.offsetHeight;
-                
-                if (scrollY >= sectionTop - offset && scrollY < sectionTop + sectionHeight - offset) {
-                    const sectionClass = section.className.split(' ')[0];
-                    // 히어로 섹션은 제외
-                    if (sectionClass !== 'hero-section') {
-                        currentSection = sectionClass;
-                    }
+        // 현재 보이는 섹션 감지
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.offsetHeight;
+            
+            if (scrollY >= sectionTop - offset && scrollY < sectionTop + sectionHeight - offset) {
+                const sectionClass = section.className.split(' ')[0];
+                // 히어로 섹션과 CTA 섹션은 네비게이션에서 제외
+                if (sectionClass !== 'hero-section' && sectionClass !== 'cta-section') {
+                    currentSection = sectionClass;
                 }
-            });
-        }
+            }
+        });
         
         // 네비게이션 아이템 활성화 업데이트
         navItems.forEach(item => {

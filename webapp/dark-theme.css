@@ -1,0 +1,590 @@
+/* 다크 테마 CSS */
+
+/* 라이트 테마 (기본값) */
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --text-muted: #adb5bd;
+    --border-color: #dee2e6;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --primary-color: #007bff;
+    --primary-light: #4dabf7;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    
+    /* 그라데이션 */
+    --gradient-primary: linear-gradient(135deg, #007bff 0%, #4dabf7 100%);
+    --gradient-dark: linear-gradient(135deg, #495057 0%, #6c757d 100%);
+    
+    /* 그림자 */
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+}
+
+/* 다크 테마 */
+[data-theme="dark"] {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-tertiary: #0f1419;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-muted: rgba(255, 255, 255, 0.5);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --primary-color: #4a9eff;
+    --primary-light: #74b9ff;
+    --success-color: #4caf50;
+    --warning-color: #ffb74d;
+    --danger-color: #ff4757;
+    --info-color: #26c6da;
+    
+    /* 다크 테마용 그라데이션 */
+    --gradient-primary: linear-gradient(135deg, #4a9eff 0%, #74b9ff 100%);
+    --gradient-dark: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    
+    /* 다크 테마용 그림자 */
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.4);
+}
+
+/* 테마 토글 버튼 스타일 */
+.theme-toggle-btn {
+    background: transparent;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--text-secondary);
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-toggle-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.theme-toggle-btn.dark-mode {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.theme-toggle-btn.toggling {
+    animation: themeToggleAnimation 0.3s ease;
+}
+
+/* 테마 토글 애니메이션 */
+@keyframes themeToggleAnimation {
+    0% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.2) rotate(180deg); }
+    100% { transform: scale(1) rotate(360deg); }
+}
+
+/* 헤더 컨트롤 레이아웃 */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* 바디 배경 색상 적용 */
+body {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 메인 컨테이너 */
+.main-container {
+    background-color: var(--bg-secondary);
+}
+
+/* 네비게이션 탭 다크 테마 지원 */
+.nav-tabs {
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: var(--gradient-primary);
+    color: #ffffff;
+    border-color: var(--primary-color);
+}
+
+/* 카드 다크 테마 지원 - 강제 적용 */
+[data-theme="dark"] .status-card, 
+[data-theme="dark"] .balance-card, 
+[data-theme="dark"] .contribution-card, 
+[data-theme="dark"] .network-card, 
+[data-theme="dark"] .contribution-history-card, 
+[data-theme="dark"] .my-dao-card,
+[data-theme="dark"] .protocol-overview-card,
+[data-theme="dark"] .validator-card {
+    background: var(--bg-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+/* 카드 내부 텍스트 다크 테마 */
+[data-theme="dark"] .card-header h3,
+[data-theme="dark"] .card-content,
+[data-theme="dark"] .info-row span,
+[data-theme="dark"] .balance-value,
+[data-theme="dark"] .personal-info span {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .info-row label,
+[data-theme="dark"] .balance-label {
+    color: var(--text-secondary) !important;
+}
+
+/* 검증자 카드 내부 요소들 다크 테마 */
+[data-theme="dark"] .validator-card .stat-item,
+[data-theme="dark"] .validator-stats,
+[data-theme="dark"] .validator-info,
+[data-theme="dark"] .stat-item {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .stat-label {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .stat-value {
+    color: var(--primary-color) !important;
+}
+
+/* DAO 기여 모달 다크 테마 */
+[data-theme="dark"] .dao-detail-content,
+[data-theme="dark"] .dao-content,
+[data-theme="dark"] .contribution-action-section,
+[data-theme="dark"] .contribution-actions,
+[data-theme="dark"] .join-options,
+[data-theme="dark"] .option-card,
+[data-theme="dark"] .dao-participate-modal,
+[data-theme="dark"] .dao-info-section,
+[data-theme="dark"] .dao-info {
+    background: #1a1a2e !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
+/* DAO 설명창 - 파란색 정보 박스 */
+[data-theme="dark"] .dao-info-section,
+[data-theme="dark"] .dao-info {
+    background: rgba(74, 158, 255, 0.1) !important;
+    border: 1px solid rgba(74, 158, 255, 0.3) !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+}
+
+
+
+/* 연결 상태 다크 테마 */
+[data-theme="dark"] .profile-connection-status {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .profile-connection-status.connecting {
+    background: rgba(245, 158, 11, 0.2) !important;
+    border-color: #f59e0b !important;
+    color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .profile-connection-status.connected {
+    background: rgba(16, 185, 129, 0.2) !important;
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}
+
+[data-theme="dark"] .profile-connection-status.disconnected {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+}
+
+/* 프로필 사진 다크 테마 */
+[data-theme="dark"] .status-card[data-card="profile"] .profile-photo {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: 3px solid #1a1a2e !important;
+}
+
+[data-theme="dark"] .status-card[data-card="profile"] .profile-photo:hover {
+    border-color: rgba(116, 169, 255, 0.5) !important;
+}
+
+/* 사용자 프로필 모달 다크 테마 */
+[data-theme="dark"] .user-avatar-large {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    border: 3px solid #1a1a2e !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .user-avatar-large::before {
+    background: linear-gradient(135deg, #667eea, #764ba2, #06b6d4) !important;
+}
+
+/* DAO 기여 카드들 - 더 어두운 배경 */
+[data-theme="dark"] .option-card {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+}
+
+/* 대시보드 전체 배경 다크 테마 */
+[data-theme="dark"] .dashboard-grid {
+    background: transparent !important;
+}
+
+/* 개별 카드 클래스 강제 적용 */
+[data-theme="dark"] .dashboard-grid .status-card,
+[data-theme="dark"] .dashboard-grid .balance-card,
+[data-theme="dark"] .dashboard-grid .contribution-card,
+[data-theme="dark"] .dashboard-grid .network-card,
+[data-theme="dark"] .dashboard-grid .contribution-history-card,
+[data-theme="dark"] .dashboard-grid .my-dao-card {
+    background: var(--bg-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* 카드 내부 요소들 */
+[data-theme="dark"] .card-content *,
+[data-theme="dark"] .profile-section *,
+[data-theme="dark"] .balance-section * {
+    color: var(--text-primary) !important;
+}
+
+/* 라벨과 보조 텍스트 */
+[data-theme="dark"] .info-row label,
+[data-theme="dark"] .balance-label,
+[data-theme="dark"] .description {
+    color: var(--text-secondary) !important;
+}
+
+/* 일반 카드 스타일 (라이트 모드용) */
+.status-card, .balance-card, .contribution-card, .network-card, 
+.contribution-history-card, .my-dao-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+/* 모달 다크 테마 지원 */
+.modal-content {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* 입력 필드 다크 테마 지원 */
+input, textarea, select {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: var(--primary-color);
+    background: var(--bg-primary);
+}
+
+/* 버튼 다크 테마 지원 */
+.btn-primary {
+    background: var(--gradient-primary);
+    border: none;
+    color: #ffffff;
+}
+
+.btn-secondary {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--danger-color), #ff3838);
+    border: none;
+    color: #ffffff;
+}
+
+/* QR 제품 카드 다크 테마 지원 */
+.product-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+}
+
+.product-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.qr-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.qr-card.sold {
+    background: rgba(255, 71, 87, 0.1);
+    border-color: rgba(255, 71, 87, 0.3);
+}
+
+/* 스크롤바 다크 테마 지원 */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* 테마 전환 애니메이션 */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+}
+
+/* 최고 우선순위로 다크 테마 강제 적용 - 모든 조합 */
+html[data-theme="dark"] .status-card,
+html[data-theme="dark"] .balance-card,
+html[data-theme="dark"] .contribution-card,
+html[data-theme="dark"] .network-card,
+html[data-theme="dark"] .contribution-history-card,
+html[data-theme="dark"] .my-dao-card,
+html[data-theme="dark"] div[data-card="profile"],
+html[data-theme="dark"] div[data-card="balance"],
+html[data-theme="dark"] div[data-card="contribution"],
+html[data-theme="dark"] div[data-card="network"],
+html[data-theme="dark"] .dashboard-grid > div,
+html[data-theme="dark"] .dashboard-grid .status-card,
+html[data-theme="dark"] .dashboard-grid .balance-card {
+    background: #1a1a2e !important;
+    background-color: #1a1a2e !important;
+    background-image: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
+/* 하드코딩된 흰색 배경 덮어쓰기 - 구체적 선택자만 */
+[data-theme="dark"] .dashboard-grid > div,
+[data-theme="dark"] .dashboard-grid .status-card,
+[data-theme="dark"] .dashboard-grid .balance-card,
+[data-theme="dark"] .dashboard-grid .contribution-card,
+[data-theme="dark"] .dashboard-grid .network-card,
+[data-theme="dark"] .dashboard-grid .contribution-history-card,
+[data-theme="dark"] .dashboard-grid .my-dao-card {
+    background: #1a1a2e !important;
+    background-color: #1a1a2e !important;
+}
+
+[data-theme="dark"] .card-content,
+[data-theme="dark"] .card-header {
+    background: transparent !important;
+    color: #ffffff !important;
+}
+
+/* 아이콘 색상 */
+.card-header i {
+    color: var(--primary-color);
+}
+
+/* 링크 색상 */
+a {
+    color: var(--primary-color);
+}
+
+a:hover {
+    color: var(--primary-light);
+}
+
+/* 테이블 다크 테마 지원 */
+table {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+th {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+td {
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* 알림 메시지 다크 테마 지원 */
+.alert {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.alert.success {
+    background: rgba(76, 175, 80, 0.1);
+    border-color: var(--success-color);
+    color: var(--success-color);
+}
+
+.alert.error {
+    background: rgba(255, 71, 87, 0.1);
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+}
+
+.alert.warning {
+    background: rgba(255, 183, 77, 0.1);
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+}
+
+/* 토스트 알림 다크 테마 */
+.toast {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-lg);
+}
+
+/* 프로그래스 바 다크 테마 */
+.progress {
+    background: var(--bg-tertiary);
+}
+
+.progress-bar {
+    background: var(--gradient-primary);
+}
+
+/* 드롭다운 다크 테마 */
+.dropdown-menu {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.dropdown-item {
+    color: var(--text-primary);
+}
+
+.dropdown-item:hover {
+    background: var(--bg-secondary);
+}
+
+/* 체크박스/라디오 다크 테마 */
+input[type="checkbox"], input[type="radio"] {
+    accent-color: var(--primary-color);
+}
+
+/* 코드 블록 다크 테마 */
+code, pre {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+/* 구분선 다크 테마 */
+hr {
+    border-color: var(--border-color);
+}
+
+/* 툴팁 다크 테마 */
+.tooltip {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+/* ========== 최종 강제 적용 - 가장 높은 우선순위 ========== */
+/* 대시보드 카드들 배경 강제 변경 */
+html[data-theme="dark"] .dashboard-grid .status-card,
+html[data-theme="dark"] .dashboard-grid .balance-card,
+html[data-theme="dark"] .dashboard-grid .contribution-card,
+html[data-theme="dark"] .dashboard-grid .network-card,
+html[data-theme="dark"] .dashboard-grid .contribution-history-card,
+html[data-theme="dark"] .dashboard-grid .my-dao-card,
+html[data-theme="dark"] .dashboard-grid .protocol-overview-card,
+html[data-theme="dark"] .dashboard-grid .validator-card,
+html[data-theme="dark"] .dashboard-grid > .status-card,
+html[data-theme="dark"] .dashboard-grid > .balance-card,
+html[data-theme="dark"] .dashboard-grid > .contribution-card,
+html[data-theme="dark"] .dashboard-grid > .network-card,
+html[data-theme="dark"] .dashboard-grid > .contribution-history-card,
+html[data-theme="dark"] .dashboard-grid > .my-dao-card,
+html[data-theme="dark"] .dashboard-grid > .protocol-overview-card,
+html[data-theme="dark"] .dashboard-grid > .validator-card {
+    background: #1a1a2e !important;
+    background-color: #1a1a2e !important;
+    background-image: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 카드 내부 요소들 색상 */
+html[data-theme="dark"] .dashboard-grid .card-header,
+html[data-theme="dark"] .dashboard-grid .card-content,
+html[data-theme="dark"] .dashboard-grid .card-header h3,
+html[data-theme="dark"] .dashboard-grid .info-row span,
+html[data-theme="dark"] .dashboard-grid .balance-value {
+    color: #ffffff !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .dashboard-grid .info-row label,
+html[data-theme="dark"] .dashboard-grid .balance-label {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 모든 가능한 선택자 조합으로 강제 적용 */
+[data-theme="dark"] .dashboard-grid > div,
+[data-theme="dark"] div.status-card,
+[data-theme="dark"] div.balance-card,
+[data-theme="dark"] div.contribution-card,
+[data-theme="dark"] div.network-card,
+[data-theme="dark"] div.contribution-history-card,
+[data-theme="dark"] div.my-dao-card,
+[data-theme="dark"] div.protocol-overview-card,
+[data-theme="dark"] div.validator-card {
+    background: #1a1a2e !important;
+    background-color: #1a1a2e !important;
+    background-image: none !important;
+}

@@ -5,6 +5,7 @@ class BrotherhoodDApp {
     this.currentUser = null;
     this.protocol = null;
     this.isAuthenticated = false;
+    this.sessionTerminated = false;
     this.currentTab = 'dashboard';
     
     // 프로토콜 API 설정
@@ -64,6 +65,14 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
 
     // QR 코드 관련
     this.qrType = 'did'; // 'did' 또는 'comm'
+    
+    // QR 생성 시스템 관련
+    this.qrProducts = [];
+    this.purchaseHistory = [];
+    this.recyclableQRs = [];
+    this.currentProductId = null;
+    this.currentQRPayment = null;
+    this.currentRecyclePurchaseId = null;
     
     // 채팅 필터링
     this.currentChatFilter = 'all'; // 기본값: 전체 채팅
@@ -140,7 +149,169 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     // 초기 프로필 상태 설정
     this.updateProfileStatus('offline');
     
+    // QR 시스템 데이터 로드 (window.dapp 함수가 정의된 후에 호출됨)
+    setTimeout(() => {
+      if (window.dapp && window.dapp.loadQRProducts) {
+        window.dapp.loadQRProducts();
+        window.dapp.loadPurchaseHistory();
+      }
+    }, 100);
+    
             console.log('✅ BROTHERHOOD DApp 초기화 완료');
+  }
+
+  // 최적의 릴레이 서버 찾기
+  // LocalTunnel 인증 처리 함수
+  async authenticateLocalTunnel(relayUrl) {
+    return new Promise((resolve, reject) => {
+      console.log(`🔐 ${relayUrl} LocalTunnel 인증 중...`);
+      
+      // 숨겨진 iframe을 만들어서 LocalTunnel 사이트 방문
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.style.position = 'absolute';
+      iframe.style.left = '-9999px';
+      iframe.src = relayUrl;
+      
+      let authCompleted = false;
+      
+      // 타임아웃 설정 (10초)
+      const timeout = setTimeout(() => {
+        if (!authCompleted) {
+          document.body.removeChild(iframe);
+          resolve(false);
+        }
+      }, 10000);
+      
+      iframe.onload = () => {
+        setTimeout(() => {
+          if (!authCompleted) {
+            authCompleted = true;
+            clearTimeout(timeout);
+            document.body.removeChild(iframe);
+            console.log(`✅ ${relayUrl} LocalTunnel 인증 완료`);
+            resolve(true);
+          }
+        }, 2000); // 2초 대기하여 인증 쿠키 설정 완료
+      };
+      
+      iframe.onerror = () => {
+        if (!authCompleted) {
+          authCompleted = true;
+          clearTimeout(timeout);
+          document.body.removeChild(iframe);
+          resolve(false);
+        }
+      };
+      
+      document.body.appendChild(iframe);
+    });
+  }
+
+  async getOptimalRelayServer() {
+    console.log('🔍 최적의 릴레이 서버 탐색 중...');
+    
+    // 1번부터 10번까지 LocalTunnel URL로 순차 시도
+    for (let i = 1; i <= 10; i++) {
+      try {
+        const relayUrl = `https://brotherhood-relay-${i}.loca.lt`;
+        console.log(`📡 릴레이 ${i}번 확인: ${relayUrl}`);
+        
+        // LocalTunnel 인증 먼저 시도
+        const authSuccess = await this.authenticateLocalTunnel(relayUrl);
+        if (!authSuccess) {
+          console.log(`⭕ 릴레이 ${i}번 인증 실패`);
+          continue;
+        }
+        
+        const response = await fetch(`${relayUrl}/active-relays`, {
+          method: 'GET',
+          timeout: 3000,
+          credentials: 'include', // 인증 쿠키 포함
+          headers: {
+            'Bypass-Tunnel-Reminder': 'true',
+            'Cache-Control': 'no-cache'
+          }
+        });
+        
+        if (response.ok) {
+          const relayListData = await response.json();
+          console.log(`✅ 릴레이 ${i}번에서 ${relayListData.relays.length}개 릴레이 리스트 확보`);
+          
+          // 🌍 지역 기반 핑-퐁 방식으로 최적 릴레이 선택
+          console.log('🌍 지역 기반 릴레이 선택 시작...');
+          
+          // 1. 사용자 위치 감지
+          await this.detectUserLocation();
+          
+          // 2. 지역 기반 핑-퐁 방식으로 최적 릴레이 선택
+          const optimalRelay = await this.selectOptimalRelayByLocation(relayListData.relays);
+          
+          if (optimalRelay) {
+            console.log(`🎯 지역 기반 최적 릴레이 선택: ${optimalRelay.number}번 (${optimalRelay.url})`);
+            this.relayServerUrl = optimalRelay.url;
+            this.apiBase = `${optimalRelay.url}/api`;
+            return optimalRelay.url;
+          } else {
+            // 폴백: 기존 방식으로 선택
+            console.log('⚠️ 지역 기반 선택 실패 - 기존 방식 사용');
+            const fallbackRelay = relayListData.relays
+              .filter(relay => relay.capacity === 'smooth')
+              .sort((a, b) => a.number - b.number)[0] ||
+              relayListData.relays
+              .filter(relay => relay.capacity === 'moderate')
+              .sort((a, b) => a.number - b.number)[0] ||
+              relayListData.relays.sort((a, b) => a.number - b.number)[0];
+            
+            if (fallbackRelay) {
+              console.log(`🔄 폴백 릴레이 선택: ${fallbackRelay.number}번 (${fallbackRelay.url})`);
+              this.relayServerUrl = fallbackRelay.url;
+              this.apiBase = `${fallbackRelay.url}/api`;
+              return fallbackRelay.url;
+            }
+          }
+        }
+      } catch (error) {
+        console.log(`⭕ 릴레이 ${i}번 없음`);
+      }
+    }
+    
+    // 모든 릴레이 서버에 연결 실패한 경우 폴백
+    if (!window.USE_RELAY_NODES) {
+      console.warn('⚠️ 모든 릴레이 서버 연결 실패 - 로컬 서버 사용');
+      return window.RELAY_SERVER_URL;
+    } else {
+      console.warn('⚠️ 모든 릴레이 서버 연결 실패 - 오프라인 모드');
+      throw new Error('릴레이 서버를 찾을 수 없습니다. 잠시 후 다시 시도해주세요.');
+    }
+  }
+
+
+
+  // LocalTunnel 인증을 위한 공통 fetch 옵션 생성
+  getFetchOptions(method = 'GET', body = null) {
+    const options = {
+      method,
+      credentials: 'include', // LocalTunnel 인증 쿠키 포함
+      headers: {
+        'Content-Type': 'application/json',
+        'Bypass-Tunnel-Reminder': 'true',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    };
+    
+    // Device UUID 추가 (있는 경우)
+    if (window.deviceUUIDManager && window.deviceUUIDManager.getDeviceUUID) {
+      options.headers['X-Device-UUID'] = window.deviceUUIDManager.getDeviceUUID();
+    }
+    
+    // body가 있는 경우 추가
+    if (body && method !== 'GET' && method !== 'HEAD') {
+      options.body = JSON.stringify(body);
+    }
+    
+    return options;
   }
 
   // WebSocket 연결 관리
@@ -150,9 +321,12 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     // 기존 연결이 있으면 먼저 정리
     this.disconnectWebSocket();
     
+    // 현재 선택된 릴레이 서버의 WebSocket URL 사용
+    const currentWsUrl = this.relayServerUrl.replace('https:', 'wss:').replace('http:', 'ws:');
+    
     try {
-      console.log('🔌 WebSocket 연결 시도:', this.wsUrl);
-      this.ws = new WebSocket(this.wsUrl);
+      console.log('🔌 WebSocket 연결 시도:', currentWsUrl);
+      this.ws = new WebSocket(currentWsUrl);
       
       this.ws.onopen = () => {
         console.log('🔌 서버에 연결됨');
@@ -172,11 +346,14 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           }));
           console.log('📤 로컬 서버 인증 메시지 전송:', this.currentUser.did);
         } else {
-          // 릴레이 서버용 메시지
+          // 릴레이 서버용 인증 메시지
         this.ws.send(JSON.stringify({
-          type: 'user_connect',
-          sessionId: this.generateSessionId(),
-          did: this.currentUser.did
+          type: 'auth',
+          connectionType: 'client',
+          credentials: {
+            did: this.currentUser.did,
+            sessionId: this.generateSessionId()
+          }
         }));
           console.log('📤 릴레이 서버 인증 메시지 전송:', this.currentUser.did);
         }
@@ -187,10 +364,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           this.wsReconnectInterval = null;
         }
         
-        // 연결 후 즉시 상태 확인 요청
-        setTimeout(() => {
-          this.requestCurrentState();
-        }, 1000);
+        // 인증 완료 후 상태 확인 요청은 auth_success 핸들러에서 처리
       };
       
       this.ws.onmessage = (event) => {
@@ -207,19 +381,29 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         console.error('WebSocket 오류:', error);
       };
       
-      this.ws.onclose = () => {
-        console.log('🔌 WebSocket 연결 종료');
+      this.ws.onclose = (event) => {
+        console.log('🔌 WebSocket 연결 종료:', event.code, event.reason);
         
         // 연결 상태 UI 업데이트
         this.updateConnectionStatus('disconnected');
         
+        // 강제 종료 코드 확인 (서버에서 세션 종료 시)
+        if (event.code === 1000 && event.reason === 'New connection established') {
+          console.log('🚪 서버에서 의도적으로 연결을 종료함 (다른 기기 로그인)');
+          // 이 경우에는 재연결 시도하지 않음
+          return;
+        }
+        
         // 세션이 종료된 경우가 아니면 재연결 시도
-        if (this.isAuthenticated && !this.wsReconnectInterval) {
+        if (this.isAuthenticated && !this.wsReconnectInterval && !this.sessionTerminated) {
+          console.log('🔄 인증된 상태에서 연결 끊김, 재연결 시도 시작');
           this.wsReconnectInterval = setInterval(() => {
             console.log('🔄 WebSocket 재연결 시도...');
             this.updateConnectionStatus('connecting');
             this.connectWebSocket();
           }, 5000);
+        } else if (!this.isAuthenticated) {
+          console.log('🔐 인증되지 않은 상태에서 연결 종료, 재연결 시도 안함');
         }
       };
     } catch (error) {
@@ -323,7 +507,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       case 'pool_update':
         // 검증자 풀 업데이트
         console.log('💰 검증자 풀 업데이트 수신:', data.timestamp);
-        this.handlePoolUpdate(data.validatorPool);
+
         break;
         
       case 'dao_treasury_update':
@@ -332,19 +516,209 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         this.handleDAOTreasuryUpdate(data.daoTreasuries);
         break;
         
-      case 'error':
-        // 서버 오류
-        console.error('❌ 서버 오류:', data.message);
-        this.showErrorMessage(data.message);
-        break;
+             case 'error':
+         // 서버 오류 - error 또는 message 필드에서 오류 메시지 추출
+         const errorMessage = data.error || data.message || '알 수 없는 오류';
+         console.error('❌ 서버 오류:', errorMessage);
+         this.showErrorMessage(errorMessage);
+         break;
         
       case 'pong':
         // ping-pong 응답
         console.log('🏓 Pong received');
         break;
         
+      case 'welcome':
+        // 릴레이 서버 환영 메시지
+        console.log('🎉 릴레이 서버 연결됨:', data.name || data.nodeId);
+        // 이미 인증 메시지를 보냈으므로 추가 작업 불필요
+        break;
+        
+      case 'auth_success':
+        // 인증 성공
+        console.log('✅ 릴레이 서버 인증 완료');
+        this.isAuthenticated = true;
+        this.sessionTerminated = false; // 세션 종료 플래그 초기화
+        
+        // 릴레이 서버에 클라이언트로 등록
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({
+            type: 'register_client',
+            data: {
+              userDID: this.currentUser.did,
+              deviceInfo: {
+                platform: navigator.platform,
+                userAgent: navigator.userAgent
+              }
+            }
+          }));
+          console.log('📤 클라이언트 등록 메시지 전송:', this.currentUser.did);
+        }
+        
+        // 인증 완료 후 상태 요청
+        setTimeout(() => {
+          this.requestCurrentState();
+        }, 500);
+        break;
+        
+      case 'registration_success':
+        console.log('✅ 릴레이 서버에 클라이언트 등록 완료');
+        break;
+        
+      case 'invite_code_response':
+        // 초대코드 생성 응답은 임시 핸들러에서 처리됨
+        // 여기서는 로그만 출력
+        console.log('📋 초대코드 응답 수신:', data.success ? '성공' : '실패');
+        break;
+        
+      case 'wallet_update':
+        // 릴레이 서버에서 전달받은 지갑 업데이트 (블록 생성 보상 등)
+        console.log('💰 지갑 업데이트 수신:', data);
+        console.log('💰 data 구조:', Object.keys(data));
+        console.log('💰 data.wallet:', data.wallet);
+        console.log('💰 data.data:', data.data);
+        console.log('💰 data.data?.wallet:', data.data?.wallet);
+        console.log('💰 현재 사용자:', this.currentUser?.did);
+        
+        // 실제 지갑 데이터는 data.data 안에 있을 수 있음
+        const walletData = data.data || data;
+        console.log('💰 사용할 지갑 데이터:', walletData);
+        
+        this.handleWalletUpdate(walletData);
+        break;
+        
+      case 'new_block':
+        // 새 블록 생성 알림
+        console.log('🔍 전체 new_block 메시지:', data);
+        console.log('🔍 data.block:', data.block);
+        console.log('🔍 data.data:', data.data);
+        
+        // 실제 블록 데이터는 data.data 안에 있음
+        const blockData = data.block || data.data || data;
+        console.log('🔍 사용할 블록 데이터:', blockData);
+        
+        this.handleNewBlock(blockData);
+        break;
+        
       default:
         console.log('❓ 알 수 없는 메시지 타입:', data.type);
+    }
+  }
+  
+  // 릴레이에서 받은 지갑 업데이트 처리
+  handleWalletUpdate(data) {
+    try {
+      console.log('🔍 지갑 업데이트 처리 시작');
+      console.log('🔍 data.wallet 존재:', !!data.wallet);
+      console.log('🔍 data.wallet?.balances 존재:', !!data.wallet?.balances);
+      console.log('🔍 data.wallet?.userDID:', data.wallet?.userDID);
+      console.log('🔍 현재 사용자 DID:', this.currentUser?.did);
+      
+      if (data.wallet && data.wallet.balances) {
+        // 현재 사용자의 지갑 정보 업데이트
+        if (this.currentUser && data.wallet.userDID === this.currentUser.did) {
+          console.log('✅ 내 지갑 업데이트 적용:', data.wallet.balances);
+          
+          // 토큰 잔액 UI 업데이트
+          this.updateTokenBalances(data.wallet.balances);
+          
+          // 블록 생성 보상 알림
+          if (data.newBlock && data.newBlock.validator === this.currentUser.did) {
+            const reward = data.newBlock.reward || 0;
+            this.showSuccessMessage(`🎉 블록 #${data.newBlock.height} 생성! +${reward}B 보상 획득!`);
+            
+            // 마이닝 상태 업데이트
+            this.updateMiningStatus({
+              isActive: false,
+              lastBlockHeight: data.newBlock.height,
+              lastReward: reward,
+              totalBlocks: data.newBlock.totalBlocks || 1
+            });
+          }
+        } else {
+          console.log('⚠️ 다른 사용자의 지갑 업데이트 (무시)');
+        }
+      } else {
+        console.log('⚠️ 지갑 데이터 누락');
+      }
+    } catch (error) {
+      console.error('❌ 지갑 업데이트 처리 실패:', error);
+    }
+  }
+  
+  // 새 블록 생성 알림 처리
+  handleNewBlock(blockData) {
+    try {
+      console.log('🔍 받은 블록 데이터:', blockData);
+      
+      // 데이터 구조 확인 및 기본값 설정
+      const height = blockData.height || blockData.index || 0;
+      const validatorName = blockData.validatorName || blockData.validator || '알 수 없음';
+      const transactionCount = blockData.transactionCount || 0;
+      
+      console.log(`🧱 블록 #${height} 생성됨 (검증자: ${validatorName})`);
+      
+      // 전체 네트워크 상태 업데이트
+      this.updateNetworkStats({
+        lastBlockHeight: height,
+        lastValidator: validatorName,
+        transactionCount: transactionCount
+      });
+      
+      // 블록 생성 알림 (본인이 아닌 경우)
+      if (blockData.validator !== this.currentUser?.did) {
+        const message = `새 블록 #${height} (by ${validatorName})`;
+        console.log(`📢 ${message}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ 새 블록 처리 실패:', error);
+      console.error('❌ 블록 데이터:', blockData);
+    }
+  }
+  
+  // 마이닝 상태 UI 업데이트
+  updateMiningStatus(status) {
+    const miningStatusElement = document.getElementById('mining-status');
+    const miningInfoElement = document.getElementById('mining-info');
+    
+    if (miningStatusElement) {
+      if (status.isActive) {
+        miningStatusElement.textContent = '⛏️ 마이닝 중...';
+        miningStatusElement.className = 'mining-active';
+      } else {
+        miningStatusElement.textContent = '💤 대기 중';
+        miningStatusElement.className = 'mining-inactive';
+      }
+    }
+    
+    if (miningInfoElement && status.lastBlockHeight) {
+      miningInfoElement.innerHTML = `
+        <div>최근 블록: #${status.lastBlockHeight}</div>
+        <div>최근 보상: ${status.lastReward}B</div>
+        <div>총 생성 블록: ${status.totalBlocks}개</div>
+      `;
+    }
+  }
+  
+  // 네트워크 상태 UI 업데이트  
+  updateNetworkStats(stats) {
+    const networkStatsElement = document.getElementById('network-stats');
+    if (networkStatsElement) {
+      networkStatsElement.innerHTML = `
+        <div class="stat-item">
+          <span class="stat-label">최신 블록:</span>
+          <span class="stat-value">#${stats.lastBlockHeight}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">최근 검증자:</span>
+          <span class="stat-value">${stats.lastValidator}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">트랜잭션:</span>
+          <span class="stat-value">${stats.transactionCount}개</span>
+        </div>
+      `;
     }
   }
   
@@ -358,10 +732,13 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   
   // 세션 종료 처리
   handleSessionTermination(reason) {
+    console.log('🚪 세션 종료 처리 시작:', reason);
+    
+    // 즉시 UI에 알림 표시
     this.showErrorMessage(reason || '다른 기기에서 로그인했습니다.');
     
-    // 로그아웃 처리
-    this.logout();
+    // 강제 로그아웃 처리 (성공 메시지나 새로고침 없이)
+    this.forceLogout();
     
     // WebSocket 정리
     if (this.ws) {
@@ -374,6 +751,91 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       clearInterval(this.wsReconnectInterval);
       this.wsReconnectInterval = null;
     }
+    
+    // 3초 후 자동 새로고침으로 완전 초기화
+    setTimeout(() => {
+      console.log('🔄 세션 종료로 인한 자동 새로고침');
+      location.reload();
+    }, 3000);
+  }
+  
+  // 강제 로그아웃 (세션 종료 시 사용)
+  forceLogout() {
+    console.log('🚨 강제 로그아웃 실행');
+    
+    // 세션 종료 플래그 설정 (재연결 방지)
+    this.sessionTerminated = true;
+    
+    // 모든 인증 관련 데이터 삭제
+    this.isAuthenticated = false;
+    this.currentUser = null;
+    this.userTokens = null;
+    this.userDAOs = [];
+    
+    // localStorage 완전 정리
+    localStorage.removeItem('baekya_auth');
+    localStorage.removeItem('baekya_tokens');
+    localStorage.removeItem('baekya_dao_treasuries');
+    localStorage.removeItem('baekya_user_daos');
+    localStorage.removeItem('baekya_session_id');
+    localStorage.removeItem('currentBalance');
+    localStorage.removeItem('lastMiningTime');
+    localStorage.removeItem('miningHistory');
+    
+    // 생체인증 데이터 초기화
+    this.biometricData = {
+      fingerprint: null,
+      faceprint: null,
+      password: null,
+      did: null,
+      communicationAddress: null
+    };
+    
+    // 거버넌스 관련 상태 초기화
+    if (this.governanceManager) {
+      this.governanceManager.proposals = [];
+      this.governanceManager.currentFilter = 'popular';
+      this.governanceManager.currentLabelFilter = '';
+      this.governanceManager.searchQuery = '';
+    }
+    
+    // 연결 상태 업데이트
+    this.updateConnectionStatus('disconnected');
+    
+    // UI 즉시 업데이트
+    this.updateUserInterface();
+    this.updateProfileButtons();
+    
+    // 프로필 관련 UI 완전 정리
+    const profileElements = [
+      'userProfileInfo',
+      'userDisplayName', 
+      'userWalletAddress',
+      'currentUserName',
+      'bTokenBalance',
+      'pTokenBalance'
+    ];
+    
+    profileElements.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = id.includes('Balance') ? '0 B' : '';
+      }
+    });
+    
+    // 사용자 아이콘도 기본값으로 초기화
+    const userIcon = document.querySelector('.user-icon');
+    if (userIcon) {
+      userIcon.textContent = '👤';
+    }
+    
+    // 프로필 모달이 열려있다면 닫기
+    const profileModal = document.getElementById('profileSettingsModal');
+    if (profileModal && profileModal.style.display !== 'none') {
+      profileModal.style.display = 'none';
+    }
+    
+    console.log('✅ 강제 로그아웃 완료');
   }
   
   // 상태 업데이트 처리
@@ -462,9 +924,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     }
     
     // 검증자 풀 정보 업데이트
-    if (data.validatorPool) {
-      this.handlePoolUpdate(data.validatorPool);
-    }
+
     
     // 새로운 기여 내역 처리
     if (data.newContribution) {
@@ -535,39 +995,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     }
   }
   
-  // 검증자 풀 업데이트 처리
-  handlePoolUpdate(poolData) {
-    console.log('💰 검증자 풀 업데이트:', poolData);
-    
-    // 서버에서 오는 데이터 형식 처리 (balance 또는 totalStake)
-    let balance = 0;
-    if (poolData) {
-      if (poolData.balance !== undefined) {
-        balance = poolData.balance;
-      } else if (poolData.totalStake !== undefined) {
-        balance = poolData.totalStake;
-      }
-    }
-    
-    if (balance !== undefined && balance !== null) {
-      // localStorage 업데이트
-      localStorage.setItem('baekya_validator_pool', balance.toString());
-      
-      // UI 업데이트
-      const validatorPool = document.getElementById('validatorPoolMain');
-      if (validatorPool) {
-        validatorPool.textContent = `${balance.toFixed(3)} B`;
-      }
-      
-      // 대시보드의 검증자 풀 표시도 업데이트
-      const validatorPoolDashboard = document.getElementById('validatorPool');
-      if (validatorPoolDashboard) {
-        validatorPoolDashboard.textContent = `${balance.toFixed(3)} B`;
-      }
-      
-      console.log(`💰 검증자 풀 UI 업데이트 완료: ${balance.toFixed(3)}B`);
-    }
-  }
+
   
   // DAO 금고 업데이트 처리
   handleDAOTreasuryUpdate(daoTreasuries) {
@@ -625,16 +1053,12 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     if (!this.isAuthenticated) return;
     
     try {
-      const response = await fetch(`${this.apiBase}/protocol-state`);
+      const response = await fetch(`${this.apiBase}/protocol-state`, this.getFetchOptions());
       if (response.ok) {
         const state = await response.json();
         
         if (state.success) {
-          // 검증자 풀 업데이트
-          if (state.validatorPool !== undefined) {
-            localStorage.setItem('baekya_validator_pool', state.validatorPool.toString());
-            this.handlePoolUpdate({ balance: state.validatorPool });
-          }
+
           
           // DAO 금고 업데이트
           if (state.daoTreasuries) {
@@ -856,9 +1280,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       case 'governance':
         this.loadGovernance();
         break;
-      case 'system':
-        this.loadSystemFiles();
-        break;
+
       case 'p2p':
         this.loadP2P();
         break;
@@ -876,7 +1298,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     }
 
     try {
-      const response = await fetch(`${this.apiBase}/status`);
+      const response = await fetch(`${this.apiBase}/status`, this.getFetchOptions());
       const status = await response.json();
       
       this.protocol = status;
@@ -901,23 +1323,20 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     // 네트워크 현황 요소들
     const totalDAOs = document.getElementById('totalDAOs');
     const totalMembers = document.getElementById('totalMembers');
-    const validatorPool = document.getElementById('validatorPool');
-    const validatorPoolMain = document.getElementById('validatorPoolMain');
+
     const totalMiners = document.getElementById('totalMiners');
 
     if (this.isAuthenticated) {
       // 로그인된 경우 실제 데이터 표시 (현재는 모두 0으로 시작)
       if (totalDAOs) totalDAOs.textContent = '0';
       if (totalMembers) totalMembers.textContent = '0';
-      if (validatorPool) validatorPool.textContent = '0 B';
-      if (validatorPoolMain) validatorPoolMain.textContent = '0 B';
+
       if (totalMiners) totalMiners.textContent = '0';
     } else {
       // 로그인하지 않은 경우 "-" 표시
       if (totalDAOs) totalDAOs.textContent = '-';
       if (totalMembers) totalMembers.textContent = '-';
-      if (validatorPool) validatorPool.textContent = '- B';
-      if (validatorPoolMain) validatorPoolMain.textContent = '- B';
+
       if (totalMiners) totalMiners.textContent = '-';
     }
   }
@@ -1185,13 +1604,20 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         }
         
         try {
+          // 새로운 릴레이 시스템을 통한 로그인
+          const apiBase = await this.getOptimalRelayServer();
+          console.log('🔗 사용할 릴레이 서버:', apiBase);
+          
           // 서버 API로 로그인 요청
           const deviceUUID = window.deviceUUIDManager.getDeviceUUID();
-          const response = await fetch(`${this.apiBase}/login`, {
+          const response = await fetch(`${apiBase}/api/login`, {
             method: 'POST',
+            credentials: 'include', // LocalTunnel 인증 쿠키 포함
             headers: {
               'Content-Type': 'application/json',
-              'X-Device-UUID': deviceUUID
+              'X-Device-UUID': deviceUUID,
+              'Bypass-Tunnel-Reminder': 'true',
+              'Cache-Control': 'no-cache'
             },
             body: JSON.stringify({
               username: userId,
@@ -1204,6 +1630,11 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           
           if (result.success) {
             console.log('🔐 서버 로그인 성공:', result);
+            
+            // 릴레이 서버 연결 초기화 (WebSocket 포함)
+            this.apiBase = `${apiBase}/api`;
+            this.relayServerUrl = apiBase;
+            console.log('✅ API 베이스 URL 업데이트:', this.apiBase);
             
             // 디바이스와 계정 연결 (확실한 초기화 보장)
             try {
@@ -1274,7 +1705,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
             // founder 계정인 경우 DAO 정보 가져오기
             if (result.isFounder) {
               try {
-                const dashboardResponse = await fetch(`${this.apiBase}/dashboard/${result.didHash}`);
+                const dashboardResponse = await fetch(`${this.apiBase}/dashboard/${result.didHash}`, this.getFetchOptions());
                 if (dashboardResponse.ok) {
                   const dashboard = await dashboardResponse.json();
                   if (dashboard.daos && dashboard.daos.length > 0) {
@@ -1493,13 +1924,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
             
             // 프로토콜 상태 업데이트 (검증자 풀, DAO 금고)
             if (result.protocolState) {
-              // 검증자 풀 상태 업데이트
-              if (result.protocolState.validatorPool !== undefined) {
-                localStorage.setItem('baekya_validator_pool', result.protocolState.validatorPool.toString());
-                console.log('🏦 검증자 풀 로그인 동기화:', result.protocolState.validatorPool);
-                // UI 업데이트
-                this.handlePoolUpdate({ balance: result.protocolState.validatorPool });
-              }
+
               
               // DAO 금고 상태 업데이트
               if (result.protocolState.daoTreasuries) {
@@ -1753,10 +2178,15 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     try {
       console.log(`🔍 아이디 중복 확인 시작: ${userId}`);
       
-      // 서버 API 호출
+      // 서버 API 호출 (LocalTunnel 인증 포함)
       const response = await fetch(`${this.apiBase}/check-userid`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // LocalTunnel 인증 쿠키 포함
+        headers: { 
+          'Content-Type': 'application/json',
+          'Bypass-Tunnel-Reminder': 'true',
+          'Cache-Control': 'no-cache'
+        },
         body: JSON.stringify({ userId })
       });
       
@@ -2162,11 +2592,14 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   // 기존 생체인증 사용자 확인
   async checkExistingBiometric(fingerprintHash) {
     try {
-      // 서버 API 호출 시뮬레이션
+      // 서버 API 호출 시뮬레이션 (LocalTunnel 인증 포함)
       const response = await fetch(`${this.apiBase}/check-biometric`, {
         method: 'POST',
+        credentials: 'include', // LocalTunnel 인증 쿠키 포함
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Bypass-Tunnel-Reminder': 'true',
+          'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({
           fingerprintHash: fingerprintHash
@@ -2619,6 +3052,10 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         throw new Error('디바이스 초기화가 완료되지 않았습니다. 잠시 후 다시 시도해주세요.');
       }
 
+      // 릴레이 서버 선택 (로그인과 동일한 프로세스)
+      const apiBase = await this.getOptimalRelayServer();
+      console.log('🔗 회원가입용 릴레이 서버:', apiBase);
+
       // 아이디/비밀번호 데이터를 기반으로 DID 생성 요청 (새로운 SimpleAuth API)
       const userData = {
         username: this.authData.userId,
@@ -2634,11 +3071,14 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         deviceUUID: userData.deviceUUID
       });
 
-      const response = await fetch(`${this.apiBase}/register`, {
+      const response = await fetch(`${apiBase}/api/register`, {
         method: 'POST',
+        credentials: 'include', // LocalTunnel 인증 쿠키 포함
         headers: {
           'Content-Type': 'application/json',
-          'X-Device-UUID': userData.deviceUUID
+          'X-Device-UUID': userData.deviceUUID,
+          'Bypass-Tunnel-Reminder': 'true',
+          'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({ userData })
       });
@@ -2647,6 +3087,11 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       
       if (result.success) {
         console.log('🎉 사용자 등록 성공:', result);
+        
+        // 선택된 릴레이 서버를 앞으로 모든 API 호출에 사용 (로그인과 동일)
+        this.apiBase = `${apiBase}/api`;
+        this.relayServerUrl = apiBase;
+        console.log('✅ 회원가입 후 API 베이스 URL 업데이트:', this.apiBase);
         
         // 디바이스와 계정 연결 (확실한 초기화 보장)
         try {
@@ -2898,6 +3343,11 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         this.loadWallet();
       }
       
+      // 거버넌스 탭이 활성화된 경우 협업 탭도 새로고침 (본투표 UI 업데이트)
+      if (this.currentTab === 'governance' && this.governanceManager) {
+        this.governanceManager.loadCollaboration();
+      }
+      
       // 회원가입 완료 후 지갑 잔액 강제 새로고침
       if (!this.isExistingUser) {
         setTimeout(() => {
@@ -2946,7 +3396,11 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     // 현재 탭에 따라 콘텐츠 새로고침
     if (this.currentTab === 'dao') {
       this.loadDAOs();
-    
+    } else if (this.currentTab === 'governance') {
+      // 거버넌스 탭이 활성화된 경우 협업(투표) 내용 새로고침
+      if (this.governanceManager) {
+        this.governanceManager.loadCollaboration();
+      }
     }
   }
 
@@ -3432,7 +3886,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       } else {
       try {
           // forceRefresh가 true이거나 localStorage에 값이 없을 때 서버에서 가져오기
-        const response = await fetch(`${this.apiBase}/wallet/${this.currentUser.did}`);
+        const response = await fetch(`${this.apiBase}/wallet/${this.currentUser.did}`, this.getFetchOptions());
         if (response.ok) {
           const walletData = await response.json();
           if (walletData.success) {
@@ -3511,7 +3965,13 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         // 검증자 풀이나 DAO 금고 정보가 없으면 서버에서 가져오기
         if (!savedPoolAmount || !localStorage.getItem('baekya_dao_treasuries')) {
           try {
-            const stateResponse = await fetch(`${this.apiBase}/protocol-state`);
+            const stateResponse = await fetch(`${this.apiBase}/protocol-state`, {
+              credentials: 'include',
+              headers: {
+                'Bypass-Tunnel-Reminder': 'true',
+                'Cache-Control': 'no-cache'
+              }
+            });
             if (stateResponse.ok) {
               const state = await stateResponse.json();
               
@@ -3860,35 +4320,10 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     // 전송 금액 입력 시 수수료 계산 표시
     if (transferAmount && !transferAmount.hasAttribute('data-setup')) {
       transferAmount.setAttribute('data-setup', 'true');
-      transferAmount.addEventListener('input', (e) => {
-        this.updateTransferSummary(e.target.value);
-      });
     }
   }
 
-  updateTransferSummary(amount) {
-    const transferSummary = document.getElementById('transferSummary');
-    const transferAmountDisplay = document.getElementById('transferAmountDisplay');
-    const transferFeeDisplay = document.getElementById('transferFeeDisplay');
-    const totalAmountDisplay = document.getElementById('totalAmountDisplay');
-    
-    if (!transferSummary || !transferAmountDisplay || !totalAmountDisplay) return;
-    
-    const amountNum = parseFloat(amount) || 0;
-    const fee = amountNum * 0.001; // 0.1% 수수료
-    const total = amountNum + fee;
-    
-    if (amountNum > 0) {
-      transferSummary.style.display = 'block';
-      transferAmountDisplay.textContent = `${amountNum.toFixed(3)} B`;
-      if (transferFeeDisplay) {
-        transferFeeDisplay.textContent = `${fee.toFixed(3)} B`;
-      }
-      totalAmountDisplay.textContent = `${total.toFixed(3)} B`;
-    } else {
-      transferSummary.style.display = 'none';
-    }
-  }
+
 
   async handleTokenTransfer() {
     const recipientAddress = document.getElementById('recipientAddress').value;
@@ -3906,14 +4341,10 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       return;
     }
 
-    // 수수료 계산 (0.1%)
-    const fee = amount * 0.001; // 0.1%
-    const totalRequired = amount + fee;
-    
     // 잔액 확인
     const currentBalance = this.userTokens?.B || 0;
-    if (totalRequired > currentBalance) {
-      alert(`잔액이 부족합니다.\n필요: ${totalRequired.toFixed(3)} B\n보유: ${currentBalance.toFixed(3)} B`);
+    if (amount > currentBalance) {
+      alert(`잔액이 부족합니다.\n필요: ${amount.toFixed(3)} B\n보유: ${currentBalance.toFixed(3)} B`);
       return;
     }
 
@@ -3937,12 +4368,15 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         return;
       }
       
-      // 서버 API 호출
+      // 서버 API 호출 (LocalTunnel 인증 포함)
       const response = await fetch(`${this.apiBase}/transfer`, {
         method: 'POST',
+        credentials: 'include', // LocalTunnel 인증 쿠키 포함
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.sessionId}`
+          'Authorization': `Bearer ${this.sessionId}`,
+          'Bypass-Tunnel-Reminder': 'true',
+          'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({
           fromDID: this.currentUser.did,
@@ -3959,6 +4393,11 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       const result = await response.json();
 
       if (result.success) {
+        // QR 결제인 경우 처리
+        if (this.currentQRPayment) {
+          await this.handleQRPaymentComplete(result.transactionId);
+        }
+
         // 성공 메시지 표시
         this.showSuccessMessage(
           `${result.amount.toFixed(3)} B-Token이 ${result.recipient?.displayName || recipientAddress}로 전송되었습니다.\n` +
@@ -3971,7 +4410,30 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     
     // 폼 리셋
     document.getElementById('transferForm').reset();
-    this.updateTransferSummary(0);
+    
+    // QR 관련 스타일 및 버튼 제거
+    const recipientInput = document.getElementById('recipientAddress');
+    const amountInput = document.getElementById('transferAmount');
+    const memoInput = document.getElementById('transferMemo');
+    const cancelBtn = document.getElementById('cancelQRPayment');
+    
+    if (recipientInput) {
+      recipientInput.disabled = false;
+      recipientInput.classList.remove('qr-filled');
+    }
+    if (amountInput) {
+      amountInput.disabled = false;
+      amountInput.classList.remove('qr-filled');
+    }
+    if (memoInput) {
+      memoInput.disabled = false;
+      memoInput.classList.remove('qr-filled');
+    }
+    if (cancelBtn) {
+      cancelBtn.remove();
+    }
+    
+
     
         // 잔액 업데이트 (서버에서 받은 데이터로)
       this.updateTokenBalances();
@@ -4823,27 +5285,43 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   // 새로운 영구 초대코드 생성 및 블록체인 저장
   async createPermanentInviteCode() {
     try {
-      const response = await fetch(`${this.apiBase}/invite-code`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.currentUser?.did}`
-        },
-        body: JSON.stringify({
-          userDID: this.currentUser?.did,
-          communicationAddress: this.currentUser?.communicationAddress
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.inviteCode) {
-          console.log('새로운 초대코드가 블록체인에 저장되었습니다:', result.inviteCode);
-          return result.inviteCode;
-        }
-      }
-
-      throw new Error('서버에서 초대코드 생성 실패');
+             // WebSocket을 통해 초대코드 생성 요청
+       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+         return new Promise((resolve, reject) => {
+           // 응답 대기를 위한 임시 핸들러
+           const tempHandler = (event) => {
+             const data = JSON.parse(event.data);
+             if (data.type === 'invite_code_response') {
+               this.ws.removeEventListener('message', tempHandler);
+               if (data.success) {
+                 console.log('새로운 초대코드가 블록체인에 저장되었습니다:', data.inviteCode);
+                 resolve(data.inviteCode);
+               } else {
+                 reject(new Error(data.error || '초대코드 생성 실패'));
+               }
+             }
+           };
+           
+           this.ws.addEventListener('message', tempHandler);
+           
+           // 초대코드 생성 요청 전송
+           this.ws.send(JSON.stringify({
+             type: 'create_invite_code',
+             userDID: this.currentUser?.did,
+             communicationAddress: this.currentUser?.communicationAddress
+           }));
+           
+           console.log('📤 초대코드 생성 요청 전송:', this.currentUser?.did);
+           
+           // 10초 타임아웃
+           setTimeout(() => {
+             this.ws.removeEventListener('message', tempHandler);
+             reject(new Error('초대코드 생성 타임아웃'));
+           }, 10000);
+         });
+       } else {
+         throw new Error('WebSocket 연결 없음');
+       }
     } catch (error) {
       console.error('초대코드 생성 실패:', error);
       // 서버 실패 시 임시 코드 생성
@@ -5540,7 +6018,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     if (!this.currentUser || !this.currentUser.did) return;
     
     try {
-      const response = await fetch(`${this.apiBase}/contributions/${this.currentUser.did}?daoId=${daoId}`);
+      const response = await fetch(`${this.apiBase}/contributions/${this.currentUser.did}?daoId=${daoId}`, this.getFetchOptions());
       const result = await response.json();
       
       if (result.success) {
@@ -9196,88 +9674,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     });
   }
 
-  // 검증자 풀 후원 모달 표시
-  showValidatorSponsorModal() {
-    if (!this.isAuthenticated) {
-              alert('검증자 풀 후원을 위해서는 먼저 로그인이 필요합니다.');
-      return;
-    }
 
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    modal.id = 'validatorSponsorModal';
-    
-    modal.innerHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3><i class="fas fa-heart"></i> 검증자 풀 후원하기</h3>
-          <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="sponsor-info">
-            <p>검증자 풀에 B-Token을 후원하여 네트워크 보안에 기여하세요.</p>
-            <div class="sponsor-benefits">
-              <h4><i class="fas fa-star"></i> 후원 혜택</h4>
-              <ul>
-                <li>네트워크 보안 강화에 기여</li>
-                <li>검증자들의 안정적인 운영 지원</li>
-                <li>BROTHERHOOD 생태계 발전에 참여</li>
-                <li>후원 내역은 투명하게 공개됩니다</li>
-              </ul>
-            </div>
-            <div class="form-group">
-              <label for="sponsorAmount">후원 금액 (B-Token)</label>
-              <div class="amount-input">
-                <input type="number" id="sponsorAmount" min="0.001" step="0.001" placeholder="0.001">
-                <span class="token-suffix">B</span>
-              </div>
-              <small>최소 후원 금액: 0.001 B</small>
-            </div>
-            <div class="current-balance">
-              <span>현재 B-Token 보유량: <strong id="currentBBalance">${document.getElementById('bTokenBalance')?.textContent || '0 B'}</strong></span>
-            </div>
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" onclick="this.closest('.modal').remove()">취소</button>
-            <button type="button" class="btn-primary" onclick="window.dapp.submitValidatorSponsor()">후원하기</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-  }
-
-  // 수수료 분배 함수 (100% 검증자 풀로 변경)
-  distributeFees(totalFee) {
-    const VALIDATOR_POOL_RATIO = 1.0;
-    const DAO_TREASURY_RATIO = 0.0;
-    
-    // 검증자 풀 할당 (60%)
-    const validatorPoolFee = totalFee * VALIDATOR_POOL_RATIO;
-    
-    // DAO 금고 할당 (40%)
-    const daoTreasuryFee = totalFee * DAO_TREASURY_RATIO;
-    
-    // 검증자 풀에 수수료의 60%만 추가 (후원금과 별도)
-    const validatorPool = document.getElementById('validatorPoolMain');
-    if (validatorPool) {
-      const currentPool = parseFloat(validatorPool.textContent.replace(' B', '')) || 0;
-      const newPool = currentPool + validatorPoolFee;
-      validatorPool.textContent = `${newPool.toFixed(6)} B`;
-      localStorage.setItem('baekya_validator_pool', newPool.toFixed(6));
-    }
-    
-    // DAO 금고에 수수료 분배 (기여량에 비례)
-    this.distributeDAOTreasuryFees(daoTreasuryFee);
-    
-    console.log(`수수료 분배 완료: 검증자 풀 +${validatorPoolFee.toFixed(6)}B, DAO 금고 총 ${daoTreasuryFee.toFixed(6)}B`);
-    
-    return {
-      validatorPool: validatorPoolFee,
-      daoTreasury: daoTreasuryFee
-    };
-  }
 
   // DAO 금고 수수료 분배 (기여량에 비례)
   distributeDAOTreasuryFees(totalDAOFee) {
@@ -9347,79 +9744,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     console.log(`${daoId} 금고에 ${amount.toFixed(6)}B 수수료 추가 (총 ${newTreasury.toFixed(6)}B)`);
   }
 
-  // 검증자 풀 후원 제출
-  async submitValidatorSponsor() {
-    const sponsorAmount = parseFloat(document.getElementById('sponsorAmount').value);
 
-    if (!sponsorAmount || sponsorAmount < 0.001) {
-      alert('후원 금액은 최소 0.001 B 이상이어야 합니다.');
-      return;
-    }
-
-    // B-Token 잔액 확인
-    const currentBTokens = parseFloat(document.getElementById('bTokenBalance').textContent.replace(' B', '')) || 0;
-    const transactionFee = 0.001; // 수수료 0.001B
-    const totalRequired = sponsorAmount + transactionFee;
-    
-    if (currentBTokens < totalRequired) {
-      alert(`B-Token이 부족합니다. 현재 보유량: ${currentBTokens}B, 필요량: ${totalRequired}B (후원 ${sponsorAmount}B + 수수료 ${transactionFee}B)`);
-      return;
-    }
-
-    // 본인 인증 (지문/얼굴/비밀번호 중 택1)
-    const authConfirmed = await this.requestAuthentication('검증자 풀 후원');
-    if (!authConfirmed) {
-      return;
-    }
-
-    if (confirm(`검증자 풀에 ${sponsorAmount}B를 후원하시겠습니까?`)) {
-      try {
-        // 서버 API로 검증자 풀 후원 요청
-          const sponsorResponse = await fetch(`${this.apiBase}/validator-pool/sponsor`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sponsorDID: this.currentUser.did,
-            amount: sponsorAmount
-            })
-          });
-          
-          if (sponsorResponse.ok) {
-            const result = await sponsorResponse.json();
-            
-            if (result.success) {
-              // 검증자 풀 상태 업데이트
-              if (result.poolStatus) {
-                const validatorPool = document.getElementById('validatorPoolMain');
-                const newPool = result.poolStatus.balance || 0;
-                validatorPool.textContent = `${newPool.toFixed(6)} B`;
-                localStorage.setItem('baekya_validator_pool', newPool.toFixed(6));
-                
-                // 대시보드의 검증자 풀 표시도 업데이트
-                const validatorPoolDashboard = document.getElementById('validatorPool');
-                if (validatorPoolDashboard) {
-                  validatorPoolDashboard.textContent = `${newPool.toFixed(6)} B`;
-                }
-              }
-              
-            this.showSuccessMessage(`검증자 풀에 ${sponsorAmount}B를 성공적으로 후원했습니다!`);
-            
-            // 모달 닫기
-            document.getElementById('validatorSponsorModal').remove();
-            
-            } else {
-              throw new Error(result.error || '트랜잭션 처리 실패');
-            }
-          } else {
-            const errorData = await sponsorResponse.json();
-            throw new Error(errorData.error || '트랜잭션 처리 실패');
-          }
-      } catch (error) {
-        console.error('검증자 풀 후원 오류:', error);
-        this.showErrorMessage(`검증자 풀 후원 실패: ${error.message}`);
-      }
-     }
-   }
 
    // DAO 금고 후원 모달 표시
    showDAOSponsorModal() {
@@ -9497,11 +9822,9 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
 
      // B-Token 잔액 확인
      const currentBTokens = parseFloat(document.getElementById('bTokenBalance').textContent.replace(' B', '')) || 0;
-     const transactionFee = 0.001;
-     const totalRequired = sponsorAmount + transactionFee;
      
-     if (currentBTokens < totalRequired) {
-       alert(`B-Token이 부족합니다. 현재 보유량: ${currentBTokens}B, 필요량: ${totalRequired}B (후원 ${sponsorAmount}B + 수수료 ${transactionFee}B)`);
+     if (currentBTokens < sponsorAmount) {
+       alert(`B-Token이 부족합니다. 현재 보유량: ${currentBTokens}B, 필요량: ${sponsorAmount}B`);
        return;
      }
 
@@ -9512,7 +9835,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
      }
 
      const daoName = this.getDAOName(this.currentDAOId);
-     if (confirm(`${daoName} 금고에 ${sponsorAmount}B를 후원하시겠습니까? (수수료 ${transactionFee}B 별도)`)) {
+     if (confirm(`${daoName} 금고에 ${sponsorAmount}B를 후원하시겠습니까?`)) {
        try {
          // 현재 DAO의 실제 ID 가져오기
          let daoUUID = null;
@@ -9538,10 +9861,15 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
            return;
          }
          
-         // 서버 API 호출
-         const response = await fetch('/api/dao/treasury/sponsor', {
+         // 서버 API 호출 (LocalTunnel 인증 포함)
+         const response = await fetch(`${this.apiBase}/dao/treasury/sponsor`, {
            method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
+           credentials: 'include', // LocalTunnel 인증 쿠키 포함
+           headers: { 
+             'Content-Type': 'application/json',
+             'Bypass-Tunnel-Reminder': 'true',
+             'Cache-Control': 'no-cache'
+           },
            body: JSON.stringify({
              sponsorDID: this.currentUser.did,
              daoId: daoUUID,
@@ -16213,44 +16541,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     }
   }
 
-  // 검증자 DAO 이동 및 강조
-  navigateToValidatorDAO() {
-    // 1. DAO 탭으로 이동
-    const daoTab = document.querySelector('.tab-btn[data-tab="dao"]');
-    if (daoTab) {
-      daoTab.click();
-    }
-    
-    // 2. 잠시 후 검증자 DAO 카드 찾기 및 강조
-    setTimeout(() => {
-      this.findAndHighlightValidatorDAO();
-    }, 300);
-  }
 
-  // 검증자 DAO 찾기 및 강조
-  findAndHighlightValidatorDAO() {
-    // 검증자 DAO 카드 찾기
-    const validatorDAOCard = document.querySelector('.dao-card[data-dao-id="validator-dao"]');
-    
-    if (validatorDAOCard) {
-      // 검증자 DAO로 스크롤
-      validatorDAOCard.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'center'
-      });
-      
-      // 강조 애니메이션 적용
-      validatorDAOCard.classList.add('highlight-animation');
-      setTimeout(() => {
-        validatorDAOCard.classList.remove('highlight-animation');
-      }, 3000);
-      
-      this.showSuccessMessage('검증자 DAO로 이동했습니다. 기여하러가기 버튼을 클릭하여 참여하세요!');
-    } else {
-      // 검증자 DAO 카드가 없으면 메시지 표시
-      this.showErrorMessage('검증자 DAO를 찾을 수 없습니다. 먼저 검증자 활동을 시작해보세요.');
-    }
-  }
 
   // DAO 상세 정보 모달 관련 기능들
   showDAODetail(daoId) {
@@ -20367,9 +20658,12 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     try {
       const response = await fetch(`${this.apiBase}/daos`, {
         method: 'POST',
+        credentials: 'include', // LocalTunnel 인증 쿠키 포함
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.currentUser.did}` 
+          'Authorization': `Bearer ${this.currentUser.did}`,
+          'Bypass-Tunnel-Reminder': 'true',
+          'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({
           ...daoData,
@@ -26602,15 +26896,7 @@ if (storedAuth) {
     dapp.currentUser = authData;
     dapp.isAuthenticated = true;
     
-    // 검증자 풀 데이터 복원
-    const savedPoolAmount = localStorage.getItem('baekya_validator_pool');
-    if (savedPoolAmount) {
-      console.log(`🏦 저장된 검증자 풀 잔액 복원: ${savedPoolAmount}B`);
-      // 초기화 후 UI 업데이트 - handlePoolUpdate 함수 사용
-      setTimeout(() => {
-        dapp.handlePoolUpdate({ balance: parseFloat(savedPoolAmount) });
-      }, 500);
-    }
+
     
     // UI 업데이트 지연 실행
     setTimeout(() => {
@@ -27733,10 +28019,7 @@ node server.js
     };
   }
 
-  loadSystemFiles() {
-    const fileTree = document.getElementById('fileTree');
-    fileTree.innerHTML = this.generateFileTree(this.systemFiles);
-  }
+
 
   getFileIcon(fileName) {
     const extension = fileName.split('.').pop().toLowerCase();
@@ -28070,12 +28353,15 @@ class GovernanceManager {
     this.currentLabelFilter = '';
     this.searchQuery = '';
     this.dateSort = 'newest'; // 'newest' or 'oldest'
+    this.cachedActiveAccounts = 1; // 기본값 설정
   }
 
   // 거버넌스 탭 로드
   loadGovernance() {
     // 제안 목록 로드
     this.loadProposals();
+    // 협업(본투표) 탭도 로드하여 로그인 상태 반영
+    this.loadCollaboration();
   }
 
   // 거버넌스 서브탭 전환
@@ -28105,13 +28391,14 @@ class GovernanceManager {
       case 'completed':
         this.loadCompleted();
         break;
+
     }
   }
 
   // 제안 목록 로드
   async loadProposals() {
     try {
-      const response = await fetch(`${window.dapp.apiBase}/governance/proposals`);
+      const response = await fetch(`${window.dapp.apiBase}/governance/proposals`, window.dapp.getFetchOptions());
       if (response.ok) {
                   const data = await response.json();
           if (data.success) {
@@ -28138,19 +28425,24 @@ class GovernanceManager {
   generateProposalCard(proposal) {
     const createdDate = new Date(proposal.createdAt).toLocaleDateString('ko-KR');
     
+    // 제안 데이터 구조에 따라 작성자 정보 추출
+    const authorDID = proposal.authorDID || (typeof proposal.author === 'object' ? proposal.author.did : null);
+    const authorUsername = typeof proposal.author === 'string' ? proposal.author : 
+                          (typeof proposal.author === 'object' ? proposal.author.username : 'Unknown');
+    
     // 실시간 사용자 정보 가져오기 시도
-    let currentUserInfo = this.getCurrentUserInfo(proposal.author.did);
-    let displayUsername = currentUserInfo ? currentUserInfo.username : proposal.author.username;
+    let currentUserInfo = authorDID ? this.getCurrentUserInfo(authorDID) : null;
+    let displayUsername = currentUserInfo ? currentUserInfo.username : authorUsername;
     let userAvatar = currentUserInfo && currentUserInfo.profilePhoto ? 
       `<img src="${currentUserInfo.profilePhoto}" alt="프로필" class="avatar-img">` :
-      displayUsername.charAt(0).toUpperCase();
+      (displayUsername && displayUsername.length > 0 ? displayUsername.charAt(0).toUpperCase() : '?');
     
     return `
       <div class="proposal-card" data-proposal-id="${proposal.id}" onclick="window.dapp.showGovernanceProposalDetail('${proposal.id}')">
         <div class="proposal-card-header">
           <div class="proposal-user-info">
             <div class="proposal-avatar clickable-avatar" 
-                 onclick="event.stopPropagation(); window.dapp.showUserProfile('${proposal.author.did}')" 
+                 onclick="event.stopPropagation(); ${authorDID ? `window.dapp.showUserProfile('${authorDID}')` : 'console.log(\"DID 정보 없음\")'}" 
                  title="사용자 정보 보기">${userAvatar}</div>
             <div class="proposal-user-details">
               <div class="proposal-username">${displayUsername}</div>
@@ -28586,6 +28878,11 @@ class GovernanceManager {
       return;
     }
 
+    if (!labelSelect || !labelSelect.value) {
+      alert('라벨을 선택해주세요. 제안 내용에 맞는 라벨을 선택해야 합니다.');
+      return;
+    }
+
 
 
     // 코어구조 파일 업로드 필수 검증
@@ -28617,8 +28914,10 @@ class GovernanceManager {
       const response = await fetch(`${window.dapp.apiBase}/governance/proposals`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...window.dapp.getFetchOptions().headers
         },
+        credentials: window.dapp.getFetchOptions().credentials,
         body: JSON.stringify(proposalData)
       });
 
@@ -28632,7 +28931,16 @@ class GovernanceManager {
           throw new Error(result.error || '제안 생성 실패');
         }
       } else {
-        throw new Error('서버 오류가 발생했습니다.');
+        // 서버 오류 응답 내용 확인
+        const errorText = await response.text();
+        console.error('서버 오류 응답:', response.status, errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || `서버 오류 (${response.status})`);
+        } catch (parseError) {
+          throw new Error(`서버 오류 (${response.status}): ${errorText}`);
+        }
       }
 
     } catch (error) {
@@ -28645,8 +28953,22 @@ class GovernanceManager {
      // 협업 탭 로드
    async loadCollaboration() {
      try {
+       // 활성 계정 수 조회 (캐싱)
+       try {
+         const accountsResponse = await fetch(`${window.dapp.apiBase}/governance/active-accounts`, window.dapp.getFetchOptions());
+         if (accountsResponse.ok) {
+           const accountsResult = await accountsResponse.json();
+           if (accountsResult.success) {
+             this.cachedActiveAccounts = accountsResult.activeAccounts;
+           }
+         }
+       } catch (error) {
+         console.warn('활성 계정 수 조회 실패:', error);
+         this.cachedActiveAccounts = this.cachedActiveAccounts || 1; // 기본값 유지
+       }
+
        // 활성 협업 제안 조회
-       const response = await fetch(`${window.dapp.apiBase}/governance/collaboration/active`);
+       const response = await fetch(`${window.dapp.apiBase}/governance/collaboration/active`, window.dapp.getFetchOptions());
        const result = await response.json();
        
        if (result.success && result.proposal) {
@@ -28690,7 +29012,7 @@ class GovernanceManager {
          <!-- 제안 상세 정보 -->
          <div class="collaboration-proposal-detail">
                      <div class="proposal-header">
-            <h2><i class="fas fa-handshake"></i> #${String(proposal.collaborationNumber || 1).padStart(2, '0')} ${proposal.title}</h2>
+            <h2>#${String(proposal.collaborationNumber || 1).padStart(2, '0')} ${proposal.title}</h2>
           </div>
            
            <div class="proposal-info-card">
@@ -28761,20 +29083,17 @@ class GovernanceManager {
           </div>
         </div>
 
-         <!-- 보완구조 목록 -->
-         <div class="collaboration-complements-section">
-           <div class="complements-header">
-             <h3><i class="fas fa-puzzle-piece"></i> 제안 코어구조에 대한 보완구조 목록</h3>
-             <div class="complements-actions">
-               <span class="complements-count">${proposal.complements ? proposal.complements.length : 0}개</span>
-               <button class="btn-primary complement-btn" onclick="window.dapp.governanceManager.showComplementUploadModal('${proposal.id}')">
-                 <i class="fas fa-plus"></i> 보완구조 업로드
-               </button>
+         <!-- 본투표 -->
+         <div class="collaboration-vote-section">
+           <div class="vote-header">
+             <h3><i class="fas fa-vote-yea"></i> 본투표</h3>
+             <div class="vote-info">
+               <span class="vote-cost">투표 비용: 0.1B</span>
              </div>
            </div>
            
-           <div class="complements-list">
-             ${this.renderComplementsList(proposal.complements || [])}
+           <div class="final-vote-container">
+             ${this.renderFinalVote(proposal)}
            </div>
          </div>
        </div>
@@ -28796,8 +29115,8 @@ class GovernanceManager {
      container.innerHTML = `
        <div class="collaboration-empty">
          <div class="empty-state">
-           <i class="fas fa-handshake collaboration-empty-icon"></i>
-           <h3>현재 협업 진행 중인 제안이 없습니다</h3>
+           <i class="fas fa-poll-h collaboration-empty-icon"></i>
+           <h3>현재 투표 진행 중인 제안이 없습니다</h3>
          </div>
        </div>
      `;
@@ -29175,17 +29494,152 @@ class GovernanceManager {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
-  // 보완구조 목록 렌더링 (유튜브 댓글 스타일)
-  renderComplementsList(complements) {
-    if (!complements || complements.length === 0) {
+  // 본투표 렌더링
+  renderFinalVote(proposal) {
+    const currentUser = window.dapp.currentUser || window.dapp.isAuthenticated ? window.dapp.authData : null;
+    if (!currentUser || !window.dapp.isAuthenticated) {
       return `
-        <div class="no-complements">
-          <i class="fas fa-info-circle"></i>
-          <p>아직 업로드된 보완구조가 없습니다.</p>
+        <div class="vote-login-required">
+          <i class="fas fa-user-lock"></i>
+          <p>투표에 참여하려면 로그인이 필요합니다.</p>
         </div>
       `;
     }
 
+    // 현재 사용자의 투표 상태 확인
+    const userVote = proposal.finalVotes?.[currentUser.did];
+    const voteStats = {
+      agree: Object.values(proposal.finalVotes || {}).filter(vote => vote === 'agree').length,
+      abstain: Object.values(proposal.finalVotes || {}).filter(vote => vote === 'abstain').length,
+      disagree: Object.values(proposal.finalVotes || {}).filter(vote => vote === 'disagree').length
+    };
+    const totalVotes = voteStats.agree + voteStats.abstain + voteStats.disagree;
+
+    // 표결비율 계산
+    const agreePercent = totalVotes > 0 ? (voteStats.agree / totalVotes * 100) : 0;
+    const abstainPercent = totalVotes > 0 ? (voteStats.abstain / totalVotes * 100) : 0;
+    const disagreePercent = totalVotes > 0 ? (voteStats.disagree / totalVotes * 100) : 0;
+
+    // 전체 계정 수 및 참여율 계산 - 캐시된 값 사용
+    const totalActiveAccounts = this.cachedActiveAccounts || 1; // 최소 1로 설정하여 0으로 나누기 방지
+    const participationRate = totalActiveAccounts > 0 ? (totalVotes / totalActiveAccounts * 100) : 0;
+
+    return `
+      <div class="final-vote-box">
+        <div class="vote-description">
+          <p>이 제안에 대한 최종 의견을 투표해주세요. 각 투표는 0.1B의 비용이 발생합니다.</p>
+        </div>
+        
+        <!-- 표결 결과 가로바 -->
+        <div class="vote-results-section">
+          <h4>표결 결과</h4>
+          <div class="vote-progress-bar">
+            <div class="vote-segment agree" style="width: ${agreePercent}%" title="동의: ${voteStats.agree}표 (${agreePercent.toFixed(1)}%)"></div>
+            <div class="vote-segment abstain" style="width: ${abstainPercent}%" title="기권: ${voteStats.abstain}표 (${abstainPercent.toFixed(1)}%)"></div>
+            <div class="vote-segment disagree" style="width: ${disagreePercent}%" title="비동의: ${voteStats.disagree}표 (${disagreePercent.toFixed(1)}%)"></div>
+          </div>
+          <div class="vote-counts">
+            <span class="votes-for">동의 ${voteStats.agree}</span>
+            <span class="abstentions">기권 ${voteStats.abstain}</span>
+            <span class="votes-against">비동의 ${voteStats.disagree}</span>
+          </div>
+        </div>
+
+        <!-- 투표 참여율 가로바 -->
+        <div class="participation-section">
+          <h4>투표 참여율</h4>
+          <div class="participation-bar">
+            <div class="participation-fill" style="width: ${participationRate}%"></div>
+          </div>
+          <div class="participation-stats">
+            <span>${totalVotes}명 / ${totalActiveAccounts}명 참여 (${participationRate.toFixed(1)}%)</span>
+          </div>
+        </div>
+        
+        <!-- 투표 버튼들 (작게) -->
+        <div class="vote-actions">
+          <button class="final-vote-btn agree ${userVote === 'agree' ? 'voted' : ''}" 
+                  onclick="window.dapp.governanceManager.submitFinalVote('${proposal.id}', 'agree')"
+                  ${userVote ? 'disabled' : ''}>
+            <i class="fas fa-thumbs-up"></i>
+            동의 (0.1B)
+          </button>
+          
+          <button class="final-vote-btn abstain ${userVote === 'abstain' ? 'voted' : ''}"
+                  onclick="window.dapp.governanceManager.submitFinalVote('${proposal.id}', 'abstain')"
+                  ${userVote ? 'disabled' : ''}>
+            <i class="fas fa-minus"></i>
+            기권 (0.1B)
+          </button>
+          
+          <button class="final-vote-btn disagree ${userVote === 'disagree' ? 'voted' : ''}"
+                  onclick="window.dapp.governanceManager.submitFinalVote('${proposal.id}', 'disagree')"
+                  ${userVote ? 'disabled' : ''}>
+            <i class="fas fa-thumbs-down"></i>
+            비동의 (0.1B)
+          </button>
+        </div>
+        
+        ${userVote ? `
+          <div class="user-vote-status">
+            <i class="fas fa-check-circle"></i>
+            <span>나의 투표: ${userVote === 'agree' ? '동의' : userVote === 'abstain' ? '기권' : '비동의'}</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // 본투표 제출 함수
+  async submitFinalVote(proposalId, voteType) {
+    const currentUser = window.dapp.currentUser;
+    if (!currentUser) {
+      alert('투표하려면 로그인이 필요합니다.');
+      return;
+    }
+
+    // B-Token 잔액 확인
+    const currentBalance = parseFloat(document.getElementById('bTokenBalance')?.textContent?.replace(' B', '') || '0');
+    if (currentBalance < 0.1) {
+      alert(`B-Token이 부족합니다. 현재 보유량: ${currentBalance}B, 필요량: 0.1B`);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${window.dapp.apiBase}/governance/proposals/${proposalId}/final-vote`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Bypass-Tunnel-Reminder': 'true',
+          'Cache-Control': 'no-cache'
+        },
+        body: JSON.stringify({
+          voteType: voteType,
+          authorDID: currentUser.did
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          alert('투표가 성공적으로 제출되었습니다!');
+          // 협업 페이지 새로고침
+          this.loadCollaboration();
+        } else {
+          throw new Error(result.error || '투표 제출 실패');
+        }
+      } else {
+        throw new Error('서버 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      console.error('투표 제출 실패:', error);
+      alert(`투표 제출 실패: ${error.message}`);
+    }
+  }
+
+  // 보완구조 관련 함수들 제거됨
+  renderComplementsList_old_removed(complements) {
     return complements.map((complement, index) => `
       <div class="complement-card" data-complement-id="${complement.id}">
         <div class="complement-main">
@@ -30227,13 +30681,15 @@ module.exports = sampleFunction;`
 
     // 실시간 사용자 정보 가져오기
     let currentUserInfo = this.getCurrentUserInfo(proposal.author.did);
-    let displayUsername = currentUserInfo ? currentUserInfo.username : proposal.author.username;
+    let displayUsername = currentUserInfo ? currentUserInfo.username : 
+                         (proposal.author.username || proposal.author || 'Unknown');
     
     // 기본 정보 설정
     if (currentUserInfo && currentUserInfo.profilePhoto) {
       avatar.innerHTML = `<img src="${currentUserInfo.profilePhoto}" alt="프로필" class="avatar-img">`;
     } else {
-      avatar.textContent = displayUsername.charAt(0).toUpperCase();
+      avatar.textContent = (displayUsername && displayUsername.length > 0) ? 
+                          displayUsername.charAt(0).toUpperCase() : '?';
     }
     author.textContent = displayUsername;
     
@@ -30394,7 +30850,13 @@ module.exports = sampleFunction;`
     }
     
     try {
-      const response = await fetch(`${window.dapp.apiBase}/governance/proposals/${proposalId}/vote/${window.dapp.currentUser.did}`);
+      const response = await fetch(`${window.dapp.apiBase}/governance/proposals/${proposalId}/vote/${window.dapp.currentUser.did}`, {
+        credentials: 'include',
+        headers: {
+          'Bypass-Tunnel-Reminder': 'true',
+          'Cache-Control': 'no-cache'
+        }
+      });
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
@@ -30631,7 +31093,7 @@ module.exports = sampleFunction;`
   getUserProposals(userDID) {
     const userProposals = this.proposals.filter(proposal => proposal.author.did === userDID);
     
-    // 현재 협업 중인 제안도 포함
+    // 현재 투표 중인 제안도 포함
     if (this.currentCollaborationProposal && this.currentCollaborationProposal.author.did === userDID) {
       // 이미 목록에 있는지 확인 (중복 방지)
       const exists = userProposals.some(proposal => proposal.id === this.currentCollaborationProposal.id);
@@ -30756,15 +31218,32 @@ window.dapp.removeAllCoreStructure = function() {
         const proposalId = this.governanceManager.currentProposalId;
         if (!proposalId) return;
         
+        // 투표 타입을 서버 형식에 맞게 매핑
+        const voteTypeMapping = {
+          'agree': 'yes',
+          'disagree': 'no',
+          'abstain': 'abstain',
+          'for': 'yes',
+          'against': 'no',
+          'yes': 'yes',
+          'no': 'no'
+        };
+        
+        const serverVoteType = voteTypeMapping[voteType] || voteType;
+        console.log(`🗳️ 투표 타입 매핑: ${voteType} → ${serverVoteType}`);
+        
         try {
           // 서버에 투표 요청
           const response = await fetch(`${this.apiBase}/governance/proposals/${proposalId}/vote`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Bypass-Tunnel-Reminder': 'true',
+              'Cache-Control': 'no-cache'
             },
             body: JSON.stringify({
-              voteType: voteType,
+              voteType: serverVoteType,
               voterDID: this.currentUser.did
             })
           });
@@ -30779,7 +31258,61 @@ window.dapp.removeAllCoreStructure = function() {
               
               await this.governanceManager.initializeVotingStatus(proposal);
               
-              alert('투표가 완료되었습니다!');
+              // 협업 단계 전환 확인
+              console.log('🔍 투표 응답 데이터:', result);
+              
+              if (result.collaborationUpdate) {
+                console.log('🔍 협업 업데이트 데이터:', result.collaborationUpdate);
+                
+                if (result.collaborationUpdate.hasUpdate) {
+                  const { message, proposal: activeProposal, isNewCollaboration } = result.collaborationUpdate;
+                  
+                  if (isNewCollaboration) {
+                    // 알림 표시
+                    alert(`🎉 ${message}\n\n투표 탭에서 협업을 시작할 수 있습니다!`);
+                    
+                    // 제안 목록 새로고침
+                    if (this.governanceManager) {
+                      this.governanceManager.loadProposals();
+                    }
+                    
+                    // 투표 탭으로 자동 이동
+                    setTimeout(() => {
+                      const collaborationTab = document.querySelector('[data-tab="collaboration"]');
+                      console.log('🔍 협업 탭 요소 찾기:', collaborationTab);
+                      
+                      if (collaborationTab) {
+                        console.log('🔄 협업 탭으로 자동 이동 시작');
+                        collaborationTab.click();
+                        console.log('✅ 협업 탭 클릭 완료');
+                      } else {
+                        console.warn('❌ 협업 탭을 찾을 수 없습니다');
+                        
+                        // 대안: governance 탭으로 이동 후 collaboration 서브탭 클릭
+                        const governanceTab = document.querySelector('[data-tab="governance"]');
+                        if (governanceTab) {
+                          governanceTab.click();
+                          setTimeout(() => {
+                            const collabSubTab = document.querySelector('[data-tab="collaboration"]');
+                            if (collabSubTab) {
+                              collabSubTab.click();
+                              console.log('✅ 거버넌스 > 협업 탭으로 이동 완료');
+                            }
+                          }, 500);
+                        }
+                      }
+                    }, 2000);
+                  } else {
+                    alert('투표가 완료되었습니다!');
+                  }
+                } else {
+                  console.log('📝 협업 전환 조건 미충족:', result.collaborationUpdate.message);
+                  alert('투표가 완료되었습니다!');
+                }
+              } else {
+                console.log('📝 협업 업데이트 정보 없음');
+                alert('투표가 완료되었습니다!');
+              }
             }
           }
         } catch (error) {
@@ -30994,6 +31527,903 @@ window.dapp.removeAllCoreStructure = function() {
         // 로그인 상태 관계없이 거버넌스 탭 활성화
         this.switchTab('governance');
       };
+
+      // QR 생성 시스템 초기화
+      window.dapp.initQRSystem = function() {
+        if (!this.qrProducts) {
+          this.qrProducts = [];
+        }
+        if (!this.purchaseHistory) {
+          this.purchaseHistory = [];
+        }
+        if (!this.recyclableQRs) {
+          this.recyclableQRs = [];
+        }
+        this.loadQRProducts();
+        this.loadPurchaseHistory();
+      };
+
+      // 제품 생성 모달 표시
+      window.dapp.showCreateProductModal = function() {
+        const modal = document.getElementById('createProductModal');
+        modal.classList.add('active');
+        
+        // 모달 외부 클릭 시 닫기
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            this.closeCreateProductModal();
+          }
+        });
+      };
+
+      // 제품 생성 모달 닫기
+      window.dapp.closeCreateProductModal = function() {
+        document.getElementById('createProductModal').classList.remove('active');
+        document.getElementById('productName').value = '';
+        document.getElementById('productPrice').value = '';
+      };
+
+      // 제품 생성
+      window.dapp.createProduct = function() {
+        const name = document.getElementById('productName').value.trim();
+        const price = parseFloat(document.getElementById('productPrice').value);
+
+        if (!name || !price || price <= 0) {
+          alert('제품명과 올바른 가격을 입력해주세요.');
+          return;
+        }
+
+        // qrProducts 배열 초기화 확인
+        if (!this.qrProducts) {
+          this.qrProducts = [];
+        }
+
+        const product = {
+          id: Date.now().toString(),
+          name: name,
+          price: price,
+          totalQRs: 0,
+          soldQRs: 0,
+          createdDate: new Date().toISOString(),
+          qrs: []
+        };
+
+        this.qrProducts.push(product);
+        this.saveQRProducts();
+        this.renderProductList();
+        this.closeCreateProductModal();
+      };
+
+      // 제품 목록 렌더링
+      window.dapp.renderProductList = function() {
+        const productList = document.getElementById('productList');
+        if (!productList) return;
+
+        // qrProducts 배열 초기화 확인
+        if (!this.qrProducts) {
+          this.qrProducts = [];
+        }
+
+        productList.innerHTML = '';
+
+        this.qrProducts.forEach(product => {
+          const remainingQRs = product.totalQRs - product.soldQRs;
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.innerHTML = `
+            <div class="product-info" onclick="window.dapp.showProductDetail('${product.id}')">
+              <h4>${product.name}</h4>
+              <p>가격: ${product.price} B</p>
+              <p>남은 QR: ${remainingQRs} / 총 ${product.totalQRs}</p>
+              <p>생성일: ${new Date(product.createdDate).toLocaleDateString()}</p>
+            </div>
+            <button class="btn-danger" onclick="event.stopPropagation(); window.dapp.deleteProduct('${product.id}')">
+              <i class="fas fa-trash"></i> 삭제
+            </button>
+          `;
+          productList.appendChild(card);
+        });
+      };
+
+      // 제품 삭제
+      window.dapp.deleteProduct = function(productId) {
+        if (!confirm('정말로 이 제품을 삭제하시겠습니까?')) return;
+
+        this.qrProducts = this.qrProducts.filter(p => p.id !== productId);
+        this.saveQRProducts();
+        this.renderProductList();
+      };
+
+      // 제품 상세 표시
+      window.dapp.showProductDetail = function(productId) {
+        const product = this.qrProducts.find(p => p.id === productId);
+        if (!product) return;
+
+        this.currentProductId = productId;
+        const modal = document.getElementById('productDetailModal');
+        const detailInfo = document.getElementById('productDetailInfo');
+        
+        const remainingQRs = product.totalQRs - product.soldQRs;
+        const remainingValue = remainingQRs * product.price;
+        const soldValue = product.soldQRs * product.price;
+
+        detailInfo.innerHTML = `
+          <h3>${product.name}</h3>
+          <p>가격: ${product.price} B</p>
+          <p>남은 QR: ${remainingQRs} / 총 ${product.totalQRs}</p>
+          <p>남은 가치: ${remainingValue} B / 총 ${product.totalQRs * product.price} B</p>
+          <p>판매된 QR: ${product.soldQRs}개 (${soldValue} B)</p>
+          <p>생성일: ${new Date(product.createdDate).toLocaleDateString()}</p>
+        `;
+
+        this.renderProductQRList(product);
+        modal.style.display = 'block';
+      };
+
+      // 제품 상세 모달 닫기
+      window.dapp.closeProductDetailModal = function() {
+        document.getElementById('productDetailModal').style.display = 'none';
+        this.currentProductId = null;
+      };
+
+      // QR 생성
+      window.dapp.generateProductQR = function() {
+        if (!this.currentProductId) return;
+
+        const product = this.qrProducts.find(p => p.id === this.currentProductId);
+        if (!product) return;
+
+        const qrNumber = product.totalQRs + 1;
+        // 올바른 지갑 주소 생성
+        const walletAddress = this.currentUser?.did ? this.generateWalletAddress(this.currentUser.did) : 'unknown';
+        
+        const qrData = {
+          id: `${product.id}_${qrNumber}`,
+          productId: product.id,
+          productName: `${product.name}#${qrNumber}`,
+          price: product.price,
+          owner: walletAddress,
+          status: 'available',
+          createdDate: new Date().toISOString()
+        };
+        
+        console.log('QR 생성 데이터:', qrData);
+        console.log('현재 사용자:', this.currentUser);
+        console.log('생성된 지갑 주소:', walletAddress);
+
+        product.qrs.push(qrData);
+        product.totalQRs++;
+        
+        this.saveQRProducts();
+        this.renderProductList();
+        this.renderProductQRList(product);
+      };
+
+      // 제품 QR 목록 렌더링
+      window.dapp.renderProductQRList = function(product) {
+        const qrList = document.getElementById('productQRList');
+        if (!qrList) return;
+
+        qrList.innerHTML = '';
+
+        product.qrs.filter(qr => qr.status === 'available').forEach(qr => {
+          const qrCard = document.createElement('div');
+          qrCard.className = 'qr-card';
+          qrCard.innerHTML = `
+            <div class="qr-code-container" id="qr_${qr.id}"></div>
+            <div class="qr-info">
+              <p><strong>${qr.productName}</strong></p>
+              <p>가격: ${qr.price} B</p>
+              <button class="btn-danger btn-sm" onclick="window.dapp.deleteQR('${product.id}', '${qr.id}')">
+                <i class="fas fa-trash"></i> 삭제
+              </button>
+              <button class="btn-primary btn-sm" onclick="window.dapp.saveQRImage('${qr.id}')">
+                <i class="fas fa-save"></i> 저장
+              </button>
+            </div>
+          `;
+          qrList.appendChild(qrCard);
+
+          // QR 코드 생성
+          setTimeout(() => {
+            // 필요한 모든 정보를 포함하되 간소화된 형식 - 주소는 전체 포함
+            const ownerAddress = qr.owner || 'unknown';
+            const qrData = `P:${qr.id}:${qr.price}:${ownerAddress}:${qr.productName.substring(0, 12)}`;
+            
+            console.log('QR 코드 데이터 생성:', qrData);
+
+            try {
+              new QRCode(document.getElementById(`qr_${qr.id}`), {
+                text: qrData,
+                width: 200,
+                height: 200,
+                correctLevel: QRCode.CorrectLevel.L
+              });
+            } catch (error) {
+              console.error('QR 코드 생성 오류:', error);
+              // 오류 발생시 주소를 30자로 줄여서 재시도
+              const fallbackData = `P:${qr.id}:${qr.price}:${ownerAddress.substring(0, 30)}:${qr.productName.substring(0, 8)}`;
+              try {
+                new QRCode(document.getElementById(`qr_${qr.id}`), {
+                  text: fallbackData,
+                  width: 200,
+                  height: 200,
+                  correctLevel: QRCode.CorrectLevel.L
+                });
+              } catch (e) {
+                console.error('Fallback QR 생성도 실패:', e);
+                // 최종 fallback - 최소한의 정보만
+                const minimalData = `P:${qr.id}:${qr.price}:${ownerAddress.substring(0, 20)}`;
+                try {
+                  new QRCode(document.getElementById(`qr_${qr.id}`), {
+                    text: minimalData,
+                    width: 200,
+                    height: 200,
+                    correctLevel: QRCode.CorrectLevel.L
+                  });
+                } catch (final) {
+                  console.error('모든 QR 생성 시도 실패:', final);
+                }
+              }
+            }
+          }, 100);
+        });
+      };
+
+      // QR 삭제
+      window.dapp.deleteQR = function(productId, qrId) {
+        if (!confirm('정말로 이 QR을 삭제하시겠습니까?')) return;
+
+        const product = this.qrProducts.find(p => p.id === productId);
+        if (!product) return;
+
+        product.qrs = product.qrs.filter(qr => qr.id !== qrId);
+        product.totalQRs--;
+
+        this.saveQRProducts();
+        this.renderProductList();
+        this.renderProductQRList(product);
+      };
+
+      // QR 이미지 저장
+      window.dapp.saveQRImage = function(qrId) {
+        const qrContainer = document.querySelector(`#qr_${qrId} canvas`);
+        if (!qrContainer) return;
+
+        const link = document.createElement('a');
+        link.download = `QR_${qrId}.png`;
+        link.href = qrContainer.toDataURL();
+        link.click();
+      };
+
+      // QR이 판매된 상태인지 확인
+      window.dapp.checkIfQRSold = function(qrId) {
+        if (!this.qrProducts) {
+          this.qrProducts = [];
+        }
+        
+        // 모든 제품에서 해당 QR 찾기
+        for (const product of this.qrProducts) {
+          if (product.qrs) {
+            const qr = product.qrs.find(qr => qr.id === qrId);
+            if (qr) {
+              return qr.status === 'sold';
+            }
+          }
+        }
+        
+        // QR을 찾지 못한 경우 (다른 사용자의 QR일 수 있음)
+        // 구매 내역에서 확인
+        if (this.purchaseHistory) {
+          const purchase = this.purchaseHistory.find(p => p.qrId === qrId);
+          if (purchase) {
+            return true; // 구매 내역에 있으면 판매된 것
+          }
+        }
+        
+        return false; // 기본적으로 판매되지 않은 것으로 간주
+      };
+
+      // QR 스캔 처리
+      window.dapp.processQRScan = function(qrData) {
+        try {
+          let processedData = null;
+          
+          // JSON 형식 시도
+          try {
+            const data = JSON.parse(qrData);
+            
+            // 간소화된 형식 처리
+            if (data.t === 'p') { // product
+              // QR에서 제품 정보 조회
+              const productId = data.i.split('_')[0];
+              const product = this.qrProducts.find(p => 
+                p.qrs.some(qr => qr.id === data.i)
+              );
+              
+              if (product) {
+                const qr = product.qrs.find(qr => qr.id === data.i);
+                processedData = {
+                  type: 'product',
+                  id: data.i,
+                  owner: qr.owner || data.o,
+                  productName: qr.productName || data.n,
+                  price: data.p
+                };
+              } else {
+                // 외부 QR인 경우 간소화된 데이터 사용
+                processedData = {
+                  type: 'product',
+                  id: data.i,
+                  owner: data.o,
+                  productName: data.n,
+                  price: data.p
+                };
+              }
+            } else if (data.t === 'r') { // recyclable
+              processedData = {
+                type: 'recyclable',
+                id: data.i,
+                owner: data.o,
+                purchaseId: data.pid
+              };
+            } else if (data.type) {
+              // 기존 형식 호환성
+              processedData = data;
+            }
+          } catch (e) {
+            // 간단한 텍스트 형식 처리
+            if (qrData.startsWith('P:')) {
+              const parts = qrData.split(':');
+              
+              // P:id:price:owner:productName 형식 처리
+              if (parts.length >= 3) {
+                processedData = {
+                  type: 'product',
+                  id: parts[1],
+                  price: parseFloat(parts[2]),
+                  owner: parts[3] || '',
+                  productName: parts[4] || `상품#${parts[1].split('_')[1] || '1'}`
+                };
+              }
+              
+              // 만약 로컬에 해당 제품이 있다면 더 정확한 정보 사용
+              if (!this.qrProducts) {
+                this.qrProducts = [];
+              }
+              
+              const product = this.qrProducts.find(p => 
+                p.qrs && p.qrs.some(qr => qr.id === parts[1])
+              );
+              
+              if (product) {
+                const qr = product.qrs.find(qr => qr.id === parts[1]);
+                if (qr) {
+                  processedData = {
+                    type: 'product',
+                    id: parts[1],
+                    owner: qr.owner,
+                    productName: qr.productName,
+                    price: qr.price
+                  };
+                }
+              }
+            } else if (qrData.startsWith('R:')) {
+              // 재활용 QR 처리 - R:purchaseId:ownerAddress 형식
+              const parts = qrData.split(':');
+              const purchaseId = parts[1];
+              const ownerAddress = parts[2] || '';
+              
+              if (!this.purchaseHistory) {
+                this.purchaseHistory = [];
+              }
+              const purchase = this.purchaseHistory.find(p => p.id === purchaseId);
+              if (purchase) {
+                processedData = {
+                  type: 'recyclable',
+                  id: purchase.qrId,
+                  owner: ownerAddress || this.currentUser?.address || '',
+                  purchaseId: purchaseId
+                };
+              } else {
+                // 다른 사용자의 재활용 QR인 경우
+                processedData = {
+                  type: 'recyclable',
+                  id: `recyclable_${purchaseId}`,
+                  owner: ownerAddress,
+                  purchaseId: purchaseId
+                };
+              }
+            }
+          }
+          
+          if (!processedData) {
+            console.log('QR 데이터 파싱 실패:', qrData);
+            throw new Error(`Invalid QR data format: ${qrData}`);
+          }
+          
+          console.log('QR 스캔 성공:', processedData);
+          
+          if (processedData.type === 'product') {
+            // QR이 판매된 상태인지 확인
+            const isQRSold = this.checkIfQRSold(processedData.id);
+            
+            // 지갑 탭으로 먼저 이동
+            this.switchTab('wallet');
+            
+            // DOM 요소가 로드될 때까지 잠깐 기다림
+            setTimeout(() => {
+              // 결제 정보 자동 입력
+              const recipientInput = document.getElementById('recipientAddress');
+              const amountInput = document.getElementById('transferAmount');
+              const memoInput = document.getElementById('transferMemo');
+
+              console.log('자동 입력 시도:', {
+                recipientInput: recipientInput,
+                amountInput: amountInput,
+                memoInput: memoInput,
+                owner: processedData.owner,
+                price: processedData.price,
+                productName: processedData.productName,
+                isQRSold: isQRSold
+              });
+
+              if (recipientInput && amountInput && memoInput) {
+                if (isQRSold) {
+                  // 판매된 QR인 경우: 구매자 주소만 입력
+                  recipientInput.value = processedData.owner || '';
+                  amountInput.value = '';
+                  memoInput.value = '';
+                  
+                  // 주소만 비활성화
+                  recipientInput.disabled = true;
+                  amountInput.disabled = false;
+                  memoInput.disabled = false;
+                  
+                  // 주소만 QR 스타일 적용
+                  recipientInput.classList.add('qr-filled');
+                  amountInput.classList.remove('qr-filled');
+                  memoInput.classList.remove('qr-filled');
+
+                  alert(`구매된 QR입니다!\n현재 소유자: ${processedData.owner}\n가격과 메모는 직접 입력하세요.`);
+                } else {
+                  // 판매 중인 QR인 경우: 모든 정보 입력
+                  recipientInput.value = processedData.owner || '';
+                  amountInput.value = processedData.price || '';
+                  memoInput.value = processedData.productName || '';
+                  
+                  // 모든 필드 비활성화
+                  recipientInput.disabled = true;
+                  amountInput.disabled = true;
+                  memoInput.disabled = true;
+                  
+                  // 모든 필드에 QR 스타일 적용
+                  recipientInput.classList.add('qr-filled');
+                  amountInput.classList.add('qr-filled');
+                  memoInput.classList.add('qr-filled');
+
+
+
+                  // QR 결제 정보 저장 (판매 중인 QR만)
+                  window.dapp.currentQRPayment = processedData;
+
+                  alert(`QR 스캔 완료!\n제품: ${processedData.productName}\n가격: ${processedData.price} B`);
+                }
+
+                // 취소 버튼 추가
+                const transferCard = document.querySelector('.transaction-card');
+                if (transferCard) {
+                  // 기존 취소 버튼 제거
+                  const existingBtn = document.getElementById('cancelQRPayment');
+                  if (existingBtn) {
+                    existingBtn.remove();
+                  }
+                  
+                  const cancelBtn = document.createElement('button');
+                  cancelBtn.id = 'cancelQRPayment';
+                  cancelBtn.className = 'btn-danger qr-cancel-btn';
+                  cancelBtn.innerHTML = '<i class="fas fa-times"></i> QR 취소';
+                  cancelBtn.style.marginLeft = '10px';
+                  cancelBtn.onclick = () => window.dapp.cancelQRPayment();
+                  
+                  const cardHeader = transferCard.querySelector('.card-header');
+                  if (cardHeader) {
+                    cardHeader.appendChild(cancelBtn);
+                  }
+                }
+                
+                console.log('QR 자동 입력 완료:', processedData);
+              } else {
+                console.error('입력 필드를 찾을 수 없습니다');
+                alert('입력 필드를 찾을 수 없습니다. 지갑 탭을 확인해주세요.');
+              }
+            }, 300);
+          } else if (processedData.type === 'recyclable') {
+            // 재활용 가능한 QR 처리
+            this.handleRecyclableQR(processedData);
+          }
+        } catch (error) {
+          console.error('QR 스캔 처리 중 오류:', error);
+          alert(`유효하지 않은 QR 코드입니다.\n디버그 정보: ${error.message}`);
+        }
+      };
+
+      // QR 결제 취소
+      window.dapp.cancelQRPayment = function() {
+        const recipientInput = document.getElementById('recipientAddress');
+        const amountInput = document.getElementById('transferAmount');
+        const memoInput = document.getElementById('transferMemo');
+        const cancelBtn = document.getElementById('cancelQRPayment');
+
+        console.log('QR 결제 취소 시작');
+
+        if (recipientInput) {
+          recipientInput.value = '';
+          recipientInput.disabled = false;
+          recipientInput.classList.remove('qr-filled');
+        }
+        if (amountInput) {
+          amountInput.value = '';
+          amountInput.disabled = false;
+          amountInput.classList.remove('qr-filled');
+        }
+        if (memoInput) {
+          memoInput.value = '';
+          memoInput.disabled = false;
+          memoInput.classList.remove('qr-filled');
+        }
+        if (cancelBtn) {
+          cancelBtn.remove();
+        }
+
+
+
+        this.currentQRPayment = null;
+        
+        console.log('QR 결제 취소 완료');
+        alert('QR 결제가 취소되었습니다.');
+      };
+
+      // 토큰 전송 후 QR 처리
+      window.dapp.handleQRPaymentComplete = function(txHash) {
+        if (!this.currentQRPayment) return;
+
+        const qrData = this.currentQRPayment;
+        
+        // 판매자의 QR 상태 업데이트
+        this.updateSellerQRStatus(qrData);
+
+        // 구매자의 구매 내역에 추가
+        const purchase = {
+          id: Date.now().toString(),
+          qrId: qrData.id,
+          productName: qrData.productName,
+          price: qrData.price,
+          purchaseDate: new Date().toISOString(),
+          txHash: txHash,
+          recyclable: true
+        };
+
+        // purchaseHistory 배열 초기화 확인
+        if (!this.purchaseHistory) {
+          this.purchaseHistory = [];
+        }
+        this.purchaseHistory.push(purchase);
+        this.savePurchaseHistory();
+
+        // 재활용 가능한 QR 추가
+        if (!this.recyclableQRs) {
+          this.recyclableQRs = [];
+        }
+        // 구매자의 지갑 주소
+        const buyerWalletAddress = this.currentUser?.did ? this.generateWalletAddress(this.currentUser.did) : 'unknown';
+        this.recyclableQRs.push({
+          id: qrData.id,
+          owner: buyerWalletAddress,
+          purchaseId: purchase.id
+        });
+
+        alert(`${qrData.productName}이(가) 판매되었습니다!`);
+        
+        this.cancelQRPayment();
+        this.renderPurchaseHistory();
+      };
+
+      // 판매자 QR 상태 업데이트
+      window.dapp.updateSellerQRStatus = function(qrData) {
+        // 실제 구현에서는 서버를 통해 판매자의 QR 상태를 업데이트해야 함
+        // 여기서는 로컬 데이터만 업데이트
+        const product = this.qrProducts.find(p => 
+          p.qrs.some(qr => qr.id === qrData.id)
+        );
+        
+        if (product) {
+          const qr = product.qrs.find(qr => qr.id === qrData.id);
+          if (qr) {
+            qr.status = 'sold';
+            // 구매자 정보로 QR 소유권 변경
+            const buyerWalletAddress = this.currentUser?.did ? this.generateWalletAddress(this.currentUser.did) : 'unknown';
+            qr.owner = buyerWalletAddress;
+            qr.soldDate = new Date().toISOString();
+            
+            product.soldQRs++;
+            this.saveQRProducts();
+            this.renderProductList();
+          }
+        }
+      };
+
+      // 구매 내역 렌더링
+      window.dapp.renderPurchaseHistory = function() {
+        const purchaseHistory = document.getElementById('purchaseHistory');
+        if (!purchaseHistory) return;
+
+        // purchaseHistory 배열 초기화 확인
+        if (!this.purchaseHistory) {
+          this.purchaseHistory = [];
+        }
+
+        purchaseHistory.innerHTML = '';
+
+        this.purchaseHistory.forEach(purchase => {
+          const card = document.createElement('div');
+          card.className = 'purchase-card';
+          card.innerHTML = `
+            <div class="purchase-info">
+              <h4>${purchase.productName}</h4>
+              <p>가격: ${purchase.price} B</p>
+              <p>구매일: ${new Date(purchase.purchaseDate).toLocaleDateString()}</p>
+              <div class="qr-code-container" id="purchase_qr_${purchase.id}"></div>
+              ${purchase.recyclable ? `
+                <button class="btn-primary" onclick="window.dapp.showRecycleModal('${purchase.id}')">
+                  <i class="fas fa-recycle"></i> 재활용
+                </button>
+              ` : '<p>재활용 완료</p>'}
+            </div>
+          `;
+          purchaseHistory.appendChild(card);
+
+          // 구매자 소유 QR 코드 생성
+          setTimeout(() => {
+            // 구매자의 지갑 주소 포함 - 전체 주소 사용
+            const buyerWalletAddress = this.currentUser?.did ? this.generateWalletAddress(this.currentUser.did) : 'unknown';
+            const recycleData = `R:${purchase.id}:${buyerWalletAddress}`;
+            
+            try {
+              new QRCode(document.getElementById(`purchase_qr_${purchase.id}`), {
+                text: recycleData,
+                width: 150,
+                height: 150,
+                correctLevel: QRCode.CorrectLevel.L
+              });
+            } catch (error) {
+              console.error('구매 QR 생성 오류:', error);
+              // 더 간단한 버전으로 재시도
+              const simpleData = `R:${purchase.id}`;
+              try {
+                new QRCode(document.getElementById(`purchase_qr_${purchase.id}`), {
+                  text: simpleData,
+                  width: 150,
+                  height: 150,
+                  correctLevel: QRCode.CorrectLevel.L
+                });
+              } catch (e) {
+                console.error('간단한 구매 QR 생성도 실패:', e);
+              }
+            }
+          }, 100);
+        });
+      };
+
+      // 재활용 모달 표시
+      window.dapp.showRecycleModal = function(purchaseId) {
+        const modal = document.getElementById('recycleQRModal');
+        const productList = document.getElementById('recycleProductList');
+        
+        this.currentRecyclePurchaseId = purchaseId;
+        
+        // qrProducts 배열 초기화 확인
+        if (!this.qrProducts) {
+          this.qrProducts = [];
+        }
+        
+        productList.innerHTML = '';
+        this.qrProducts.forEach(product => {
+          const item = document.createElement('div');
+          item.className = 'recycle-product-item';
+          item.innerHTML = `
+            <span>${product.name} (${product.price} B)</span>
+            <button class="btn-primary" onclick="window.dapp.recycleQR('${product.id}')">
+              선택
+            </button>
+          `;
+          productList.appendChild(item);
+        });
+
+        modal.style.display = 'block';
+      };
+
+      // 재활용 모달 닫기
+      window.dapp.closeRecycleQRModal = function() {
+        document.getElementById('recycleQRModal').style.display = 'none';
+        this.currentRecyclePurchaseId = null;
+      };
+
+      // QR 재활용
+      window.dapp.recycleQR = function(productId) {
+        if (!this.currentRecyclePurchaseId) return;
+
+        // 배열 초기화 확인
+        if (!this.purchaseHistory) {
+          this.purchaseHistory = [];
+        }
+        if (!this.qrProducts) {
+          this.qrProducts = [];
+        }
+
+        const purchase = this.purchaseHistory.find(p => p.id === this.currentRecyclePurchaseId);
+        const product = this.qrProducts.find(p => p.id === productId);
+
+        if (!purchase || !product) return;
+
+        // 새로운 QR 생성
+        const qrNumber = product.totalQRs + 1;
+        // 올바른 지갑 주소 생성
+        const walletAddress = this.currentUser?.did ? this.generateWalletAddress(this.currentUser.did) : 'unknown';
+        
+        const recycledQR = {
+          id: `${product.id}_${qrNumber}`,
+          productId: product.id,
+          productName: `${product.name}#${qrNumber}`,
+          price: product.price,
+          owner: walletAddress,
+          status: 'available',
+          createdDate: new Date().toISOString(),
+          recycledFrom: purchase.id
+        };
+
+        product.qrs.push(recycledQR);
+        product.totalQRs++;
+
+        // 구매 내역에서 재활용 표시
+        purchase.recyclable = false;
+
+        this.saveQRProducts();
+        this.savePurchaseHistory();
+        this.renderProductList();
+        this.renderPurchaseHistory();
+        this.closeRecycleQRModal();
+
+        alert('QR이 성공적으로 재활용되었습니다!');
+      };
+
+      // 데이터 저장 함수들
+      window.dapp.saveQRProducts = function() {
+        localStorage.setItem('qrProducts', JSON.stringify(this.qrProducts));
+      };
+
+      window.dapp.loadQRProducts = function() {
+        const saved = localStorage.getItem('qrProducts');
+        if (saved) {
+          this.qrProducts = JSON.parse(saved);
+          this.renderProductList();
+        }
+      };
+
+      window.dapp.savePurchaseHistory = function() {
+        localStorage.setItem('purchaseHistory', JSON.stringify(this.purchaseHistory));
+      };
+
+      window.dapp.loadPurchaseHistory = function() {
+        const saved = localStorage.getItem('purchaseHistory');
+        if (saved) {
+          this.purchaseHistory = JSON.parse(saved);
+          this.renderPurchaseHistory();
+        }
+      };
+
+      // QR Manager 구현
+      window.qrManager = {
+        scannerActive: false,
+        videoStream: null,
+        
+        openQRScanner: function(callback) {
+          const modal = document.createElement('div');
+          modal.className = 'qr-scanner-modal';
+          modal.innerHTML = `
+            <div class="qr-scanner-content">
+              <div class="scanner-header">
+                <h3>QR 코드 스캔</h3>
+                <button class="close-scanner" onclick="window.qrManager.closeScanner()">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <video id="qr-video" width="300" height="300"></video>
+              <canvas id="qr-canvas" style="display: none;"></canvas>
+              <p class="scanner-info">QR 코드를 카메라에 비춰주세요</p>
+            </div>
+          `;
+          document.body.appendChild(modal);
+
+          const video = document.getElementById('qr-video');
+          const canvas = document.getElementById('qr-canvas');
+          const context = canvas.getContext('2d');
+
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+              this.videoStream = stream;
+              video.srcObject = stream;
+              video.play();
+              this.scannerActive = true;
+              this.scanQRCode(video, canvas, context, callback);
+            })
+            .catch(err => {
+              console.error('카메라 접근 오류:', err);
+              alert('카메라에 접근할 수 없습니다.');
+              this.closeScanner();
+            });
+        },
+
+        scanQRCode: function(video, canvas, context, callback) {
+          if (!this.scannerActive) return;
+
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            if (code) {
+              // QR 코드 감지됨
+              this.closeScanner();
+              
+              // 제품 QR인지 확인
+              try {
+                const data = JSON.parse(code.data);
+                // 간소화된 형식과 기존 형식 모두 체크
+                if (data.t === 'p' || data.t === 'r' || data.type === 'product' || data.type === 'recyclable') {
+                  // 제품 QR이면 processQRScan 호출
+                  window.dapp.processQRScan(code.data);
+                  return;
+                }
+              } catch (e) {
+                // JSON이 아니면 간단한 형식 체크
+                if (code.data.startsWith('P:') || code.data.startsWith('R:')) {
+                  window.dapp.processQRScan(code.data);
+                  return;
+                }
+                // 그 외는 일반 주소로 처리
+              }
+
+              // 일반 주소로 처리
+              if (callback) {
+                callback(code.data);
+              }
+              return;
+            }
+          }
+
+          requestAnimationFrame(() => {
+            this.scanQRCode(video, canvas, context, callback);
+          });
+        },
+
+        closeScanner: function() {
+          this.scannerActive = false;
+          
+          if (this.videoStream) {
+            this.videoStream.getTracks().forEach(track => track.stop());
+            this.videoStream = null;
+          }
+
+          const modal = document.querySelector('.qr-scanner-modal');
+          if (modal) {
+            modal.remove();
+          }
+        }
+      };
       
       // switchTab 함수 개선
       window.dapp.switchTab = function(tabName) {
@@ -31020,8 +32450,200 @@ window.dapp.removeAllCoreStructure = function() {
         // 각 탭별 로직 실행
         if (tabName === 'governance' && this.governanceManager) {
           this.governanceManager.loadProposals();
+          // 로그인 상태가 바뀌었을 수 있으므로 협업 탭도 새로고침
+          this.governanceManager.loadCollaboration();
+          
+          // 거버넌스 탭 로드 시 다크모드 적용 (시스템 서브탭 포함)
+          setTimeout(() => {
+            
+          }, 100);
+          setTimeout(() => {
+            
+          }, 1000);
+        } else if (tabName === 'qr-generator') {
+          // QR 생성 탭 초기화
+          this.initQRSystem();
         }
       };
     }
   });
-} 
+}
+
+// 지역 기반 릴레이 선택을 위한 함수들 추가
+BrotherhoodDApp.prototype.detectUserLocation = async function() {
+  try {
+    console.log('🌍 사용자 위치 감지 중...');
+    
+    const response = await fetch('http://ip-api.com/json/', {
+      timeout: 5000
+    });
+    
+    if (response.ok) {
+      const locationData = await response.json();
+      
+      if (locationData.status === 'success') {
+        this.userCoordinates = {
+          lat: locationData.lat,
+          lng: locationData.lon
+        };
+        this.userLocation = {
+          country: locationData.country,
+          city: locationData.city,
+          region: locationData.regionName
+        };
+        
+        console.log(`📍 사용자 위치: ${this.userLocation.city}, ${this.userLocation.country} (${this.userCoordinates.lat}, ${this.userCoordinates.lng})`);
+      } else {
+        this.setDefaultUserLocation();
+      }
+    } else {
+      this.setDefaultUserLocation();
+    }
+  } catch (error) {
+    console.warn('⚠️ 위치 감지 실패:', error.message);
+    this.setDefaultUserLocation();
+  }
+};
+
+BrotherhoodDApp.prototype.setDefaultUserLocation = function() {
+  this.userCoordinates = {
+    lat: 37.5665,
+    lng: 126.9780
+  };
+  this.userLocation = {
+    country: 'South Korea',
+    city: 'Seoul',
+    region: 'Seoul'
+  };
+  console.log('📍 기본 사용자 위치: Seoul, South Korea');
+};
+
+BrotherhoodDApp.prototype.calculateDistance = function(lat1, lng1, lat2, lng2) {
+  const R = 6371; // 지구 반지름 (km)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+BrotherhoodDApp.prototype.selectOptimalRelayByLocation = async function(relayList) {
+  if (!this.userCoordinates || !relayList.length) {
+    console.log('❌ 사용자 위치 또는 릴레이 리스트 없음 - 첫 번째 릴레이 사용');
+    return relayList[0];
+  }
+  
+  const userLat = this.userCoordinates.lat;
+  const userLng = this.userCoordinates.lng;
+  
+  // 25km부터 시작해서 점진적으로 범위 확대
+  const searchRadii = [25, 50, 100, 200, 500, 1000];
+  
+  for (const radius of searchRadii) {
+    console.log(`🔍 ${radius}km 범위 내 릴레이 탐색 중...`);
+    
+    // 해당 범위 내의 릴레이들 필터링
+    const nearbyRelays = relayList.filter(relay => {
+      if (!relay.coordinates) {
+        console.log(`⚠️ 릴레이 ${relay.number}번: 좌표 정보 없음`);
+        return false;
+      }
+      
+      const distance = this.calculateDistance(
+        userLat, userLng,
+        relay.coordinates.lat, relay.coordinates.lng
+      );
+      
+      console.log(`📍 릴레이 ${relay.number}번 (${relay.city}): 거리 ${distance.toFixed(1)}km`);
+      return distance <= radius;
+    });
+    
+    if (nearbyRelays.length === 0) {
+      console.log(`📍 ${radius}km 범위 내 릴레이 없음 - 범위 확대`);
+      continue;
+    }
+    
+    console.log(`📍 ${radius}km 범위 내 ${nearbyRelays.length}개 릴레이 발견`);
+    
+    // 핑-퐁 테스트로 가장 빠른 릴레이 선택
+    const optimalRelay = await this.pingTestRelays(nearbyRelays);
+    
+    if (optimalRelay) {
+      const distance = this.calculateDistance(
+        userLat, userLng,
+        optimalRelay.coordinates.lat, optimalRelay.coordinates.lng
+      );
+      console.log(`✅ 최적 릴레이 선택: ${optimalRelay.number}번 (${optimalRelay.city}, 거리: ${distance.toFixed(1)}km, 핑: ${optimalRelay.ping}ms)`);
+      return optimalRelay;
+    }
+  }
+  
+  console.log('⚠️ 모든 범위에서 릴레이를 찾지 못함 - 첫 번째 릴레이 사용');
+  return relayList[0];
+};
+
+BrotherhoodDApp.prototype.pingTestRelays = async function(relayList) {
+  console.log(`🏓 ${relayList.length}개 릴레이 핑 테스트 시작...`);
+  
+  // 모든 릴레이에 동시에 핑 테스트
+  const pingPromises = relayList.map(async (relay) => {
+    try {
+      const startTime = Date.now();
+      
+      const response = await fetch(`${relay.url}/ping`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Bypass-Tunnel-Reminder': 'true',
+          'Cache-Control': 'no-cache'
+        },
+        timeout: 3000
+      });
+      
+      const endTime = Date.now();
+      const pingTime = endTime - startTime;
+      
+      if (response.ok) {
+        return {
+          ...relay,
+          ping: pingTime,
+          status: 'reachable'
+        };
+      } else {
+        return {
+          ...relay,
+          ping: 9999,
+          status: 'unreachable'
+        };
+      }
+    } catch (error) {
+      return {
+        ...relay,
+        ping: 9999,
+        status: 'error'
+      };
+    }
+  });
+  
+  const results = await Promise.all(pingPromises);
+  
+  // 성공한 릴레이들만 필터링
+  const reachableRelays = results.filter(relay => relay.status === 'reachable');
+  
+  if (reachableRelays.length === 0) {
+    console.log('❌ 핑 테스트 통과한 릴레이 없음');
+    return null;
+  }
+  
+  // 핑 시간 기준으로 정렬
+  reachableRelays.sort((a, b) => a.ping - b.ping);
+  
+  console.log('🏓 핑 테스트 결과:');
+  reachableRelays.forEach(relay => {
+    console.log(`  ${relay.number}번: ${relay.ping}ms (${relay.city || 'Unknown'})`);
+  });
+  
+  return reachableRelays[0]; // 가장 빠른 릴레이 반환
+}; 

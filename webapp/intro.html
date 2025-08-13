@@ -58,14 +58,14 @@
             <div class="nav-item" data-section="solution-section">
                 <span class="nav-label">대안</span>
             </div>
+            <div class="nav-item" data-section="structure-section">
+                <span class="nav-label">구조</span>
+            </div>
             <div class="nav-item" data-section="features-section">
                 <span class="nav-label">기능</span>
             </div>
             <div class="nav-item" data-section="roadmap-section">
                 <span class="nav-label">질문</span>
-            </div>
-            <div class="nav-item" data-section="cta-section">
-                <span class="nav-label">시작</span>
             </div>
         </div>
     </nav>
@@ -202,7 +202,52 @@
         </div>
     </section>
 
-    <!-- 섹션 4: 핵심 기능 -->
+    <!-- 섹션 4: 탈중앙 통신구조 -->
+    <section class="structure-section">
+        <div class="container">
+            <h2 class="section-title">
+                <span class="title-accent">탈중앙</span> 통신구조
+            </h2>
+            
+            <!-- PNG 영역 -->
+            <div class="structure-visual">
+                <div class="structure-diagram">
+                    <img src="images/network-structure.png" alt="탈중앙 통신구조도" class="structure-image">
+                </div>
+            </div>
+            
+            <!-- 구성요소 아이콘들 -->
+            <div class="structure-components">
+                <div class="component-item">
+                    <div class="component-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h3>사용자</h3>
+                </div>
+                
+                <div class="component-item">
+                    <div class="component-icon">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <h3>중계노드</h3>
+                </div>
+                
+                <div class="component-item">
+                    <div class="component-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>검증노드</h3>
+                </div>
+            </div>
+            
+            <!-- 통신 흐름 설명 -->
+            <div class="structure-description">
+                <p>사용자가 D-App에서의 활동으로 트랜잭션을 발생시키면, 이는 중계노드로 전달되어 중계노드에 연결된 검증노드에게 전달됩니다. 전달된 트랜잭션으로 하여금 검증노드는 블록을 생성하여, 다시 중계서버로 전달합니다. 그리고 이는 모든 중계서버와 모든 노드에게 전파됩니다.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 섹션 5: 핵심 기능 -->
     <section class="features-section">
         <div class="container">
             <h2 class="section-title">핵심 기능</h2>
@@ -221,22 +266,6 @@
                             <div class="dao-node">기여활동</div>
                             <div class="dao-node">토큰발행</div>
                             <div class="dao-node">자율운영</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 기여 증명 -->
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <i class="fas fa-certificate"></i>
-                    </div>
-                    <h3>기여 증명 시스템</h3>
-                    <p>구성원이 DAO 내 지정된 기여활동(DCA)을 자율적으로 행하면, 고유한 증명기준을 거쳐 토큰이 발행됩니다.</p>
-                    <div class="feature-visual">
-                        <div class="contribution-flow">
-                            <div class="step">기여</div>
-                            <div class="step">증명</div>
-                            <div class="step">발행</div>
                         </div>
                     </div>
                 </div>
@@ -265,11 +294,36 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- QR 생성 시스템 -->
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <h3>QR 생성 시스템</h3>
+                    <p>제품을 설정하고, 제품정보와 판매자주소가 담긴 QR을 생성하여 프로토콜상 거래를 용이하게 합니다. 해당 QR은 구매자에게 소유권이 이전되며, 재활용할 수 있습니다.</p>
+                    <div class="feature-visual">
+                        <div class="qr-system">
+                            <div class="qr-step">
+                                <i class="fas fa-user-tie"></i>
+                                <span>QR생성</span>
+                            </div>
+                            <div class="qr-step">
+                                <i class="fas fa-exchange-alt"></i>
+                                <span>구매자이전</span>
+                            </div>
+                            <div class="qr-step">
+                                <i class="fas fa-recycle"></i>
+                                <span>재활용</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- 섹션 5: 로드맵 -->
+    <!-- 섹션 6: 로드맵 -->
     <section class="roadmap-section">
         <div class="container">
             <h2 class="section-title">Q & A</h2>
@@ -317,9 +371,9 @@
                     <h3>이것이 왜 필요한가요?</h3>
                     <p>인류는 '만물의 협동'이란 상호부조론를 뒤로한 채 사회진화론을 정설로 받아드렸고, '무한한 경쟁'이란 그릇된 발전원리로 하여금 인간은 문명을 위한 부품으로 전락하였습니다.</p>
                     
-                    <p>공동체를 이루는 것은 우리이지만, 발전이란 명목 하에 우리들의 희생은 당연시되고 있으며, 건물들과 이상은 높아져만 가는데, 우리들의 마음속 불꽃은 한없이 작아지고만 있습니다.</p>
+                    <p>공동체를 이루는 것은 우리이지만 발전이란 명목 하에 우리들의 희생은 당연시되고 있으며, 건물들과 이상은 높아져가지만 우리들의 마음속 불꽃은 한없이 작아지고 있습니다.</p>
                     
-                    <p>기술들은 미래를 이야기하지만, 우리들은 과거의 것에서 정답을 찾으려 하고 있고, 우리들은 자유를 이야기하지만, 존재의 의미를 시스템 속에서 찾으려 하고 있습니다.</p>
+                    <p>기술들은 미래를 이야기하지만 우리들은 과거의 것에서 정답을 찾으려 하고 있고, 우리들은 자유를 이야기하지만 시스템 속에서 존재의 의미를 찾으려 하고 있습니다.</p>
 
                     <p>우리들은 이제, 이것을 바로잡아야 합니다.</p>
 
@@ -331,7 +385,7 @@
         </div>
     </section>
 
-    <!-- 섹션 6: CTA -->
+    <!-- 섹션 7: CTA -->
     <section class="cta-section">
         <div class="container">
             <div class="cta-content">

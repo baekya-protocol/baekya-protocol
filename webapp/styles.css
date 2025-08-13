@@ -3,7 +3,7 @@
 /* CSS 변수 정의 */
 :root {
     /* 주요 색상 */
-    --primary-color: #1e40af;        /* 진한 파란색 */
+    --primary-color: #3b82f6;        /* 밝은 파란색 */
     --primary-dark: #1e3a8a;         /* 더 진한 파란색 */
     --primary-light: #3b82f6;        /* 밝은 파란색 */
     --secondary-color: #059669;      /* 녹색 */
@@ -201,7 +201,7 @@
   
   /* APK 다운로드 배너 스타일 */
   .apk-download-banner {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background: var(--primary-color);
     color: white;
     padding: 1rem 0;
     margin-bottom: 1rem;
@@ -2953,6 +2953,27 @@
       gap: 0.5rem;
     }
     
+    /* QR 생성 탭 - QR 생성 헤더 */
+    .mobile-header-qr-generator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    
+    .mobile-qr-generator-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--text-white);
+    }
+    
+    .mobile-qr-generator-title i {
+      color: var(--text-white);
+    }
+    
     .mobile-proposal-btn {
       padding: 0.5rem 0.75rem;
       background: linear-gradient(135deg, var(--primary-light) 0%, var(--secondary-color) 100%);
@@ -3450,7 +3471,7 @@
   /* CSS 변수 정의 */
   :root {
     /* 주요 색상 */
-    --primary-color: #1e40af;        /* 진한 파란색 */
+    --primary-color: #3b82f6;        /* 밝은 파란색 */
     --primary-dark: #1e3a8a;         /* 더 진한 파란색 */
     --primary-light: #3b82f6;        /* 밝은 파란색 */
     --secondary-color: #059669;      /* 녹색 */
@@ -6096,6 +6117,27 @@
     .mobile-governance-actions {
       display: flex;
       gap: 0.5rem;
+    }
+    
+    /* QR 생성 탭 - QR 생성 헤더 */
+    .mobile-header-qr-generator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    
+    .mobile-qr-generator-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--text-white);
+    }
+    
+    .mobile-qr-generator-title i {
+      color: var(--text-white);
     }
     
     .mobile-proposal-btn {
@@ -11296,6 +11338,27 @@
     .mobile-governance-actions {
       display: flex;
       gap: 0.5rem;
+    }
+    
+    /* QR 생성 탭 - QR 생성 헤더 */
+    .mobile-header-qr-generator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    
+    .mobile-qr-generator-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--text-white);
+    }
+    
+    .mobile-qr-generator-title i {
+      color: var(--text-white);
     }
     
     .mobile-proposal-btn {
@@ -15739,7 +15802,7 @@
   /* CSS 변수 정의 */
   :root {
     /* 주요 색상 */
-    --primary-color: #1e40af;        /* 진한 파란색 */
+    --primary-color: #3b82f6;        /* 밝은 파란색 */
     --primary-dark: #1e3a8a;         /* 더 진한 파란색 */
     --primary-light: #3b82f6;        /* 밝은 파란색 */
     --secondary-color: #059669;      /* 녹색 */
@@ -18385,6 +18448,27 @@
     .mobile-governance-actions {
       display: flex;
       gap: 0.5rem;
+    }
+    
+    /* QR 생성 탭 - QR 생성 헤더 */
+    .mobile-header-qr-generator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    
+    .mobile-qr-generator-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--text-white);
+    }
+    
+    .mobile-qr-generator-title i {
+      color: var(--text-white);
     }
     
     .mobile-proposal-btn {
@@ -18884,7 +18968,7 @@
   /* CSS 변수 정의 */
   :root {
     /* 주요 색상 */
-    --primary-color: #1e40af;        /* 진한 파란색 */
+    --primary-color: #3b82f6;        /* 밝은 파란색 */
     --primary-dark: #1e3a8a;         /* 더 진한 파란색 */
     --primary-light: #3b82f6;        /* 밝은 파란색 */
     --secondary-color: #059669;      /* 녹색 */
@@ -21530,6 +21614,27 @@
     .mobile-governance-actions {
       display: flex;
       gap: 0.5rem;
+    }
+    
+    /* QR 생성 탭 - QR 생성 헤더 */
+    .mobile-header-qr-generator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    
+    .mobile-qr-generator-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--text-white);
+    }
+    
+    .mobile-qr-generator-title i {
+      color: var(--text-white);
     }
     
     .mobile-proposal-btn {
@@ -26730,6 +26835,27 @@
     .mobile-governance-actions {
       display: flex;
       gap: 0.5rem;
+    }
+    
+    /* QR 생성 탭 - QR 생성 헤더 */
+    .mobile-header-qr-generator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    
+    .mobile-qr-generator-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--text-white);
+    }
+    
+    .mobile-qr-generator-title i {
+      color: var(--text-white);
     }
     
     .mobile-proposal-btn {
@@ -34441,7 +34567,7 @@
   }
   
   .btn-icon.video-btn {
-    background: #7c3aed;
+    background: var(--primary-color);
     color: white;
   }
   
@@ -36281,6 +36407,15 @@
     color: white !important;
   }
   
+  /* QR 생성 탭 헤더 텍스트 흰색 */
+  .tab-btn[data-tab="qr-generator"].active,
+  .tab-btn[data-tab="qr-generator"].active span,
+  #mobile-header-qr-generator.active,
+  #mobile-header-qr-generator.active .mobile-qr-generator-title,
+  #mobile-header-qr-generator.active .mobile-qr-generator-title span {
+    color: white !important;
+  }
+  
   /* 거버넌스 탭 스타일 */
   .governance-container {
     max-width: 1200px;
@@ -36311,7 +36446,14 @@
     padding: 0.5rem;
     border-radius: 12px;
     margin-bottom: 2rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .governance-nav::-webkit-scrollbar {
+    display: none;
   }
   
   .governance-tab {
@@ -36330,6 +36472,7 @@
     flex: 1;
     justify-content: center;
     min-width: max-content;
+    white-space: nowrap;
   }
   
   .governance-tab:hover {
@@ -36345,6 +36488,29 @@
   
   .governance-tab i {
     font-size: 0.9rem;
+  }
+  
+  /* 모바일에서 거버넌스 탭 최적화 */
+  @media (max-width: 768px) {
+    .governance-nav {
+      gap: 0.25rem;
+      padding: 0.25rem;
+    }
+    
+    .governance-tab {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      min-width: auto;
+      flex: 1;
+    }
+    
+    .governance-tab span {
+      font-size: 0.75rem;
+    }
+    
+    .governance-tab i {
+      font-size: 0.8rem;
+    }
   }
   
   /* 거버넌스 탭 콘텐츠 */
@@ -36393,6 +36559,13 @@
     margin-bottom: 1.5rem;
     overflow-x: auto;
     align-items: center;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .proposals-filter-menu::-webkit-scrollbar {
+    display: none;
   }
   
   .filter-btn {
@@ -36427,6 +36600,31 @@
   
   .filter-btn i {
     font-size: 0.85rem;
+  }
+  
+  /* 모바일에서 필터 버튼 최적화 */
+  @media (max-width: 768px) {
+    .proposals-filter-menu {
+      gap: 0.25rem;
+      padding: 0.25rem;
+    }
+    
+    .filter-btn {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      gap: 0.25rem;
+      min-width: auto;
+      flex: 1;
+    }
+    
+    .filter-btn i {
+      font-size: 0.75rem;
+    }
+    
+    .filter-divider {
+      height: 25px;
+      margin: 0 0.5rem;
+    }
   }
   
   /* 필터 구분선 */
@@ -36672,12 +36870,306 @@
       align-items: center;
     }
 
-    .scan-photo-btn {
-      width: 100%;
-      max-width: 300px;
-      justify-content: center;
-    }
+      .scan-photo-btn {
+    width: 100%;
+    max-width: 300px;
+    justify-content: center;
   }
+}
+
+/* 본투표 시스템 스타일 */
+.collaboration-vote-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(229, 231, 235, 0.8);
+}
+
+.vote-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.vote-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vote-info {
+  display: flex;
+  align-items: center;
+}
+
+.vote-cost {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.final-vote-box {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.vote-description {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.vote-description p {
+  color: #6b7280;
+  margin: 0;
+}
+
+/* 표결 결과 섹션 */
+.vote-results-section {
+  margin-bottom: 1.5rem;
+}
+
+.vote-results-section h4,
+.participation-section h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.vote-progress-bar {
+  height: 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 0.5rem;
+}
+
+.vote-segment {
+  transition: width 0.3s ease;
+}
+
+.vote-segment.agree {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.vote-segment.abstain {
+  background: linear-gradient(90deg, #6b7280, #9ca3af);
+}
+
+.vote-segment.disagree {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.vote-counts {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.votes-for {
+  color: #10b981;
+}
+
+.abstentions {
+  color: #6b7280;
+}
+
+.votes-against {
+  color: #ef4444;
+}
+
+/* 투표 참여율 섹션 */
+.participation-section {
+  margin-bottom: 1.5rem;
+}
+
+.participation-bar {
+  height: 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.participation-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  transition: width 0.3s ease;
+}
+
+.participation-stats {
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* 투표 버튼들 (작게 변경) */
+.vote-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.final-vote-btn {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+.final-vote-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.final-vote-btn.agree {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: white;
+}
+
+.final-vote-btn.agree:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669, #10b981);
+  transform: translateY(-1px);
+}
+
+.final-vote-btn.agree.voted {
+  background: #059669;
+  box-shadow: 0 0 0 2px #d1fae5;
+}
+
+.final-vote-btn.abstain {
+  background: linear-gradient(135deg, #6b7280, #9ca3af);
+  color: white;
+}
+
+.final-vote-btn.abstain:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4b5563, #6b7280);
+  transform: translateY(-1px);
+}
+
+.final-vote-btn.abstain.voted {
+  background: #4b5563;
+  box-shadow: 0 0 0 2px #e5e7eb;
+}
+
+.final-vote-btn.disagree {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  color: white;
+}
+
+.final-vote-btn.disagree:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  transform: translateY(-1px);
+}
+
+.final-vote-btn.disagree.voted {
+  background: #dc2626;
+  box-shadow: 0 0 0 2px #fecaca;
+}
+
+.user-vote-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  color: #0369a1;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.user-vote-status i {
+  color: #10b981;
+}
+
+.stats-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stats-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.stats-value {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.user-vote-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.user-vote-status i {
+  color: #10b981;
+}
+
+.vote-login-required {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.vote-login-required i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #d1d5db;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .vote-actions {
+    flex-direction: column;
+  }
+  
+  .final-vote-btn {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+  
+  .vote-results-section h4,
+  .participation-section h4 {
+    font-size: 1.1rem;
+  }
+  
+  .vote-progress-bar {
+    height: 14px;
+  }
+  
+  .participation-bar {
+    height: 10px;
+  }
+}
   
   /* 제안 헤더 */
   .proposals-header {
@@ -42030,7 +42522,7 @@
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: linear-gradient(135deg, #667eea, #764ba2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -43740,8 +44232,340 @@
     
     .complement-meta {
       flex-direction: column;
-      align-items: flex-start;
-      gap: 0.5rem;
-    }
+          align-items: flex-start;
+    gap: 0.5rem;
   }
+}
+
+/* ========== QR 생성 시스템 스타일 ========== */
+.qr-generator-container {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.qr-generator-header {
+  margin-bottom: 2rem;
+}
+
+.qr-generator-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.qr-system-description {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+}
+
+.qr-products-section,
+.qr-purchase-section {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.product-list,
+.purchase-history {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.product-card,
+.purchase-card {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.product-info {
+  margin-bottom: 0.75rem;
+}
+
+.product-info h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.product-info p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.product-card .btn-danger {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* QR 상세 모달 */
+.qr-modal-content {
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.product-detail-info {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.product-detail-info h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.product-detail-info p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.generate-qr-btn {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.product-qr-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.qr-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.qr-code-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+  min-height: 200px;
+}
+
+.qr-code-container canvas,
+.qr-code-container img {
+  max-width: 100%;
+  height: auto;
+}
+
+.qr-info p {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.qr-info button {
+  margin: 0.25rem;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* 구매 내역 스타일 */
+.purchase-card {
+  cursor: default;
+}
+
+.purchase-info h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.purchase-info p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.purchase-info .qr-code-container {
+  margin: 1rem 0;
+}
+
+/* 재활용 모달 */
+.recycle-product-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.recycle-product-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.recycle-product-item:hover {
+  background: var(--bg-tertiary);
+}
+
+/* QR 스캐너 모달 */
+.qr-scanner-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.qr-scanner-content {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 400px;
+  width: 90%;
+}
+
+.scanner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.scanner-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.close-scanner {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.close-scanner:hover {
+  color: var(--text-primary);
+}
+
+#qr-video {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.scanner-info {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .qr-generator-container {
+    padding: 1rem;
+  }
+
+  .product-list,
+  .purchase-history {
+    grid-template-columns: 1fr;
+  }
+
+  .product-qr-list {
+    grid-template-columns: 1fr;
+  }
+
+  .qr-modal-content {
+    max-width: 95%;
+  }
+}
+
+/* QR 자동 입력 스타일 */
+.qr-filled {
+  background-color: #e3f2fd !important;
+  border: 2px solid #2196f3 !important;
+}
+
+.qr-cancel-btn {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+}
+
+.qr-cancel-btn:hover {
+  background-color: #d32f2f !important;
+}
+
+/* 로그인 버튼 로딩 상태 스타일 */
+.btn-primary:disabled {
+  opacity: 0.7 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+.btn-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-spinner i {
+  animation: btn-spin 1s linear infinite;
+}
+
+@keyframes btn-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.btn-text {
+  display: inline-block;
+}
   

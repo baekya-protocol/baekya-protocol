@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="additional.css">
     <link rel="stylesheet" href="input-fix.css">
+
+    <link rel="stylesheet" href="dark-theme.css">
   
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
@@ -60,18 +62,17 @@
                     </div>
                 </div>
 
-                <!-- 시스템 탭 헤더 -->
-                <div class="mobile-header-tab" id="mobile-header-system">
-                    <div class="mobile-header-system">
-                        <div class="mobile-system-title">
-                            <i class="fas fa-code"></i>
-                            <span>시스템</span>
+
+
+                <!-- QR 생성 탭 헤더 -->
+                <div class="mobile-header-tab" id="mobile-header-qr-generator">
+                    <div class="mobile-header-qr-generator">
+                        <div class="mobile-qr-generator-title">
+                            <i class="fas fa-qrcode"></i>
+                            <span>QR 생성</span>
                         </div>
                     </div>
                 </div>
-
-
-
 
             </div>
         </div>
@@ -102,10 +103,11 @@
                     <i class="fas fa-university"></i>
                     <span>거버넌스</span>
                 </button>
-                <button class="tab-btn" data-tab="system">
-                    <i class="fas fa-code"></i>
-                    <span>시스템</span>
+                <button class="tab-btn" data-tab="qr-generator">
+                    <i class="fas fa-qrcode"></i>
+                    <span>QR생성</span>
                 </button>
+
 
             </nav>
 
@@ -118,7 +120,12 @@
                     <div class="status-card" data-card="profile">
                         <div class="card-header">
                             <h3><i class="fas fa-user-circle"></i> 내 프로필</h3>
-                            <div class="profile-connection-status" id="profileConnectionStatus">🟡 연결 중...</div>
+                            <div class="header-controls">
+                                <div class="profile-connection-status" id="profileConnectionStatus">🟡 연결 중...</div>
+                                <button class="theme-toggle-btn" id="themeToggle" onclick="window.themeManager.toggleTheme()" title="다크모드 전환">
+                                    <i class="fas fa-sun"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="card-content">
                             <div class="profile-section">
@@ -203,37 +210,7 @@
                         </div>
                     </div>
 
-                    <!-- 검증자 참여 카드 -->
-                    <div class="validator-card" data-card="validator">
-                        <div class="card-header">
-                            <h3><i class="fas fa-shield-alt"></i> 네트워크 검증자</h3>
-                        </div>
-                        <div class="card-content">
-                            <div class="validator-info">
-                                <p class="validator-description">
-                                    네트워크 검증에 참여하여 보상을 받아보세요.
-                                </p>
-                                <div class="validator-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-label">검증자 수수료 풀</span>
-                                        <span class="stat-value" id="validatorPoolMain">- B</span>
-                                    </div>
-                                                            <div class="stat-item">
-                            <span class="stat-label">블록생성 인센티브</span>
-                            <span class="stat-value">0.25B</span>
-                        </div>
-                                </div>
-                                <div class="validator-actions">
-                                    <button class="btn-support validator-sponsor-btn" onclick="window.dapp.showValidatorSponsorModal()">
-                                        <i class="fas fa-heart"></i> 후원하기
-                                    </button>
-                                    <button class="btn-primary validator-join-btn" onclick="window.dapp.navigateToValidatorDAO()">
-                                        <i class="fas fa-users"></i> 참여하기
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
 
                     <!-- 거버넌스 카드 -->
                     <div class="protocol-overview-card" data-card="governance">
@@ -250,27 +227,10 @@
                                 </button>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- 시스템 카드 -->
-                    <div class="protocol-overview-card" data-card="system">
-                        <div class="card-header">
-                            <h3><i class="fas fa-code"></i> 시스템</h3>
-                            </div>
-                        <div class="card-content">
-                            <div class="protocol-info">
-                                <p class="protocol-description">
-                                    프로토콜의 시스템 구조와 코드를 살펴보세요.
-                                </p>
-                                <button class="btn-primary protocol-overview-btn" onclick="window.dapp.switchTab('system')">
-                                    <i class="fas fa-folder-tree"></i> 시스템 구조 보기
-                                </button>
-                        </div>
-                    </div>
-                    </div>
+                                    </div>
 
 
-                </div>
+            </div>
             </div>
 
             <!-- 지갑 탭 -->
@@ -361,13 +321,7 @@
                                     <h3><i class="fas fa-paper-plane"></i> 토큰 전송</h3>
                                 </div>
                                 <div class="card-content">
-                                    <div class="transaction-fee-info">
-                                        <div class="fee-notice">
-                                            <i class="fas fa-info-circle"></i>
-                                            <span>트랜잭션 수수료: <strong>0.1%</strong></span>
-                                        </div>
 
-                                    </div>
                                     <form id="transferForm">
                                         <div class="form-group">
                                             <label for="recipientAddress">받는 주소</label>
@@ -385,20 +339,7 @@
                                                 <input type="number" id="transferAmount" placeholder="0" min="0" step="0.01">
                                                 <span class="token-suffix">B</span>
                                             </div>
-                                            <div class="amount-summary" id="transferSummary" style="display: none;">
-                                                <div class="summary-row">
-                                                    <span>전송량:</span>
-                                                    <span id="transferAmountDisplay">0 B</span>
-                                                </div>
-                                                <div class="summary-row">
-                                                    <span>수수료 (0.1%):</span>
-                                                    <span id="transferFeeDisplay">0 B</span>
-                                                </div>
-                                                <div class="summary-row total">
-                                                    <span>총 필요:</span>
-                                                    <span id="totalAmountDisplay">0.001 B</span>
-                                                </div>
-                                            </div>
+
                                         </div>
                                         <div class="form-group">
                                             <label for="transferMemo">메모 (선택사항)</label>
@@ -580,12 +521,16 @@
                     <span>I. 제안</span>
                 </button>
                 <button class="governance-tab" data-tab="collaboration" onclick="window.dapp.switchGovernanceTab('collaboration')">
-                    <i class="fas fa-handshake"></i>
-                    <span>II. 협업</span>
+                    <i class="fas fa-poll-h"></i>
+                    <span>II. 투표</span>
                 </button>
                 <button class="governance-tab" data-tab="completed" onclick="window.dapp.switchGovernanceTab('completed')">
                     <i class="fas fa-check-circle"></i>
-                    <span>III. 완료</span>
+                    <span>III. 반영</span>
+                </button>
+                <button class="governance-tab" data-tab="system" onclick="window.dapp.switchGovernanceTab('system')">
+                    <i class="fas fa-code"></i>
+                    <span>시스템</span>
                 </button>
             </div>
 
@@ -638,10 +583,10 @@
                 </div>
             </div>
 
-                         <!-- 협업 탭 콘텐츠 -->
+                         <!-- 투표 탭 콘텐츠 -->
              <div id="governance-collaboration" class="governance-tab-content">
                  <div id="collaborationContent" class="collaboration-content">
-                     <!-- 협업 내용이 동적으로 생성됩니다 -->
+                     <!-- 투표 진행 내용이 동적으로 생성됩니다 -->
                  </div>
              </div>
 
@@ -652,49 +597,112 @@
                     <p>성공적으로 완료된 제안들입니다.</p>
                 </div>
             </div>
+
+            <!-- 시스템 탭 콘텐츠 -->
+            <div id="governance-system" class="governance-tab-content">
+                <div class="system-container">
+                    <div class="system-header">
+                        <h2><i class="fas fa-code"></i> 시스템 구조</h2>
+                        <div class="system-actions">
+                            <button class="btn-primary download-btn" onclick="window.dapp.toggleDownloadMode()">
+                                <i class="fas fa-download"></i> 가져오기
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 파일 트리 -->
+                    <div class="file-tree-container">
+                        <div class="select-all-controls">
+                            <button class="select-all-btn" onclick="window.dapp.selectAllFiles()">전체 선택</button>
+                            <button class="select-all-btn" onclick="window.dapp.deselectAllFiles()">전체 해제</button>
+                            <button class="btn-primary" onclick="window.dapp.downloadSelectedFiles()">
+                                <i class="fas fa-download"></i> 다운로드
+                            </button>
+                        </div>
+                        <div class="file-tree" id="fileTree">
+                            <!-- 파일 트리가 동적으로 생성됩니다 -->
+                        </div>
+                    </div>
+
+                    <!-- 파일 뷰어 -->
+                    <div class="file-viewer" id="fileViewer" style="display: none;">
+                        <div class="file-viewer-header">
+                            <div class="file-path" id="filePath"></div>
+                            <button class="close-viewer-btn" onclick="window.dapp.closeFileViewer()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="file-content" id="fileContent">
+                            <!-- 파일 내용이 표시됩니다 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- 시스템 탭 -->
-    <div id="system" class="tab-content">
-        <div class="system-container">
-            <div class="system-header">
-                <h2><i class="fas fa-code"></i> 시스템 구조</h2>
-                <div class="system-actions">
-                    <button class="btn-primary download-btn" onclick="window.dapp.toggleDownloadMode()">
-                        <i class="fas fa-download"></i> 가져오기
+    <!-- QR 생성 탭 -->
+    <div id="qr-generator" class="tab-content">
+        <div class="qr-generator-container">
+            <div class="qr-generator-header">
+                <h2><i class="fas fa-qrcode"></i> QR 생성 시스템</h2>
+                <p class="qr-system-description">내 물품에 대한 QR을 생성하고 손쉽게 거래하세요. 판매된 QR의 소유권은 구매자에게 이전됩니다.</p>
+            </div>
+
+            <!-- 물건 생성 섹션 -->
+            <div class="qr-products-section">
+                <div class="section-header">
+                    <h3>품목</h3>
+                    <button class="btn-primary" onclick="window.dapp.showCreateProductModal()">
+                        <i class="fas fa-plus"></i> 품목 생성
                     </button>
+                </div>
+
+                <!-- 물품 목록 -->
+                <div id="productList" class="product-list">
+                    <!-- 물품 카드들이 여기에 동적으로 생성됩니다 -->
                 </div>
             </div>
 
-            <!-- 파일 트리 -->
-            <div class="file-tree-container">
-                <div class="select-all-controls">
-                    <button class="select-all-btn" onclick="window.dapp.selectAllFiles()">전체 선택</button>
-                    <button class="select-all-btn" onclick="window.dapp.deselectAllFiles()">전체 해제</button>
-                    <button class="btn-primary" onclick="window.dapp.downloadSelectedFiles()">
-                        <i class="fas fa-download"></i> 다운로드
-                    </button>
+            <!-- 구매 내역 섹션 -->
+            <div class="qr-purchase-section">
+                <div class="section-header">
+                    <h3>구매 내역</h3>
                 </div>
-                <div class="file-tree" id="fileTree">
-                    <!-- 파일 트리가 동적으로 생성됩니다 -->
+                <div id="purchaseHistory" class="purchase-history">
+                    <!-- 구매 내역이 여기에 동적으로 생성됩니다 -->
                 </div>
             </div>
 
-            <!-- 파일 뷰어 -->
-            <div class="file-viewer" id="fileViewer" style="display: none;">
-                <div class="file-viewer-header">
-                    <div class="file-path" id="filePath"></div>
-                    <button class="close-viewer-btn" onclick="window.dapp.closeFileViewer()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="file-content" id="fileContent">
-                    <!-- 파일 내용이 표시됩니다 -->
+            <!-- 물품 상세 모달 -->
+            <div id="productDetailModal" class="modal">
+                <div class="modal-content qr-modal-content">
+                    <div class="modal-header">
+                        <h3>물품 상세 정보</h3>
+                        <span class="close" onclick="window.dapp.closeProductDetailModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <!-- 물품 상세 정보 -->
+                        <div id="productDetailInfo" class="product-detail-info">
+                            <!-- 동적으로 생성됩니다 -->
+                        </div>
+
+                        <!-- QR 생성 버튼 -->
+                        <button class="btn-primary generate-qr-btn" onclick="window.dapp.generateProductQR()">
+                            <i class="fas fa-qrcode"></i> 품목 생성
+                        </button>
+
+                        <!-- 생성된 QR 목록 -->
+                        <div id="productQRList" class="product-qr-list">
+                            <!-- QR 카드들이 여기에 동적으로 생성됩니다 -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+
 
     <!-- 거버넌스 제안 생성 모달 -->
     <div id="createGovernanceProposalModal" class="modal">
@@ -805,6 +813,49 @@
                 <button type="submit" form="createGovernanceProposalForm" class="btn-primary" onclick="window.dapp.submitGovernanceProposal(event)">
                     <i class="fas fa-plus"></i> 생성 (5B)
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 품목 생성 모달 -->
+    <div id="createProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-box"></i> 품목 생성</h3>
+                <span class="close" onclick="window.dapp.closeCreateProductModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="productName">물품명</label>
+                    <input type="text" id="productName" placeholder="제품명을 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="productPrice">가격 (B)</label>
+                    <input type="number" id="productPrice" placeholder="가격을 입력하세요" min="0" step="0.01">
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="window.dapp.closeCreateProductModal()">취소</button>
+                    <button class="btn-primary" onclick="window.dapp.createProduct()">생성</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR 재활용 선택 모달 -->
+    <div id="recycleQRModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-recycle"></i> QR 재활용</h3>
+                <span class="close" onclick="window.dapp.closeRecycleQRModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>이 QR을 재활용할 제품을 선택하세요:</p>
+                <div id="recycleProductList" class="recycle-product-list">
+                    <!-- 제품 목록이 동적으로 생성됩니다 -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="window.dapp.closeRecycleQRModal()">취소</button>
+                </div>
             </div>
         </div>
     </div>
@@ -2101,8 +2152,6 @@
 
     <!-- 제안하기 모달 -->
 
-    <!-- QR 코드 라이브러리 -->
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-    <script src="qr-manager.js"></script>
+    <script src="theme-manager.js"></script>
 </body>
 </html> 

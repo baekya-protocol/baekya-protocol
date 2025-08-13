@@ -6,11 +6,16 @@ class GovernanceApp {
         this.currentProposalFilter = 'new'; // new, waiting
         this.currentEvaluationFilter = 'evaluating'; // evaluating, completed
         
-        // 메인 앱과 동일한 API 설정
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const localServerUrl = `http://${window.location.hostname}:3000`;
-        this.relayServerUrl = isLocal ? localServerUrl : 'https://baekya-relay-production.up.railway.app';
-        this.apiBase = isLocal ? `${localServerUrl}/api` : `${this.relayServerUrl}/api`;
+        // 메인 앱과 동일한 API 설정 - 릴레이 노드 시스템 사용
+        if (!window.USE_RELAY_NODES) {
+          // 개발 환경 - 로컬 서버 사용
+          this.relayServerUrl = window.RELAY_SERVER_URL;
+          this.apiBase = `${this.relayServerUrl}/api`;
+        } else {
+          // 프로덕션 환경 - 메인 앱의 릴레이 매니저를 통해 API 호출
+          this.useRelayManager = true;
+          this.apiBase = '/api'; // 상대 경로로 설정, 실제 요청시 릴레이 매니저가 처리
+        }
         
         // 임시: 거버넌스 API가 구현되지 않았으므로 로컬 처리
         this.useLocalStorage = true;
@@ -472,9 +477,7 @@ class GovernanceApp {
                 // 메인 페이지로 이동
                 window.location.href = '/';
                 break;
-            case 'system':
-                this.loadSystemFiles();
-                break;
+
             case 'governance':
                 this.switchGovernanceSubTab('proposal');
                 break;
@@ -830,7 +833,9 @@ class GovernanceApp {
         const totalDonations = donations.reduce((sum, d) => sum + d.amount, 0);
         const goodRate = this.calculateGoodRate(proposalId);
 
-        title.innerHTML = `<i class="fas fa-lightbulb"></i> ${proposal.title}`;
+        // 투표 단계(협업)에서는 아이콘 없이 제목만 표시
+        const isInVotingStage = this.collaborations.current && this.collaborations.current.proposal.id === proposal.id;
+        title.innerHTML = isInVotingStage ? proposal.title : `<i class="fas fa-lightbulb"></i> ${proposal.title}`;
         
         content.innerHTML = `
             <div class="proposal-detail">
@@ -2101,7 +2106,7 @@ class GovernanceApp {
                         <textarea id="proposalDescription" placeholder="제안 내용을 상세히 설명해주세요" rows="6"></textarea>
                     </div>
                     <div class="form-group">
-                        <label>라벨 (선택사항)</label>
+                        <label>라벨 *</label>
                         <div class="label-options">
                             <label class="label-option">
                                 <input type="checkbox" value="기능개선"> 기능개선
@@ -2119,6 +2124,7 @@ class GovernanceApp {
                                 <input type="checkbox" value="보안"> 보안
                             </label>
                         </div>
+                        <small style="color: #666; margin-top: 5px; display: block;">제안 내용에 맞는 라벨을 선택해주세요.</small>
                     </div>
                     <div class="cost-info">
                         <i class="fas fa-info-circle"></i>
@@ -2185,6 +2191,11 @@ class GovernanceApp {
 
         if (!description || description.length === 0) {
             alert('제안 설명을 입력해주세요.');
+            return;
+        }
+
+        if (labels.length === 0) {
+            alert('라벨을 선택해주세요. 제안 내용에 맞는 라벨을 하나 이상 선택해야 합니다.');
             return;
         }
 
