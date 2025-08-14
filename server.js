@@ -19,6 +19,7 @@ const WebSocket = require('ws');
 const http = require('http');
 const readline = require('readline');
 const { Server } = require('socket.io');
+const { spawn } = require('child_process');
 // Node.js 18+ 버전에서는 fetch가 내장되어 있음
 
 // 백야 프로토콜 컴포넌트들
@@ -39,6 +40,154 @@ let automationSystem = null;
 
 // 중계서버 리스트 (전역 관리)
 let relayServersList = new Map(); // relayUrl -> { url, location, nodeInfo, lastUpdate }
+
+// WebSocket 터널 관련 변수
+let tunnelWs = null;
+let tunnelConnected = false;
+
+// WebSocket 터널 생성 함수
+async function createWebSocketTunnel(relayUrl, password) {
+  return new Promise((resolve, reject) => {
+    console.log(`🔄 WebSocket 터널 생성 중... (${relayUrl})`);
+    
+    // WebSocket URL 생성 (HTTP -> WS, HTTPS -> WSS)
+    const wsUrl = relayUrl.replace(/^http/, 'ws') + '/tunnel';
+    
+    tunnelWs = new WebSocket(wsUrl);
+    
+    tunnelWs.on('open', () => {
+      console.log('✅ WebSocket 터널 연결 성공');
+      
+      // 터널 인증
+      const authMessage = {
+        type: 'tunnel_auth',
+        password: password,
+        nodeId: nodeId,
+        endpoint: `http://localhost:${port}`
+      };
+      
+      tunnelWs.send(JSON.stringify(authMessage));
+    });
+    
+    tunnelWs.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        if (message.type === 'tunnel_auth_response') {
+          if (message.success) {
+            console.log('✅ WebSocket 터널 인증 성공');
+            tunnelConnected = true;
+            resolve('tunnel-connected');
+          } else {
+            console.error('❌ WebSocket 터널 인증 실패:', message.message);
+            reject(new Error(message.message));
+          }
+        } else if (message.type === 'http_request') {
+          // HTTP 요청을 로컬 서버로 프록시
+          handleTunnelRequest(message);
+        }
+      } catch (error) {
+        console.error('❌ 터널 메시지 파싱 오류:', error);
+      }
+    });
+    
+    tunnelWs.on('error', (err) => {
+      console.error('❌ WebSocket 터널 연결 실패:', err.message);
+      tunnelConnected = false;
+      reject(err);
+    });
+    
+    tunnelWs.on('close', () => {
+      console.log('🔌 WebSocket 터널 연결 종료');
+      tunnelConnected = false;
+    });
+    
+    // 타임아웃 (30초)
+    setTimeout(() => {
+      if (!tunnelConnected) {
+        console.error('❌ WebSocket 터널 생성 타임아웃');
+        tunnelWs.close();
+        reject(new Error('WebSocket 터널 생성 타임아웃'));
+      }
+    }, 30000);
+  });
+}
+
+// 터널을 통한 HTTP 요청 처리
+async function handleTunnelRequest(request) {
+  const { requestId, method, path, query, headers, body } = request;
+  
+  try {
+    // 중요한 요청만 로그 출력 (로그인, 등록, 초대코드, 송금 등)
+    const isImportantRequest = path.includes('/login') || path.includes('/register') || path.includes('/transfer') || path.includes('/invite') || (method === 'POST');
+    
+    if (isImportantRequest) {
+      console.log(`📡 터널 요청: ${method} ${path} (${requestId})`);
+    }
+    
+    // 쿼리 파라미터 구성
+    const queryString = query && Object.keys(query).length > 0 
+      ? '?' + new URLSearchParams(query).toString() 
+      : '';
+    
+    // body 처리: 이미 JSON 문자열이면 그대로 사용, 객체면 JSON.stringify
+    let requestBody = undefined;
+    if (method !== 'GET' && body) {
+      if (typeof body === 'string') {
+        requestBody = body;
+      } else {
+        requestBody = JSON.stringify(body);
+      }
+    }
+    
+    // 특별한 헤더를 추가해서 터널 요청임을 표시
+    const tunnelHeaders = {
+      ...headers,
+      'x-tunnel-request': 'true',
+      'x-tunnel-body': requestBody || '' // body를 헤더로 전달
+    };
+    
+    // 로컬 서버에 요청 전달 (GET 요청으로 변경하여 body parser 우회)
+    const response = await fetch(`http://localhost:${port}${path}${queryString}`, {
+      method: method,
+      headers: tunnelHeaders,
+      body: method !== 'GET' ? requestBody : undefined
+    });
+    
+    const responseData = await response.json();
+    
+    // 응답을 터널을 통해 전송
+    const responseMessage = {
+      type: 'http_response',
+      requestId: requestId,
+      status: response.status,
+      body: responseData
+    };
+    
+    tunnelWs.send(JSON.stringify(responseMessage));
+    
+    if (isImportantRequest) {
+      console.log(`📡 터널 응답: ${response.status} (${requestId})`);
+    }
+    
+  } catch (error) {
+    console.error(`❌ 터널 요청 처리 실패 (${requestId}):`, error);
+    
+    // 오류 응답 전송
+    const errorResponse = {
+      type: 'http_response',
+      requestId: requestId,
+      status: 500,
+      body: {
+        success: false,
+        error: '내부 서버 오류',
+        details: error.message
+      }
+    };
+    
+    tunnelWs.send(JSON.stringify(errorResponse));
+  }
+}
 
 // 중계서버 리스트 업데이트를 모든 중계서버에 전파
 async function propagateRelayListUpdate() {
@@ -141,10 +290,19 @@ async function registerRelayServer(url, location, nodeInfo) {
 
 // 리스팅 서버에 중계서버 등록
 async function registerToListingServer(url, location, nodeInfo) {
-  const listingServers = [
+  // 먼저 자동 탐색으로 리스팅 서버 찾기
+  const discoveredServer = await discoverListingServer();
+  
+  const listingServers = [];
+  if (discoveredServer) {
+    listingServers.push(discoveredServer);
+  }
+  
+  // 백업 서버들 추가
+  listingServers.push(
     'https://baekya-listing-server.railway.app', // 메인 리스팅 서버
     'http://localhost:4000' // 로컬 리스팅 서버 (개발용)
-  ];
+  );
   
   for (const listingServer of listingServers) {
     try {
@@ -172,12 +330,52 @@ async function registerToListingServer(url, location, nodeInfo) {
   }
 }
 
+// 리스팅 서버 자동 탐색 함수
+async function discoverListingServer() {
+  console.log('🔍 리스팅 서버 자동 탐색 중...');
+  
+  // 순차적으로 번호를 증가시키며 탐색
+  for (let i = 1; i <= 50; i++) { // 최대 50개까지 탐색
+    const serverUrl = `https://listing-server-production${i}.up.railway.app`;
+    
+    try {
+      console.log(`   시도 중: ${serverUrl}`);
+      const response = await fetch(`${serverUrl}/api/status`, {
+        method: 'GET',
+        timeout: 3000
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'running') {
+          console.log(`✅ 리스팅 서버 발견: ${serverUrl}`);
+          return serverUrl;
+        }
+      }
+    } catch (error) {
+      // 조용히 실패 - 다음 번호로 계속
+    }
+  }
+  
+  console.log('❌ 사용 가능한 리스팅 서버를 찾지 못했습니다.');
+  return null;
+}
+
 // 리스팅 서버에서 중계서버 목록 가져오기
 async function fetchRelayListFromListingServer() {
-  const listingServers = [
+  // 먼저 자동 탐색으로 리스팅 서버 찾기
+  const discoveredServer = await discoverListingServer();
+  
+  const listingServers = [];
+  if (discoveredServer) {
+    listingServers.push(discoveredServer);
+  }
+  
+  // 백업 서버들 추가
+  listingServers.push(
     'https://baekya-listing-server.railway.app',
     'http://localhost:4000'
-  ];
+  );
   
   for (const listingServer of listingServers) {
     try {
@@ -434,10 +632,10 @@ function broadcastStateUpdate(userDID, updateData) {
       ws.send(message);
       console.log(`✅ 로컬 클라이언트에 전송 성공: ${userDID}`);
     } else {
-      console.log(`⚠️ 로컬 클라이언트 연결 상태 불량: ${userDID}`);
+      // 로컬 클라이언트 연결 상태 불량 (로그 제거)
       }
   } else {
-    console.log(`⚠️ 로컬 클라이언트 없음: ${userDID}`);
+    // 로컬 클라이언트 없음 (정상 상황 - 웹앱은 릴레이 경유)
   }
   
   // 릴레이 서버에도 전송 (Vercel 웹앱용)
@@ -637,14 +835,25 @@ function checkAndAutoTransitionToCollaboration() {
 // 중계서버 연결 함수
 async function connectToRelayServer() {
   try {
-    // 먼저 중계서버 연결 설정을 받음
-    await setupRelayConnection();
+    console.log('🔍 중계서버 연결 모드 확인 중...');
     
-    console.log('🔍 중계서버 연결 시작...');
+    // 환경 변수에서 중계서버 설정 확인
+    const relayUrl = process.env.RELAY_SERVER_URL;
+    const relayPassword = process.env.RELAY_PASSWORD;
+    
+    if (relayUrl && relayPassword) {
+      // 환경 변수로 자동 연결
+      console.log('🌐 환경 변수 중계서버 설정 발견 - 자동 연결 중...');
+      await connectToRelay(relayUrl, relayPassword);
+    } else {
+      // 수동 설정 모드
+      console.log('⚙️ 수동 중계서버 연결 설정 모드');
+      await setupRelayConnection();
+    }
     
   } catch (error) {
-    console.error('❌ 중계서버 연결 실패:', error);
-    process.exit(1);
+    console.error('❌ 중계서버 연결 실패:', error.message);
+    throw error; // 에러를 상위로 전달
   }
 }
 
@@ -707,7 +916,19 @@ async function connectToRelay(relayUrl, password) {
     
     console.log(`🔗 중계서버 연결 시도: ${fullUrl}`);
     
-    // 중계서버에 인증 요청
+    // WebSocket 터널 생성
+    if (!tunnelConnected) {
+      console.log('🔄 WebSocket 터널 생성 중...');
+      try {
+        await createWebSocketTunnel(fullUrl, password);
+        console.log(`✅ WebSocket 터널 생성 완료`);
+      } catch (error) {
+        console.error('❌ WebSocket 터널 생성 실패:', error.message);
+        console.log('⚠️ 직접 연결로 폴백합니다.');
+      }
+    }
+    
+    // 중계서버에 인증 요청 (터널 생성 후)
     const authResponse = await fetch(`${fullUrl}/api/auth`, {
       method: 'POST',
       headers: {
@@ -2784,7 +3005,26 @@ app.post('/api/register', async (req, res) => {
 // 사용자 로그인 (새로운 엔드포인트)
 app.post('/api/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    let username, password, deviceUUID;
+    
+    // 터널 요청인 경우 헤더에서 body 데이터 추출
+    if (req.headers['x-tunnel-request'] === 'true') {
+      const tunnelBody = req.headers['x-tunnel-body'];
+      
+      if (tunnelBody) {
+        try {
+          const parsedBody = JSON.parse(tunnelBody);
+          username = parsedBody.username;
+          password = parsedBody.password;
+          deviceUUID = parsedBody.deviceUUID;
+        } catch (parseError) {
+          console.error('❌ 터널 body 파싱 실패:', parseError);
+        }
+      }
+    } else {
+      // 일반 요청인 경우 req.body에서 추출
+      ({ username, password, deviceUUID } = req.body);
+    }
     
     if (!username || !password) {
       return res.status(400).json({ 
@@ -2794,7 +3034,7 @@ app.post('/api/login', async (req, res) => {
     }
 
     // 디바이스 ID 추가
-    const deviceId = req.headers['x-device-id'] || req.body.deviceId || `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const deviceId = req.headers['x-device-id'] || deviceUUID || req.body.deviceId || `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const result = await protocol.loginUser(username, password, deviceId);
     
@@ -3037,7 +3277,25 @@ app.get('/api/invite-code', async (req, res) => {
 // 초대코드 생성 (계정별 고유 초대코드, 블록체인 저장)
 app.post('/api/invite-code', async (req, res) => {
   try {
-    const { userDID, communicationAddress } = req.body;
+    let userDID, communicationAddress;
+    
+    // 터널 요청인 경우 헤더에서 body 데이터 추출
+    if (req.headers['x-tunnel-request'] === 'true') {
+      const tunnelBody = req.headers['x-tunnel-body'];
+      
+      if (tunnelBody) {
+        try {
+          const parsedBody = JSON.parse(tunnelBody);
+          userDID = parsedBody.userDID;
+          communicationAddress = parsedBody.communicationAddress;
+        } catch (parseError) {
+          console.error('❌ 터널 body 파싱 실패:', parseError);
+        }
+      }
+    } else {
+      // 일반 요청인 경우 req.body에서 추출
+      ({ userDID, communicationAddress } = req.body);
+    }
     
     if (!userDID) {
       return res.status(400).json({
@@ -3442,17 +3700,31 @@ app.get('/api/wallet/:did', async (req, res) => {
 app.post('/api/transfer', async (req, res) => {
   try {
     console.log('🔍 토큰 전송 요청 받음');
-    console.log('📦 요청 본문:', JSON.stringify(req.body, null, 2));
-    console.log('🔐 헤더:', req.headers);
     
-    const { fromDID, toAddress, amount, tokenType = 'B-Token', authData } = req.body;
+    let fromDID, toAddress, amount, tokenType = 'B-Token', authData;
     
-    console.log('📋 파싱된 데이터:');
-    console.log(`  - fromDID: ${fromDID} (타입: ${typeof fromDID})`);
-    console.log(`  - toAddress: ${toAddress} (타입: ${typeof toAddress})`);
-    console.log(`  - amount: ${amount} (타입: ${typeof amount})`);
-    console.log(`  - tokenType: ${tokenType}`);
-    console.log(`  - authData: ${JSON.stringify(authData)}`);
+    // 터널 요청인 경우 헤더에서 body 데이터 추출
+    if (req.headers['x-tunnel-request'] === 'true') {
+      const tunnelBody = req.headers['x-tunnel-body'];
+      
+      if (tunnelBody) {
+        try {
+          const parsedBody = JSON.parse(tunnelBody);
+          fromDID = parsedBody.fromDID;
+          toAddress = parsedBody.toAddress;
+          amount = parsedBody.amount;
+          tokenType = parsedBody.tokenType || 'B-Token';
+          authData = parsedBody.authData;
+        } catch (parseError) {
+          console.error('❌ 터널 body 파싱 실패:', parseError);
+        }
+      }
+    } else {
+      // 일반 요청인 경우 req.body에서 추출
+      ({ fromDID, toAddress, amount, tokenType = 'B-Token', authData } = req.body);
+    }
+    
+    console.log('📦 전송 요청:', { fromDID: fromDID?.substring(0,16) + '...', toAddress, amount, tokenType });
     
     if (!fromDID || !toAddress || !amount || amount <= 0) {
       console.log('❌ 파라미터 검증 실패:');
@@ -4903,9 +5175,31 @@ app.get('/api/debug/users', (req, res) => {
 app.post('/api/governance/proposals', async (req, res) => {
   try {
     console.log('🏛️ 거버넌스 제안 생성 요청 수신');
-    console.log('📦 요청 본문:', JSON.stringify(req.body, null, 2));
     
-    const { title, description, label, hasStructure, structureFiles, authorDID } = req.body;
+    let title, description, label, hasStructure, structureFiles, authorDID;
+    
+    // 터널 요청인 경우 헤더에서 body 데이터 추출
+    if (req.headers['x-tunnel-request'] === 'true') {
+      const tunnelBody = req.headers['x-tunnel-body'];
+      
+      if (tunnelBody) {
+        try {
+          const parsedBody = JSON.parse(tunnelBody);
+          title = parsedBody.title;
+          description = parsedBody.description;
+          label = parsedBody.label;
+          hasStructure = parsedBody.hasStructure;
+          structureFiles = parsedBody.structureFiles;
+          authorDID = parsedBody.authorDID;
+        } catch (parseError) {
+          console.error('❌ 터널 body 파싱 실패:', parseError);
+          return res.status(400).json({ success: false, error: '요청 데이터 파싱 실패' });
+        }
+      }
+    } else {
+      // 일반 요청인 경우 req.body에서 추출
+      ({ title, description, label, hasStructure, structureFiles, authorDID } = req.body);
+    }
     const cost = 5; // 제안 생성 비용 고정: 5B
     
     console.log('🔍 필수 필드 확인:');
@@ -5380,8 +5674,12 @@ async function startServer() {
       console.log(`🔌 WebSocket: ws://localhost:${port}`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
       
-      // 서버 시작 후 중계서버 연결
-      await connectToRelayServer();
+      // 서버 시작 후 중계서버 연결 (비동기)
+      connectToRelayServer().catch(error => {
+        console.error('❌ 중계서버 연결 실패:', error.message);
+        console.log('💡 중계서버 없이도 로컬 모드로 작동합니다.');
+        setupTerminalInterface(); // 중계서버 연결 실패 시에도 터미널 인터페이스 시작
+      });
 
     });
     
@@ -5412,45 +5710,70 @@ async function startServer() {
 
 // 터미널 인터페이스 설정
 function setupTerminalInterface() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+  // 약간의 지연을 두어 모든 비동기 작업이 완료된 후 실행
+  setTimeout(() => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
 
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('⛏️  검증자 모드 시작하기');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('1. 로그인');
-  console.log('2. 가입');
-  console.log('3. 종료');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('⛏️  검증자 모드 시작하기');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('1. 로그인');
+    console.log('2. 가입');
+    console.log('3. 종료');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-  rl.question('선택하세요 (1/2/3): ', async (choice) => {
-    switch (choice) {
-      case '1':
-        await handleValidatorLogin(rl);
-        break;
-      case '2':
-        await handleValidatorSignup(rl);
-        break;
-      case '3':
-        console.log('서버를 종료합니다...');
-        process.exit(0);
-        break;
-      default:
-        console.log('잘못된 선택입니다. 다시 시도하세요.');
-        rl.close();
-        setupTerminalInterface();
-    }
-  });
+    const promptForChoice = () => {
+      rl.question('선택하세요 (1/2/3): ', async (choice) => {
+        switch (choice.trim()) {
+          case '1':
+            await handleValidatorLogin(rl);
+            break;
+          case '2':
+            await handleValidatorSignup(rl);
+            break;
+          case '3':
+            console.log('서버를 종료합니다...');
+            rl.close();
+            process.exit(0);
+            break;
+          default:
+            console.log('❌ 잘못된 선택입니다. 1, 2, 또는 3을 입력하세요.');
+            promptForChoice(); // 다시 질문
+        }
+      });
+    };
+
+    promptForChoice();
+  }, 1000); // 1초 지연
 }
 
 // 검증자 로그인 처리
 async function handleValidatorLogin(rl) {
+  console.log('\n🔐 검증자 로그인');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
   rl.question('아이디: ', (username) => {
+    if (!username.trim()) {
+      console.log('❌ 아이디를 입력해주세요.');
+      rl.close();
+      setupTerminalInterface();
+      return;
+    }
+    
     rl.question('비밀번호: ', async (password) => {
+      if (!password.trim()) {
+        console.log('❌ 비밀번호를 입력해주세요.');
+        rl.close();
+        setupTerminalInterface();
+        return;
+      }
+      
       try {
-        const result = await protocol.loginUser(username, password, `validator_${Date.now()}`);
+        console.log('\n🔄 로그인 처리 중...');
+        const result = await protocol.loginUser(username.trim(), password.trim(), `validator_${Date.now()}`);
         
         if (result.success) {
           validatorDID = result.didHash;
@@ -5459,18 +5782,20 @@ async function handleValidatorLogin(rl) {
           console.log('\n✅ 로그인 성공!');
           console.log(`👤 사용자: ${result.username}`);
           console.log(`💰 현재 잔액: ${result.tokenBalances.bToken}B`);
-          console.log('\n⛏️  검증자 모드 시작 - 30초마다 블록 생성');
+          console.log('\n⛏️  검증자 모드 시작 - 1초마다 블록 생성');
           console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
           
           rl.close();
           startBlockGeneration();
         } else {
           console.log(`\n❌ 로그인 실패: ${result.error}`);
+          console.log('💡 아이디와 비밀번호를 확인해주세요.\n');
           rl.close();
           setupTerminalInterface();
         }
       } catch (error) {
         console.error('\n❌ 로그인 처리 중 오류:', error.message);
+        console.log('💡 네트워크 연결을 확인해주세요.\n');
         rl.close();
         setupTerminalInterface();
       }
@@ -5508,7 +5833,7 @@ async function handleValidatorSignup(rl) {
             console.log(`👤 사용자: ${result.username}`);
             console.log(`📱 통신주소: ${result.communicationAddress} (자동 생성)`);
             console.log(`🆔 DID: ${result.didHash}`);
-            console.log('\n⛏️  검증자 모드 시작 - 30초마다 블록 생성');
+            console.log('\n⛏️  검증자 모드 시작 - 1초마다 블록 생성');
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
             
             rl.close();
@@ -5535,15 +5860,15 @@ function startBlockGeneration() {
   blockchain.registerValidator(validatorDID, 100);
   
   console.log('🔗 검증자로 등록되었습니다.');
-  console.log('⏱️  30초마다 블록을 생성합니다...\n');
+  console.log('⏱️  1초마다 블록을 생성합니다...\n');
   
   // 즉시 첫 블록 생성
   generateBlock();
   
-  // 30초마다 블록 생성
+  // 1초마다 블록 생성
   blockGenerationTimer = setInterval(() => {
     generateBlock();
-  }, 30000);
+  }, 1000);
 }
 
 // 블록 생성 및 DCA 처리
@@ -5617,12 +5942,6 @@ async function generateBlock() {
       // 릴레이 노드 보상 지급 (블록 생성 시 동시 지급)
       let relayReward = 0;
       
-      // 디버그: 릴레이 연결 상태 확인
-      console.log(`🔍 릴레이 보상 체크:`);
-      console.log(`  - relayManager 존재: ${!!relayManager}`);
-      console.log(`  - 연결 상태: ${relayManager?.connectionState}`);
-      console.log(`  - 운영자 DID: ${relayManager?.relayOperatorDID || 'none'}`);
-      console.log(`  - 운영자 이름: ${relayManager?.relayOperatorUsername || 'none'}`);
       
       if (relayManager && relayManager.connectionState === 'connected' && relayManager.relayOperatorDID) {
         try {
@@ -5683,7 +6002,7 @@ async function generateBlock() {
           console.warn('⚠️ 릴레이 노드 보상 처리 실패:', error.message);
         }
       } else {
-        console.log(`⚠️ 릴레이 보상 지급 안함: 조건 미충족`);
+        // 릴레이 보상 조건 미충족 (로그 제거)
       }
       
       // DCA 자동 인정 - 블록 생성 기여 (보상은 BlockchainCore에서 자동 처리됨)
@@ -5697,7 +6016,7 @@ async function generateBlock() {
             dcaId: 'block-generation',
             evidence: `Block ${block.index} validated`,
             description: `블록 #${block.index} 생성 및 검증`,
-            bValue: 5, // BlockchainCore에서 자동 지급됨
+            bValue: 0.25, // BlockchainCore에서 자동 지급됨
             verified: true,
             verifiedAt: Date.now(),
             metadata: {
@@ -5713,7 +6032,7 @@ async function generateBlock() {
       }
       
       // 총 보상 계산
-      const dcaReward = 5; // DCA 자동검증 보상
+      const dcaReward = 0.25; // DCA 자동검증 보상
       const totalReward = dcaReward + poolIncentive + relayReward;
       
       // 등록된 모든 중계서버에 블록 전파
@@ -5729,7 +6048,7 @@ async function generateBlock() {
       console.log(`\n⛏️  [검증자] 블록 #${block.index} 생성 완료 [${now.toLocaleTimeString()}]`);
       console.log(`👤 검증자: ${validatorUsername} (${validatorDID.substring(0, 8)}...)`);
       console.log(`📦 트랜잭션: ${pendingTransactions.length}개 처리`);
-      console.log(`💎 총 보상: +${totalReward}B (검증자: ${dcaReward}B + 풀 인센티브: ${poolIncentive}B + 릴레이: ${relayReward}B)`);
+      console.log(`💎 총 보상: +${totalReward}B`);
       console.log(`📊 총 생성 블록: ${blocksGenerated}개`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       
@@ -5813,7 +6132,7 @@ async function generateBlock() {
         });
       });
     } else {
-      console.error('❌ 블록 생성 실패:', block?.error || '알 수 없는 오류');
+      // 빈 블록 생성은 정상 상황이므로 로그 제거
     }
   } catch (error) {
     console.error('❌ 블록 생성 중 오류:', error.message);
@@ -5833,6 +6152,14 @@ process.on('SIGINT', () => {
   
   if (blockGenerationTimer) {
     clearInterval(blockGenerationTimer);
+  }
+  
+  // WebSocket Tunnel 정리
+  if (tunnelWs) {
+    console.log('🔄 WebSocket 터널 종료 중...');
+    tunnelWs.close();
+    tunnelWs = null;
+    tunnelConnected = false;
   }
   
   // 릴레이 매니저 정리

@@ -26,13 +26,8 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_PRODUCTION = NODE_ENV === 'production' || isMainnet;
 
 console.log(`
-🌟 백야 프로토콜 시작
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚙️  환경: ${IS_PRODUCTION ? '메인넷 (PRODUCTION)' : '개발/테스트넷'}
-🔗 네트워크: ${isMainnet ? 'MAINNET' : isTestnet ? 'TESTNET' : 'LOCAL'}
-👤 역할: ${isValidator ? 'VALIDATOR' : 'FULL NODE'}
-📞 통신주소: ${providedAddress || '입력 필요'}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚔️  BROTHERHOOD VALIDATOR START
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━        
 
 🚀 "기여한 만큼 보장받는" 사회규약을 실현하기 위한
 📜 기여기반 탈중앙 사회시스템이 시작됩니다...

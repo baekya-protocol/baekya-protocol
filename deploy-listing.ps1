@@ -34,8 +34,16 @@ try {
 
 Write-Host "Railway authentication verified" -ForegroundColor Green
 
+# Get project name
+$ProjectName = Read-Host "Enter Railway project name for listing server (existing or new)"
+if (-not $ProjectName.trim()) {
+    Write-Host "ERROR: Project name is required." -ForegroundColor Red
+    exit 1
+}
+
 Write-Host ""
 Write-Host "Listing Server Configuration:" -ForegroundColor Cyan
+Write-Host "  Project: $ProjectName" -ForegroundColor Cyan
 Write-Host "  Role: Relay server registry management" -ForegroundColor Cyan
 Write-Host "  Port: Auto-assigned by Railway" -ForegroundColor Cyan
 Write-Host ""
@@ -49,9 +57,79 @@ if ($confirm -ne 'y' -and $confirm -ne 'Y') {
 try {
     Write-Host "Starting listing server deployment..." -ForegroundColor Green
     
-    # Initialize Railway project
-    Write-Host "Initializing Railway project..." -ForegroundColor Yellow
-    railway init --name "baekya-listing-$(Get-Random -Maximum 9999)"
+    # Check if already linked to a project
+    Write-Host "Checking Railway project..." -ForegroundColor Yellow
+    
+    $railwayConfigExists = Test-Path ".railway"
+    if ($railwayConfigExists) {
+        Write-Host "Found existing Railway project configuration." -ForegroundColor Green
+        $projectStatus = railway status 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Connected to existing project successfully." -ForegroundColor Green
+            Write-Host "Current project: " -NoNewline -ForegroundColor Cyan
+            Write-Host ($projectStatus | Select-String "Project:").ToString().Split(":")[1].Trim() -ForegroundColor White
+            
+            $useExisting = Read-Host "Use this existing project? (y/N)"
+            if ($useExisting -eq 'y' -or $useExisting -eq 'Y') {
+                Write-Host "Using existing project for deployment..." -ForegroundColor Green
+            } else {
+                # Unlink and show project selection
+                railway unlink
+                Write-Host "Disconnected from current project." -ForegroundColor Yellow
+                $railwayConfigExists = $false
+            }
+        } else {
+            Write-Host "Existing config is invalid. Removing..." -ForegroundColor Yellow
+            Remove-Item -Recurse -Force ".railway" -ErrorAction SilentlyContinue
+            $railwayConfigExists = $false
+        }
+    }
+    
+    if (-not $railwayConfigExists) {
+        # Show existing projects
+        Write-Host "`nFetching your Railway projects..." -ForegroundColor Yellow
+        $projectList = railway list 2>$null
+        
+        if ($LASTEXITCODE -eq 0 -and $projectList) {
+            Write-Host "`nYour existing Railway projects:" -ForegroundColor Cyan
+            Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+            
+            $projects = @()
+            $projectList | ForEach-Object {
+                if ($_ -match "^\s*(.+?)\s*$" -and $_.Trim() -ne "" -and $_ -notmatch "^Project") {
+                    $projects += $_.Trim()
+                }
+            }
+            
+            if ($projects.Count -gt 0) {
+                for ($i = 0; $i -lt $projects.Count; $i++) {
+                    Write-Host "  $($i + 1). $($projects[$i])" -ForegroundColor White
+                }
+                Write-Host "  0. Create new project '$ProjectName'" -ForegroundColor Green
+                Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+                
+                $selection = Read-Host "Select project (0-$($projects.Count))"
+                
+                if ($selection -eq "0") {
+                    Write-Host "Creating new project '$ProjectName'..." -ForegroundColor Yellow
+                    railway init --name $ProjectName
+                } elseif ($selection -match "^\d+$" -and [int]$selection -ge 1 -and [int]$selection -le $projects.Count) {
+                    $selectedProject = $projects[[int]$selection - 1]
+                    Write-Host "Connecting to project '$selectedProject'..." -ForegroundColor Green
+                    railway link
+                } else {
+                    Write-Host "Invalid selection. Creating new project '$ProjectName'..." -ForegroundColor Yellow
+                    railway init --name $ProjectName
+                }
+            } else {
+                Write-Host "No existing projects found. Creating new project '$ProjectName'..." -ForegroundColor Yellow
+                railway init --name $ProjectName
+            }
+        } else {
+            Write-Host "Could not fetch project list. Creating new project '$ProjectName'..." -ForegroundColor Yellow
+            railway init --name $ProjectName
+        }
+    }
     
     # Set environment variables
     Write-Host "Setting environment variables..." -ForegroundColor Yellow
@@ -61,13 +139,16 @@ try {
     Write-Host "Preparing deployment configuration..." -ForegroundColor Yellow
     Copy-Item "package.json" "package.json.backup"
     Copy-Item "railway-listing.json" "package.json"
+    Copy-Item "Dockerfile" "Dockerfile.backup"
+    Copy-Item "Dockerfile.listing" "Dockerfile"
     
     # Deploy
     Write-Host "Deploying to Railway..." -ForegroundColor Yellow
     railway up
     
-    # Restore package.json
+    # Restore package.json and Dockerfile
     Move-Item "package.json.backup" "package.json" -Force
+    Move-Item "Dockerfile.backup" "Dockerfile" -Force
     
     # Check deployment status
     Start-Sleep -Seconds 5
@@ -87,9 +168,12 @@ try {
 } catch {
     Write-Host "ERROR during deployment: $($_.Exception.Message)" -ForegroundColor Red
     
-    # Restore package.json on error
+    # Restore files on error
     if (Test-Path "package.json.backup") {
         Move-Item "package.json.backup" "package.json" -Force
+    }
+    if (Test-Path "Dockerfile.backup") {
+        Move-Item "Dockerfile.backup" "Dockerfile" -Force
     }
     
     exit 1

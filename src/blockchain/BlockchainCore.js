@@ -692,7 +692,7 @@ class BlockchainCore {
         const rewardTransaction = new Transaction(
           'did:baekya:system0000000000000000000000000000000000000000',
           selectedValidator,
-          5,
+          0.25,
           'B-Token',
           { type: 'validator_reward', blockIndex: result.block.index, description: '블록 생성 기여가치 (Validator DAO DCA)' }
         );

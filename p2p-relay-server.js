@@ -15,18 +15,23 @@ const wss = new WebSocket.Server({ server });
 // 중계서버 설정
 const RELAY_PASSWORD = process.env.RELAY_PASSWORD || 'default-password';
 const RELAY_LOCATION = process.env.RELAY_LOCATION || '37.5665,126.9780'; // 서울 기본값
+
 let isAuthenticated = false;
 let connectedValidator = null;
+let tunnelConnection = null; // WebSocket 터널 연결
 
 // 등록된 풀노드들 관리
 const registeredNodes = new Map(); // nodeId -> { ws, info, lastPing }
 const userSessions = new Map(); // sessionId -> { nodeId, ws, userDID }
 const usersByDID = new Map(); // userDID -> Set of sessionIds
+const pendingRequests = new Map(); // requestId -> { resolve, reject, timeout }
 
-// CORS 설정
+// CORS 설정 - 간단하게 모든 도메인 허용 (credentials 없이)
 app.use(cors({
   origin: '*',
-  credentials: true
+  credentials: false,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-UUID']
 }));
 app.use(express.json());
 
@@ -51,13 +56,21 @@ app.post('/api/auth', (req, res) => {
   isAuthenticated = true;
   
   if (nodeType === 'validator' && nodeId && endpoint) {
-    connectedValidator = {
-      nodeId: nodeId,
-      endpoint: endpoint,
-      connectedAt: Date.now()
-    };
-    
-    console.log(`✅ 검증자 노드 인증 성공: ${nodeId} (${endpoint})`);
+    // 기존 WebSocket 터널 연결이 있으면 유지하고 정보만 업데이트
+    if (connectedValidator && connectedValidator.type === 'websocket-tunnel') {
+      console.log(`✅ 기존 WebSocket 터널 유지 - 검증자 노드 정보 업데이트: ${nodeId}`);
+      connectedValidator.nodeId = nodeId;
+      connectedValidator.endpoint = endpoint;
+    } else {
+      // 새로운 HTTP 기반 연결
+      connectedValidator = {
+        type: 'http',
+        nodeId: nodeId,
+        endpoint: endpoint,
+        connectedAt: Date.now()
+      };
+      console.log(`✅ 검증자 노드 인증 성공 (HTTP): ${nodeId} (${endpoint})`);
+    }
     
     // 리스팅 서버에 등록
     registerToListingServer();
@@ -73,12 +86,52 @@ app.post('/api/auth', (req, res) => {
   });
 });
 
+// 리스팅 서버 자동 탐색 함수
+async function discoverListingServer() {
+  console.log('🔍 리스팅 서버 자동 탐색 중...');
+  
+  // 순차적으로 번호를 증가시키며 탐색
+  for (let i = 1; i <= 50; i++) { // 최대 50개까지 탐색
+    const serverUrl = `https://listing-server-production${i}.up.railway.app`;
+    
+    try {
+      console.log(`   시도 중: ${serverUrl}`);
+      const response = await fetch(`${serverUrl}/api/status`, {
+        method: 'GET',
+        timeout: 3000
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'running') {
+          console.log(`✅ 리스팅 서버 발견: ${serverUrl}`);
+          return serverUrl;
+        }
+      }
+    } catch (error) {
+      // 조용히 실패 - 다음 번호로 계속
+    }
+  }
+  
+  console.log('❌ 사용 가능한 리스팅 서버를 찾지 못했습니다.');
+  return null;
+}
+
 // 리스팅 서버에 중계서버 등록
 async function registerToListingServer() {
-  const listingServers = [
+  // 먼저 자동 탐색으로 리스팅 서버 찾기
+  const discoveredServer = await discoverListingServer();
+  
+  const listingServers = [];
+  if (discoveredServer) {
+    listingServers.push(discoveredServer);
+  }
+  
+  // 백업 서버들 추가
+  listingServers.push(
     'https://baekya-listing-server.railway.app',
     'http://localhost:4000'
-  ];
+  );
   
   const relayUrl = process.env.RAILWAY_PUBLIC_DOMAIN ? 
     `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 
@@ -113,6 +166,120 @@ async function registerToListingServer() {
       console.log(`❌ 리스팅 서버 등록 실패: ${listingServer} (${error.message})`);
     }
   }
+}
+
+// 핑 API (웹앱 최적화용)
+app.get('/api/ping', (req, res) => {
+  res.json({
+    success: true,
+    timestamp: Date.now(),
+    status: 'online'
+  });
+});
+
+// 검증자로 요청 전달하는 함수
+async function forwardToValidator(validator, requestData) {
+  try {
+    const { method, path, body, query, headers } = requestData;
+    
+    console.log(`🔍 검증자 타입: ${validator.type}, WebSocket 상태: ${validator.ws ? 'OK' : 'NULL'}`);
+    
+    if (validator.type === 'websocket-tunnel' && validator.ws) {
+      // WebSocket 터널을 통한 요청 전달
+      console.log(`📡 WebSocket 터널을 통한 요청 전달: ${method} ${path}`);
+      return await forwardThroughTunnel(validator.ws, requestData);
+    } else {
+      // 기존 HTTP 직접 요청 (폴백)
+      console.log(`📡 HTTP 직접 요청 전달: ${method} ${path} → ${validator.endpoint}`);
+      const validatorUrl = validator.endpoint;
+      
+      // 쿼리 파라미터 구성
+      const queryString = query && Object.keys(query).length > 0 
+        ? '?' + new URLSearchParams(query).toString() 
+        : '';
+      
+      const response = await fetch(`${validatorUrl}/api${path}${queryString}`, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Forwarded-From': 'relay-server'
+        },
+        body: method !== 'GET' && body ? JSON.stringify(body) : undefined,
+        timeout: 10000
+      });
+      
+      const data = await response.json();
+      
+      return {
+        status: response.status,
+        data: data
+      };
+    }
+  } catch (error) {
+    console.error('❌ 검증자 요청 전달 실패:', error.message);
+    return {
+      status: 500,
+      data: {
+        success: false,
+        error: '검증자 연결 실패',
+        details: error.message
+      }
+    };
+  }
+}
+
+// WebSocket 터널을 통한 HTTP 요청 전달
+async function forwardThroughTunnel(tunnelWs, requestData) {
+  return new Promise((resolve, reject) => {
+    const requestId = uuidv4();
+    const { method, path, body, query, headers } = requestData;
+    
+    // 요청 타임아웃 설정 (10초)
+    const timeout = setTimeout(() => {
+      pendingRequests.delete(requestId);
+      reject(new Error('터널 요청 타임아웃'));
+    }, 10000);
+    
+    // 대기 중인 요청에 등록
+    pendingRequests.set(requestId, { 
+      resolve: (data) => {
+        clearTimeout(timeout);
+        resolve({
+          status: data.status || 200,
+          data: data.body || data
+        });
+      }, 
+      reject: (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      }, 
+      timeout 
+    });
+    
+    // WebSocket을 통해 HTTP 요청 전달
+    const tunnelMessage = {
+      type: 'http_request',
+      requestId: requestId,
+      method: method,
+      path: `/api${path}`,
+      query: query,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Forwarded-From': 'relay-server',
+        ...headers
+      },
+      body: body
+    };
+    
+    try {
+      tunnelWs.send(JSON.stringify(tunnelMessage));
+      console.log(`📡 터널로 요청 전달: ${method} ${path} (${requestId})`);
+    } catch (error) {
+      clearTimeout(timeout);
+      pendingRequests.delete(requestId);
+      reject(error);
+    }
+  });
 }
 
 // 중계서버 리스트 업데이트 수신 API
@@ -213,23 +380,30 @@ app.get('/api/nodes', (req, res) => {
 // 사용자 API를 풀노드로 라우팅 (와일드카드는 맨 마지막에)
 app.all('/api/*', async (req, res) => {
   try {
-    const availableNodes = Array.from(registeredNodes.values())
-      .filter(node => Date.now() - node.lastPing < 30000); // 30초 내 ping
-    
-    if (availableNodes.length === 0) {
+    // 먼저 연결된 검증자(풀노드) 확인
+    if (!connectedValidator) {
       return res.status(503).json({
         success: false,
-        error: '사용 가능한 풀노드가 없습니다',
-        code: 'NO_NODES_AVAILABLE'
+        error: '연결된 풀노드가 없습니다',
+        code: 'NO_VALIDATOR_CONNECTED'
       });
     }
     
-    // 로드 밸런싱: 랜덤 노드 선택
-    const selectedNode = availableNodes[Math.floor(Math.random() * availableNodes.length)];
+    // 검증자 연결 상태 확인 (5분 이내)
+    if (Date.now() - connectedValidator.connectedAt > 300000) {
+      connectedValidator = null;
+      return res.status(503).json({
+        success: false,
+        error: '풀노드 연결이 만료되었습니다',
+        code: 'VALIDATOR_CONNECTION_EXPIRED'
+      });
+    }
     
-    // 풀노드에게 요청 전달
+    // 연결된 풀노드로 요청 전달
     const apiPath = req.path.replace('/api', '');
-    const nodeResponse = await forwardToNode(selectedNode, {
+    console.log(`📡 풀노드로 요청 전달: ${req.method} ${apiPath} → ${connectedValidator.endpoint}`);
+    
+    const nodeResponse = await forwardToValidator(connectedValidator, {
       method: req.method,
       path: apiPath,
       headers: req.headers,
@@ -255,11 +429,68 @@ app.all('/api/*', async (req, res) => {
 // WebSocket 연결 처리
 wss.on('connection', (ws, req) => {
   const connectionId = uuidv4();
-  let connectionType = null; // 'node' 또는 'user'
+  let connectionType = null; // 'node', 'user', 또는 'tunnel'
   let nodeId = null;
   let sessionId = null;
   
   console.log(`🔌 새로운 WebSocket 연결: ${connectionId}`);
+  
+  // URL 경로로 터널 연결인지 확인
+  if (req.url === '/tunnel') {
+    connectionType = 'tunnel';
+    tunnelConnection = ws;
+    console.log('🔄 WebSocket 터널 연결 설정됨');
+    
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message);
+        
+        if (data.type === 'tunnel_auth') {
+          // 터널 인증
+          if (data.password === RELAY_PASSWORD) {
+            connectedValidator = {
+              type: 'websocket-tunnel',
+              ws: ws,
+              nodeId: data.nodeId,
+              endpoint: data.endpoint
+            };
+            
+            ws.send(JSON.stringify({
+              type: 'tunnel_auth_response',
+              success: true,
+              message: '터널 인증 성공'
+            }));
+            
+            console.log(`✅ WebSocket 터널 인증 성공: ${data.nodeId}`);
+          } else {
+            ws.send(JSON.stringify({
+              type: 'tunnel_auth_response',
+              success: false,
+              message: '터널 인증 실패'
+            }));
+            ws.close();
+          }
+        } else if (data.type === 'http_response') {
+          // HTTP 응답을 대기 중인 요청에 전달
+          if (pendingRequests.has(data.requestId)) {
+            const { resolve } = pendingRequests.get(data.requestId);
+            pendingRequests.delete(data.requestId);
+            resolve(data);
+          }
+        }
+      } catch (error) {
+        console.error('❌ 터널 메시지 파싱 오류:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('🔌 WebSocket 터널 연결 종료');
+      tunnelConnection = null;
+      connectedValidator = null;
+    });
+    
+    return; // 일반 WebSocket 로직으로 진행하지 않음
+  }
   
   ws.on('message', (message) => {
     try {
@@ -566,6 +797,16 @@ setInterval(() => {
   }
 }, 300000);
 
+// WebSocket 터널 엔드포인트 추가
+app.get('/tunnel', (req, res) => {
+  // WebSocket 터널 업그레이드 요청 처리
+  if (req.headers.upgrade === 'websocket') {
+    console.log('🔄 WebSocket 터널 업그레이드 요청');
+  } else {
+    res.status(400).json({ error: 'WebSocket upgrade required' });
+  }
+});
+
 // 서버 시작
 server.listen(port, () => {
   console.log('🚀 백야 프로토콜 P2P 네트워크 중계 서버 시작');
@@ -588,13 +829,18 @@ server.listen(port, () => {
     console.log(`   • 활성 세션: ${userSessions.size}개`);
     console.log(`   • WebSocket 연결: ${wss.clients.size}개`);
     
+    // 연결된 검증자(풀노드) 상태 표시
+    if (connectedValidator) {
+      console.log(`   ✅ 검증자 연결됨: ${connectedValidator.nodeId} (${connectedValidator.endpoint})`);
+    } else {
+      console.log(`   ⚠️ 연결된 검증자가 없습니다`);
+    }
+    
     if (onlineNodes.length > 0) {
-      console.log(`   • 노드 목록:`);
+      console.log(`   • WebSocket 노드 목록:`);
       onlineNodes.forEach(node => {
         console.log(`     - ${node.info.id} (${node.info.endpoint})`);
       });
-    } else {
-      console.log(`   ⚠️ 연결된 풀노드가 없습니다`);
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

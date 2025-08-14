@@ -160,7 +160,6 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
             console.log('✅ BROTHERHOOD DApp 초기화 완료');
   }
 
-  // 최적의 릴레이 서버 찾기
   // LocalTunnel 인증 처리 함수
   async authenticateLocalTunnel(relayUrl) {
     return new Promise((resolve, reject) => {
@@ -206,6 +205,241 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       
       document.body.appendChild(iframe);
     });
+  }
+
+  isLocalEnvironment() {
+    return window.location.hostname === 'localhost' || 
+           window.location.hostname === '127.0.0.1' ||
+           window.location.hostname.startsWith('192.168.') ||
+           window.location.hostname.startsWith('10.0.');
+  }
+
+  // 리스팅 서버 자동 탐색
+  async discoverListingServer() {
+    console.log('🔍 리스팅 서버 자동 탐색 중...');
+    
+    // 순차적으로 번호를 증가시키며 탐색
+    for (let i = 1; i <= 10; i++) {
+      const serverUrl = `https://listing-server-production${i}.up.railway.app`;
+      console.log(`   시도 중: ${serverUrl}`);
+      
+      try {
+        const response = await fetch(`${serverUrl}/api/status`, {
+          method: 'GET',
+          timeout: 3000
+        });
+        
+        if (response.ok) {
+          console.log(`✅ 리스팅 서버 발견: ${serverUrl}`);
+          return serverUrl;
+        }
+      } catch (error) {
+        console.log(`   ❌ ${serverUrl} 접속 실패`);
+      }
+    }
+    
+    console.log('⚠️ 리스팅 서버를 찾을 수 없습니다');
+    return null;
+  }
+
+  // 중계서버 목록 가져오기
+  async fetchRelayList(listingServerUrl) {
+    try {
+      const response = await fetch(`${listingServerUrl}/api/relay-list`, {
+        method: 'GET',
+        timeout: 5000
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.relays || [];
+      }
+    } catch (error) {
+      console.error('중계서버 목록 가져오기 실패:', error);
+    }
+    return [];
+  }
+
+  // 중계서버 핑 테스트
+  async pingRelay(relayUrl) {
+    const startTime = Date.now();
+    
+    try {
+      // 여러 엔드포인트 시도
+      const endpoints = ['/api/ping', '/api/status', '/health', '/'];
+      let lastError;
+      
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(`${relayUrl}${endpoint}`, {
+            method: 'GET',
+            timeout: 5000
+          });
+          
+          const latency = Date.now() - startTime;
+          
+          if (response.ok) {
+            console.log(`✅ ${relayUrl} 응답 (${endpoint}): ${response.status} - ${latency}ms`);
+            return { latency, status: 'online', url: relayUrl };
+          } else if (response.status === 503) {
+            console.log(`✅ ${relayUrl} 응답 (${endpoint}): 503 - 과부하 상태이지만 사용 가능 - ${latency}ms`);
+            return { latency, status: 'degraded', url: relayUrl };
+          }
+        } catch (error) {
+          lastError = error;
+          continue;
+        }
+      }
+      
+      throw lastError;
+      
+    } catch (error) {
+      const latency = Date.now() - startTime;
+      console.log(`❌ ${relayUrl} 핑 실패: ${error.message} - ${latency}ms`);
+      return { latency: 9999, status: 'offline', url: relayUrl };
+    }
+  }
+
+  // 최적 중계서버 찾기
+  async findOptimalRelay() {
+    this.showRelayOptimizationProgress();
+    
+    try {
+      // 1단계: 리스팅 서버 탐색
+      this.updateRelayOptimizationStep('리스팅 서버 탐색 중...');
+      const listingServerUrl = await this.discoverListingServer();
+      
+      if (!listingServerUrl) {
+        throw new Error('리스팅 서버를 찾을 수 없습니다');
+      }
+      
+      // 2단계: 중계서버 목록 가져오기
+      this.updateRelayOptimizationStep('중계서버 목록 가져오는 중...');
+      const relayList = await this.fetchRelayList(listingServerUrl);
+      
+      if (relayList.length === 0) {
+        throw new Error('사용 가능한 중계서버가 없습니다');
+      }
+      
+      // 3단계: 핑 테스트
+      this.updateRelayOptimizationStep(`${relayList.length}개 중계서버에 핑 테스트 중...`);
+      console.log(`📊 ${relayList.length}개 중계서버에 핑 테스트 중...`);
+      
+      const pingPromises = relayList.map(relay => this.pingRelay(relay.url));
+      const pingResults = await Promise.all(pingPromises);
+      
+      // 온라인이거나 성능 저하 상태인 서버들만 필터링
+      const availableRelays = pingResults.filter(result => 
+        result.status === 'online' || result.status === 'degraded'
+      );
+      
+      if (availableRelays.length === 0) {
+        console.log('⚠️ 온라인 중계서버가 없습니다. 하드코딩된 서버로 폴백합니다.');
+        
+        // 하드코딩된 Railway 서버들로 폴백
+        const fallbackServers = [
+          'https://baekya-relay-production.up.railway.app',
+          'https://baekya-relay-production1.up.railway.app',
+          'https://baekya-relay-production2.up.railway.app'
+        ];
+        
+        this.updateRelayOptimizationStep('폴백 서버 테스트 중...');
+        
+        for (const serverUrl of fallbackServers) {
+          const result = await this.pingRelay(serverUrl);
+          if (result.status === 'online' || result.status === 'degraded') {
+            console.log(`🎯 폴백 서버 선택: ${serverUrl} (${result.latency}ms)`);
+            this.relayServerUrl = serverUrl;
+            this.hideRelayOptimizationProgress();
+            return serverUrl;
+          }
+        }
+        
+        throw new Error('모든 서버가 오프라인입니다');
+      }
+      
+      // 가장 빠른 서버 선택
+      const optimalRelay = availableRelays.reduce((fastest, current) => 
+        current.latency < fastest.latency ? current : fastest
+      );
+      
+      console.log(`🎯 최적 중계서버 선택: ${optimalRelay.url} (${optimalRelay.latency}ms)`);
+      this.relayServerUrl = optimalRelay.url;
+      
+      this.hideRelayOptimizationProgress();
+      return optimalRelay.url;
+      
+    } catch (error) {
+      console.error('❌ 중계서버 최적화 실패:', error);
+      this.hideRelayOptimizationProgress();
+      
+      // 최종 폴백
+      this.relayServerUrl = 'https://baekya-relay-production.up.railway.app';
+      console.log(`🔄 최종 폴백: ${this.relayServerUrl}`);
+      return this.relayServerUrl;
+    }
+  }
+
+  // 중계서버 최적화 진행상황 UI
+  showRelayOptimizationProgress() {
+    const modal = document.getElementById('biometricModal');
+    const content = modal.querySelector('.modal-content');
+    
+    content.innerHTML = `
+      <div class="relay-optimization">
+        <div class="optimization-icon">🔍</div>
+        <h3>최적의 중계서버 탐색 중...</h3>
+        <div class="optimization-status" id="optimizationStatus">
+          서버 탐색을 시작합니다...
+        </div>
+        <div class="optimization-progress">
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  updateRelayOptimizationStep(step) {
+    const statusEl = document.getElementById('optimizationStatus');
+    if (statusEl) {
+      statusEl.textContent = step;
+    }
+    console.log(`🔄 ${step}`);
+  }
+
+  hideRelayOptimizationProgress() {
+    // 최적화 프로세스 완료 - 모달 내용을 원래 상태로 복원
+    console.log('🔄 중계서버 최적화 완료');
+    
+    const modal = document.getElementById('biometricModal');
+    if (modal) {
+      const content = modal.querySelector('.modal-content');
+      if (content) {
+        content.innerHTML = `
+          <div class="modal-header">
+            <h3>아이디 인증 진행 중</h3>
+            <button class="modal-close" onclick="window.dapp.closeBiometricModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="biometric-progress">
+              <div class="step active" id="stepFingerprint">
+                <i class="fas fa-user-check"></i>
+                <span>아이디 확인</span>
+              </div>
+              <div class="step" id="stepComplete">
+                <i class="fas fa-check-circle"></i>
+                <span>완료</span>
+              </div>
+            </div>
+            <div class="progress-message" id="progressMessage">
+              아이디 인증을 시작합니다...
+            </div>
+          </div>
+        `;
+      }
+    }
   }
 
   async getOptimalRelayServer() {
@@ -292,12 +526,8 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   getFetchOptions(method = 'GET', body = null) {
     const options = {
       method,
-      credentials: 'include', // LocalTunnel 인증 쿠키 포함
       headers: {
-        'Content-Type': 'application/json',
-        'Bypass-Tunnel-Reminder': 'true',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+        'Content-Type': 'application/json'
       }
     };
     
@@ -620,7 +850,8 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           console.log('✅ 내 지갑 업데이트 적용:', data.wallet.balances);
           
           // 토큰 잔액 UI 업데이트
-          this.updateTokenBalances(data.wallet.balances);
+          // 지갑 정보 강제 새로고침
+          this.updateTokenBalances(true);
           
           // 블록 생성 보상 알림
           if (data.newBlock && data.newBlock.validator === this.currentUser.did) {
@@ -1416,16 +1647,32 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
 
   // 아이디 인증 관련 메서드
   async startUserAuth() {
-    console.log('🔐 아이디 인증 시작...');
+    console.log('🔐 사용자 인증 시작...');
     
     const modal = document.getElementById('biometricModal');
+    if (!modal) {
+      console.error('❌ biometricModal 요소를 찾을 수 없습니다');
+      this.showErrorMessage('모달 요소를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
+      return;
+    }
     
     // 기존 모달 내용 초기화
     this.resetBiometricModal();
     
     modal.classList.add('active');
     
+    // 모달이 완전히 활성화될 때까지 잠시 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     try {
+      // 로컬 환경이 아닌 경우 중계서버 최적화 먼저 실행
+      if (!this.isLocalEnvironment()) {
+        console.log('🌐 원격 환경 - 중계서버 최적화 시작');
+        await this.findOptimalRelay();
+      } else {
+        console.log('🏠 로컬 환경 - 직접 연결 모드');
+      }
+      
       // 로그인/회원가입 선택 화면 표시
       const authMode = await this.showAuthModeSelection();
       
@@ -1470,13 +1717,16 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   resetBiometricModal() {
     const modalBody = document.querySelector('#biometricModal .modal-body');
     
-    // 동적으로 추가된 모든 요소 제거
-    const dynamicElements = modalBody.querySelectorAll('.password-setup, .invite-code-setup, .personal-info-setup, .user-id-setup, .auth-mode-selection');
-    dynamicElements.forEach(element => element.remove());
-    
-    // 모든 step 초기화
-    const steps = document.querySelectorAll('.step');
-    steps.forEach(step => step.classList.remove('active'));
+    // modalBody가 존재할 때만 처리
+    if (modalBody) {
+      // 동적으로 추가된 모든 요소 제거
+      const dynamicElements = modalBody.querySelectorAll('.password-setup, .invite-code-setup, .personal-info-setup, .user-id-setup, .auth-mode-selection');
+      dynamicElements.forEach(element => element.remove());
+      
+      // 모든 step 초기화
+      const steps = document.querySelectorAll('.step');
+      steps.forEach(step => step.classList.remove('active'));
+    }
     
     // 첫 번째 step 활성화
     const stepFingerprint = document.getElementById('stepFingerprint');
@@ -1493,7 +1743,10 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       const progressMessage = document.getElementById('progressMessage');
       const modalBody = document.querySelector('#biometricModal .modal-body');
       
-              progressMessage.textContent = 'BROTHERHOOD에 오신 것을 환영합니다!';
+      // progressMessage가 존재할 때만 설정
+      if (progressMessage) {
+        progressMessage.textContent = 'BROTHERHOOD에 오신 것을 환영합니다!';
+      }
       
       // 선택 UI 추가
       const authSelection = document.createElement('div');
@@ -1522,20 +1775,27 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         </div>
       `;
       
-      modalBody.appendChild(authSelection);
+      // modalBody가 존재할 때만 추가
+      if (modalBody) {
+        modalBody.appendChild(authSelection);
+      }
       
       const loginBtn = document.getElementById('selectLoginBtn');
       const registerBtn = document.getElementById('selectRegisterBtn');
       
-      loginBtn.addEventListener('click', () => {
-        authSelection.remove();
-        resolve('login');
-      });
+      if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+          authSelection.remove();
+          resolve('login');
+        });
+      }
       
-      registerBtn.addEventListener('click', () => {
-        authSelection.remove();
-        resolve('register');
-      });
+      if (registerBtn) {
+        registerBtn.addEventListener('click', () => {
+          authSelection.remove();
+          resolve('register');
+        });
+      }
     });
   }
 
@@ -1545,7 +1805,10 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       const progressMessage = document.getElementById('progressMessage');
       const modalBody = document.querySelector('#biometricModal .modal-body');
       
-      progressMessage.textContent = '로그인 정보를 입력해주세요...';
+      // progressMessage 안전 체크
+      if (progressMessage) {
+        progressMessage.textContent = '로그인 정보를 입력해주세요...';
+      }
       
       // 로그인 UI 추가
       const loginSetup = document.createElement('div');
@@ -1568,24 +1831,30 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         </div>
       `;
       
-      modalBody.appendChild(loginSetup);
+      // modalBody 안전 체크
+      if (modalBody) {
+        modalBody.appendChild(loginSetup);
+      }
       
       const loginBtn = document.getElementById('loginBtn');
       const userIdInput = document.getElementById('loginUserId');
       const passwordInput = document.getElementById('loginPassword');
       
-      // 엔터키 이벤트
+      // 엔터키 이벤트 - 안전 체크
       [userIdInput, passwordInput].forEach(input => {
-        input.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
-            loginBtn.click();
-          }
-        });
+        if (input && loginBtn) {
+          input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              loginBtn.click();
+            }
+          });
+        }
       });
       
-      loginBtn.addEventListener('click', async () => {
-        const userId = userIdInput.value.trim();
-        const password = passwordInput.value;
+      if (loginBtn && userIdInput && passwordInput) {
+        loginBtn.addEventListener('click', async () => {
+          const userId = userIdInput.value.trim();
+          const password = passwordInput.value;
         
         if (!userId) {
           alert('아이디를 입력해주세요.');
@@ -1604,20 +1873,17 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         }
         
         try {
-          // 새로운 릴레이 시스템을 통한 로그인
-          const apiBase = await this.getOptimalRelayServer();
-          console.log('🔗 사용할 릴레이 서버:', apiBase);
+          // 이미 최적화된 중계서버 사용
+          const apiBase = this.relayServerUrl;
+          console.log('🔗 사용할 중계서버:', apiBase);
           
           // 서버 API로 로그인 요청
           const deviceUUID = window.deviceUUIDManager.getDeviceUUID();
           const response = await fetch(`${apiBase}/api/login`, {
             method: 'POST',
-            credentials: 'include', // LocalTunnel 인증 쿠키 포함
             headers: {
               'Content-Type': 'application/json',
-              'X-Device-UUID': deviceUUID,
-              'Bypass-Tunnel-Reminder': 'true',
-              'Cache-Control': 'no-cache'
+              'X-Device-UUID': deviceUUID
             },
             body: JSON.stringify({
               username: userId,
@@ -1772,7 +2038,8 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
           passwordInput.value = '';
           passwordInput.focus();
         }
-      });
+        });
+      }
     });
   }
 
@@ -2181,11 +2448,8 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       // 서버 API 호출 (LocalTunnel 인증 포함)
       const response = await fetch(`${this.apiBase}/check-userid`, {
         method: 'POST',
-        credentials: 'include', // LocalTunnel 인증 쿠키 포함
         headers: { 
-          'Content-Type': 'application/json',
-          'Bypass-Tunnel-Reminder': 'true',
-          'Cache-Control': 'no-cache'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ userId })
       });
@@ -2595,11 +2859,8 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       // 서버 API 호출 시뮬레이션 (LocalTunnel 인증 포함)
       const response = await fetch(`${this.apiBase}/check-biometric`, {
         method: 'POST',
-        credentials: 'include', // LocalTunnel 인증 쿠키 포함
         headers: {
-          'Content-Type': 'application/json',
-          'Bypass-Tunnel-Reminder': 'true',
-          'Cache-Control': 'no-cache'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           fingerprintHash: fingerprintHash
@@ -3052,9 +3313,9 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         throw new Error('디바이스 초기화가 완료되지 않았습니다. 잠시 후 다시 시도해주세요.');
       }
 
-      // 릴레이 서버 선택 (로그인과 동일한 프로세스)
-      const apiBase = await this.getOptimalRelayServer();
-      console.log('🔗 회원가입용 릴레이 서버:', apiBase);
+      // 이미 최적화된 중계서버 사용 (로그인과 동일한 프로세스)
+      const apiBase = this.relayServerUrl;
+      console.log('🔗 회원가입용 중계서버:', apiBase);
 
       // 아이디/비밀번호 데이터를 기반으로 DID 생성 요청 (새로운 SimpleAuth API)
       const userData = {
@@ -3073,12 +3334,9 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
 
       const response = await fetch(`${apiBase}/api/register`, {
         method: 'POST',
-        credentials: 'include', // LocalTunnel 인증 쿠키 포함
         headers: {
           'Content-Type': 'application/json',
-          'X-Device-UUID': userData.deviceUUID,
-          'Bypass-Tunnel-Reminder': 'true',
-          'Cache-Control': 'no-cache'
+          'X-Device-UUID': userData.deviceUUID
         },
         body: JSON.stringify({ userData })
       });
@@ -3372,12 +3630,18 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
 
   closeBiometricModal() {
     const modal = document.getElementById('biometricModal');
-    modal.classList.remove('active');
-    
-    // 상태 리셋
-    const steps = document.querySelectorAll('.step');
-    steps.forEach(step => step.classList.remove('active'));
-    document.getElementById('stepFingerprint').classList.add('active');
+    if (modal) {
+      modal.classList.remove('active');
+      
+      // 상태 리셋
+      const steps = document.querySelectorAll('.step');
+      steps.forEach(step => step.classList.remove('active'));
+      
+      const stepFingerprint = document.getElementById('stepFingerprint');
+      if (stepFingerprint) {
+        stepFingerprint.classList.add('active');
+      }
+    }
   }
 
   updateUserInterface() {
@@ -3966,10 +4230,8 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         if (!savedPoolAmount || !localStorage.getItem('baekya_dao_treasuries')) {
           try {
             const stateResponse = await fetch(`${this.apiBase}/protocol-state`, {
-              credentials: 'include',
               headers: {
-                'Bypass-Tunnel-Reminder': 'true',
-                'Cache-Control': 'no-cache'
+                'Content-Type': 'application/json'
               }
             });
             if (stateResponse.ok) {
@@ -4290,12 +4552,22 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         transactionHistorySection.style.display = 'block';
       }
       
-      await this.updateTokenBalances();
+      await this.updateTokenBalances(true); // 강제 새로고침
       this.updateAddressDisplay();
       this.setupTransferForm();
       
       // 기여 데이터 로드
       this.loadUserContributions();
+      
+      // 30초마다 지갑 정보 자동 갱신
+      if (this.walletRefreshInterval) {
+        clearInterval(this.walletRefreshInterval);
+      }
+      this.walletRefreshInterval = setInterval(() => {
+        if (this.isAuthenticated && this.currentUser) {
+          this.updateTokenBalances(true);
+        }
+      }, 30000);
       
       // BMR 시스템 제거로 해당 코드 삭제
     }
@@ -4371,12 +4643,9 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
       // 서버 API 호출 (LocalTunnel 인증 포함)
       const response = await fetch(`${this.apiBase}/transfer`, {
         method: 'POST',
-        credentials: 'include', // LocalTunnel 인증 쿠키 포함
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.sessionId}`,
-          'Bypass-Tunnel-Reminder': 'true',
-          'Cache-Control': 'no-cache'
+          'Authorization': `Bearer ${this.sessionId}`
         },
         body: JSON.stringify({
           fromDID: this.currentUser.did,
@@ -5285,43 +5554,29 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
   // 새로운 영구 초대코드 생성 및 블록체인 저장
   async createPermanentInviteCode() {
     try {
-             // WebSocket을 통해 초대코드 생성 요청
-       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-         return new Promise((resolve, reject) => {
-           // 응답 대기를 위한 임시 핸들러
-           const tempHandler = (event) => {
-             const data = JSON.parse(event.data);
-             if (data.type === 'invite_code_response') {
-               this.ws.removeEventListener('message', tempHandler);
-               if (data.success) {
-                 console.log('새로운 초대코드가 블록체인에 저장되었습니다:', data.inviteCode);
-                 resolve(data.inviteCode);
-               } else {
-                 reject(new Error(data.error || '초대코드 생성 실패'));
-               }
-             }
-           };
-           
-           this.ws.addEventListener('message', tempHandler);
-           
-           // 초대코드 생성 요청 전송
-           this.ws.send(JSON.stringify({
-             type: 'create_invite_code',
-             userDID: this.currentUser?.did,
-             communicationAddress: this.currentUser?.communicationAddress
-           }));
-           
-           console.log('📤 초대코드 생성 요청 전송:', this.currentUser?.did);
-           
-           // 10초 타임아웃
-           setTimeout(() => {
-             this.ws.removeEventListener('message', tempHandler);
-             reject(new Error('초대코드 생성 타임아웃'));
-           }, 10000);
-         });
-       } else {
-         throw new Error('WebSocket 연결 없음');
-       }
+      // HTTP API를 통해 초대코드 생성 요청
+      console.log('📤 초대코드 생성 요청 전송:', this.currentUser?.did);
+      
+      const response = await fetch(`${this.relayServerUrl}/api/invite-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-UUID': this.deviceUUID
+        },
+        body: JSON.stringify({
+          userDID: this.currentUser?.did,
+          communicationAddress: this.currentUser?.communicationAddress
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ 새로운 초대코드가 생성되었습니다:', data.inviteCode);
+        return data.inviteCode;
+      } else {
+        throw new Error(data.error || '초대코드 생성 실패');
+      }
     } catch (error) {
       console.error('초대코드 생성 실패:', error);
       // 서버 실패 시 임시 코드 생성
@@ -5437,7 +5692,7 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
         { id: 'dca1', title: '초대 활동', criteria: '초대 받은 사용자가 DID생성', value: '50' }
       ],
       'validator-dao': [
-        { id: 'dca1', title: '블록생성', criteria: '자동검증', value: '5' }
+        { id: 'dca1', title: '블록생성', criteria: '자동검증', value: '0.25' }
       ]
     };
 
@@ -9864,11 +10119,8 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
          // 서버 API 호출 (LocalTunnel 인증 포함)
          const response = await fetch(`${this.apiBase}/dao/treasury/sponsor`, {
            method: 'POST',
-           credentials: 'include', // LocalTunnel 인증 쿠키 포함
            headers: { 
-             'Content-Type': 'application/json',
-             'Bypass-Tunnel-Reminder': 'true',
-             'Cache-Control': 'no-cache'
+             'Content-Type': 'application/json'
            },
            body: JSON.stringify({
              sponsorDID: this.currentUser.did,
@@ -20658,12 +20910,9 @@ const isLocal = !(window.Capacitor && window.Capacitor.isNativePlatform()) &&
     try {
       const response = await fetch(`${this.apiBase}/daos`, {
         method: 'POST',
-        credentials: 'include', // LocalTunnel 인증 쿠키 포함
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.currentUser.did}`,
-          'Bypass-Tunnel-Reminder': 'true',
-          'Cache-Control': 'no-cache'
+          'Authorization': `Bearer ${this.currentUser.did}`
         },
         body: JSON.stringify({
           ...daoData,
@@ -29608,11 +29857,8 @@ class GovernanceManager {
     try {
       const response = await fetch(`${window.dapp.apiBase}/governance/proposals/${proposalId}/final-vote`, {
         method: 'POST',
-        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Bypass-Tunnel-Reminder': 'true',
-          'Cache-Control': 'no-cache'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           voteType: voteType,
@@ -30851,10 +31097,8 @@ module.exports = sampleFunction;`
     
     try {
       const response = await fetch(`${window.dapp.apiBase}/governance/proposals/${proposalId}/vote/${window.dapp.currentUser.did}`, {
-        credentials: 'include',
         headers: {
-          'Bypass-Tunnel-Reminder': 'true',
-          'Cache-Control': 'no-cache'
+          'Content-Type': 'application/json'
         }
       });
       if (response.ok) {
@@ -31236,11 +31480,8 @@ window.dapp.removeAllCoreStructure = function() {
           // 서버에 투표 요청
           const response = await fetch(`${this.apiBase}/governance/proposals/${proposalId}/vote`, {
             method: 'POST',
-            credentials: 'include',
             headers: {
-              'Content-Type': 'application/json',
-              'Bypass-Tunnel-Reminder': 'true',
-              'Cache-Control': 'no-cache'
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({
               voteType: serverVoteType,
