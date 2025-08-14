@@ -1,117 +1,116 @@
-#!/usr/bin/env pwsh
+# Baekya Protocol Relay Server Deployment Script
 
-# Baekya Protocol P2P Relay Server Railway Deployment Script
+param(
+    [string]$RelayPassword
+)
 
-Write-Host "Starting Baekya Protocol P2P Relay Server Deployment" -ForegroundColor Green
-Write-Host "=============================================" -ForegroundColor Cyan
+# Set UTF-8 encoding
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Check Railway CLI
-try {
-    $railwayVersion = railway version
-    Write-Host "Railway CLI installed: $railwayVersion" -ForegroundColor Green
-} catch {
-    Write-Host "Railway CLI is not installed!" -ForegroundColor Red
-    Write-Host "Install from: https://docs.railway.app/develop/cli" -ForegroundColor Yellow
+Write-Host "Baekya Protocol Relay Server Deployment Started" -ForegroundColor Green
+Write-Host "=============================================" -ForegroundColor Green
+
+# Check Railway CLI installation
+$railwayInstalled = Get-Command railway -ErrorAction SilentlyContinue
+if (-not $railwayInstalled) {
+    Write-Host "ERROR: Railway CLI is not installed." -ForegroundColor Red
+    Write-Host "Install with: npm install -g @railway/cli" -ForegroundColor Yellow
+    Write-Host "Or PowerShell: iwr -useb https://railway.app/install.ps1 | iex" -ForegroundColor Yellow
     exit 1
 }
+
+Write-Host "Railway CLI found" -ForegroundColor Green
 
 # Check Railway login
-Write-Host "`nChecking Railway login..." -ForegroundColor Blue
 try {
-    railway whoami
-    Write-Host "Logged in to Railway" -ForegroundColor Green
-} catch {
-    Write-Host "Railway login required" -ForegroundColor Yellow
-    railway login
-}
-
-# Check project connection
-Write-Host "`nChecking Railway project connection..." -ForegroundColor Blue
-$projectLinked = $false
-try {
-    railway status
-    $projectLinked = $true
-    Write-Host "Connected to Railway project" -ForegroundColor Green
-} catch {
-    Write-Host "Railway project connection required" -ForegroundColor Yellow
-}
-
-if (-not $projectLinked) {
-    Write-Host "`nRailway Project Selection:" -ForegroundColor Cyan
-    Write-Host "1. Create new project" -ForegroundColor White
-    Write-Host "2. Link existing project" -ForegroundColor White
-    
-    $choice = Read-Host "Select (1 or 2)"
-    
-    if ($choice -eq "1") {
-        Write-Host "`nCreating new Railway project..." -ForegroundColor Blue
-        railway init
-    } else {
-        Write-Host "`nLinking to existing project..." -ForegroundColor Blue
-        railway link
+    $loginStatus = railway whoami 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Railway login required." -ForegroundColor Red
+        Write-Host "Please run: railway login" -ForegroundColor Yellow
+        exit 1
     }
-}
-
-# Set environment variables
-Write-Host "`nSetting environment variables..." -ForegroundColor Blue
-
-# PORT is automatically set by Railway
-Write-Host "PORT: Automatically set by Railway" -ForegroundColor Green
-
-# Set NODE_ENV
-railway variables set NODE_ENV=production
-Write-Host "NODE_ENV: production" -ForegroundColor Green
-
-# Service name
-$serviceName = "baekya-relay"
-Write-Host "`nService name: $serviceName" -ForegroundColor Cyan
-
-# Deployment settings
-Write-Host "`nDeployment settings:" -ForegroundColor Cyan
-Write-Host "   Start command: node p2p-relay-server.js" -ForegroundColor White
-Write-Host "   Health check: /api/relay-status" -ForegroundColor White
-
-# Start deployment
-Write-Host "`nStarting Railway deployment..." -ForegroundColor Blue
-Write-Host "=============================================" -ForegroundColor Cyan
-
-try {
-    # Deploy to Railway
-    railway up --service $serviceName
-    
-    Write-Host "`nDeployment started!" -ForegroundColor Green
-    Write-Host "Check deployment status: railway logs -f" -ForegroundColor Yellow
-    
-    # Get deployment URL
-    Write-Host "`nGetting deployment URL..." -ForegroundColor Blue
-    Start-Sleep -Seconds 5
-    
-    try {
-        $status = railway status --json | ConvertFrom-Json
-        $deployUrl = $status.domains[0]
-        
-        if ($deployUrl) {
-            Write-Host "Relay server URL: https://$deployUrl" -ForegroundColor Green
-            Write-Host "`nUpdate webapp config:" -ForegroundColor Yellow
-            Write-Host "   window.RELAY_SERVER_URL = 'https://$deployUrl';" -ForegroundColor White
-        }
-    } catch {
-        Write-Host "Cannot get URL automatically" -ForegroundColor Yellow
-        Write-Host "   Check Railway dashboard" -ForegroundColor Yellow
-    }
-    
 } catch {
-    Write-Host "Deployment failed!" -ForegroundColor Red
-    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "ERROR: Railway login required." -ForegroundColor Red
+    Write-Host "Please run: railway login" -ForegroundColor Yellow
     exit 1
 }
 
-Write-Host "`n=============================================" -ForegroundColor Cyan
-Write-Host "Relay server deployment complete!" -ForegroundColor Green
-Write-Host "`nMonitoring:" -ForegroundColor Yellow
-Write-Host "   - Logs: railway logs -f" -ForegroundColor White
-Write-Host "   - Dashboard: https://railway.app/dashboard" -ForegroundColor White
-Write-Host "   - Health check: https://[your-domain]/api/relay-status" -ForegroundColor White
-Write-Host "`nFullnode connection:" -ForegroundColor Yellow
-Write-Host "   Set env: RELAY_SERVER_URL=https://[your-domain]" -ForegroundColor White
-Write-Host "   Or direct mode: DIRECT_MODE=true" -ForegroundColor White 
+Write-Host "Railway authentication verified" -ForegroundColor Green
+
+# Get relay password if not provided
+if (-not $RelayPassword) {
+    $RelayPassword = Read-Host "Enter relay server password (8+ characters, alphanumeric)"
+    if ($RelayPassword.Length -lt 8) {
+        Write-Host "ERROR: Password must be at least 8 characters." -ForegroundColor Red
+        exit 1
+    }
+}
+
+# Set default location (Seoul, Korea)
+$RelayLocation = "37.5665,126.9780"
+
+Write-Host ""
+Write-Host "Deployment Configuration:" -ForegroundColor Cyan
+Write-Host "  Password: $('*' * $RelayPassword.Length)" -ForegroundColor Cyan
+Write-Host "  Location: Seoul, Korea (default)" -ForegroundColor Cyan
+Write-Host ""
+
+$confirm = Read-Host "Proceed with deployment? (y/N)"
+if ($confirm -ne 'y' -and $confirm -ne 'Y') {
+    Write-Host "Deployment cancelled." -ForegroundColor Yellow
+    exit 0
+}
+
+try {
+    Write-Host "Starting relay server deployment..." -ForegroundColor Green
+    
+    # Initialize Railway project
+    Write-Host "Initializing Railway project..." -ForegroundColor Yellow
+    railway init --name "baekya-relay-$(Get-Random -Maximum 9999)"
+    
+    # Set environment variables
+    Write-Host "Setting environment variables..." -ForegroundColor Yellow
+    railway variables --set "RELAY_PASSWORD=$RelayPassword"
+    railway variables --set "RELAY_LOCATION=$RelayLocation"
+    railway variables --set "NODE_ENV=production"
+    
+    # Backup and replace package.json
+    Write-Host "Preparing deployment configuration..." -ForegroundColor Yellow
+    Copy-Item "package.json" "package.json.backup"
+    Copy-Item "railway-relay.json" "package.json"
+    
+    # Deploy
+    Write-Host "Deploying to Railway..." -ForegroundColor Yellow
+    railway up
+    
+    # Restore package.json
+    Move-Item "package.json.backup" "package.json" -Force
+    
+    # Check deployment status
+    Start-Sleep -Seconds 5
+    Write-Host "Checking deployment status..." -ForegroundColor Yellow
+    $deployInfo = railway status
+    
+    Write-Host ""
+    Write-Host "Relay Server Deployment Complete!" -ForegroundColor Green
+    Write-Host "=================================" -ForegroundColor Green
+    Write-Host "Deployment Info:" -ForegroundColor Cyan
+    Write-Host $deployInfo
+    Write-Host ""
+    Write-Host "IMPORTANT: Copy the relay server URL for full node connection!" -ForegroundColor Yellow
+    Write-Host "Railway Dashboard: https://railway.app/dashboard" -ForegroundColor Yellow
+    
+} catch {
+    Write-Host "ERROR during deployment: $($_.Exception.Message)" -ForegroundColor Red
+    
+    # Restore package.json on error
+    if (Test-Path "package.json.backup") {
+        Move-Item "package.json.backup" "package.json" -Force
+    }
+    
+    exit 1
+}
+
+Write-Host ""
+Write-Host "Deployment script completed successfully" -ForegroundColor Green

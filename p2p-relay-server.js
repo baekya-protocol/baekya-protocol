@@ -12,6 +12,12 @@ const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// 중계서버 설정
+const RELAY_PASSWORD = process.env.RELAY_PASSWORD || 'default-password';
+const RELAY_LOCATION = process.env.RELAY_LOCATION || '37.5665,126.9780'; // 서울 기본값
+let isAuthenticated = false;
+let connectedValidator = null;
+
 // 등록된 풀노드들 관리
 const registeredNodes = new Map(); // nodeId -> { ws, info, lastPing }
 const userSessions = new Map(); // sessionId -> { nodeId, ws, userDID }
@@ -23,6 +29,144 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// 중계서버 인증 API
+app.post('/api/auth', (req, res) => {
+  const { password, nodeType, nodeId, endpoint } = req.body;
+  
+  if (!password) {
+    return res.status(400).json({
+      success: false,
+      error: '비밀번호가 필요합니다'
+    });
+  }
+  
+  if (password !== RELAY_PASSWORD) {
+    return res.status(401).json({
+      success: false,
+      error: '잘못된 비밀번호입니다'
+    });
+  }
+  
+  isAuthenticated = true;
+  
+  if (nodeType === 'validator' && nodeId && endpoint) {
+    connectedValidator = {
+      nodeId: nodeId,
+      endpoint: endpoint,
+      connectedAt: Date.now()
+    };
+    
+    console.log(`✅ 검증자 노드 인증 성공: ${nodeId} (${endpoint})`);
+    
+    // 리스팅 서버에 등록
+    registerToListingServer();
+  }
+  
+  res.json({
+    success: true,
+    message: '인증 성공',
+    relayInfo: {
+      location: RELAY_LOCATION,
+      connectedAt: Date.now()
+    }
+  });
+});
+
+// 리스팅 서버에 중계서버 등록
+async function registerToListingServer() {
+  const listingServers = [
+    'https://baekya-listing-server.railway.app',
+    'http://localhost:4000'
+  ];
+  
+  const relayUrl = process.env.RAILWAY_PUBLIC_DOMAIN ? 
+    `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 
+    `http://localhost:${port}`;
+  
+  for (const listingServer of listingServers) {
+    try {
+      const response = await fetch(`${listingServer}/api/register-relay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          url: relayUrl,
+          location: RELAY_LOCATION,
+          nodeInfo: {
+            relayId: uuidv4(),
+            connectedValidator: connectedValidator,
+            capabilities: ['block_propagation', 'transaction_relay'],
+            version: '1.0.0'
+          },
+          timestamp: Date.now()
+        }),
+        timeout: 5000
+      });
+      
+      if (response.ok) {
+        console.log(`✅ 리스팅 서버 등록 성공: ${listingServer}`);
+        break;
+      }
+    } catch (error) {
+      console.log(`❌ 리스팅 서버 등록 실패: ${listingServer} (${error.message})`);
+    }
+  }
+}
+
+// 중계서버 리스트 업데이트 수신 API
+app.post('/api/relay-list-update', (req, res) => {
+  const { type, relays, timestamp, source } = req.body;
+  
+  if (type === 'relay_list_update') {
+    console.log(`📡 리스트 업데이트 수신: ${relays.length}개 중계서버 (from: ${source})`);
+    
+    // 리스트 정보를 메모리에 저장 (필요시 사용)
+    global.relayList = relays;
+    global.lastListUpdate = timestamp;
+  }
+  
+  res.json({
+    success: true,
+    message: '리스트 업데이트 수신 완료'
+  });
+});
+
+// 블록 전파 수신 API
+app.post('/api/block-propagation', (req, res) => {
+  const { type, block, validatorDID, timestamp } = req.body;
+  
+  if (type === 'block_propagation' && block) {
+    console.log(`📦 블록 #${block.index} 전파 수신 (검증자: ${validatorDID?.substring(0, 8)}...)`);
+    
+    // 연결된 클라이언트들에게 블록 정보 전파
+    broadcastToClients({
+      type: 'new_block',
+      block: block,
+      validatorDID: validatorDID,
+      timestamp: timestamp
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: '블록 전파 완료'
+  });
+});
+
+// 클라이언트들에게 메시지 브로드캐스트
+function broadcastToClients(message) {
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      try {
+        client.send(JSON.stringify(message));
+      } catch (error) {
+        console.warn('⚠️ 클라이언트 브로드캐스트 실패:', error.message);
+      }
+    }
+  });
+}
 
 // 중계 서버 상태 확인 (Healthcheck용 - 항상 200 응답)
 app.get('/api/relay-status', (req, res) => {
