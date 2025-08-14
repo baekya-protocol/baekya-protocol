@@ -73,7 +73,7 @@ services:
     # Backup and replace package.json
     Write-Host "Preparing deployment configuration..." -ForegroundColor Yellow
     Copy-Item "package.json" "package.json.backup" -Force
-    Copy-Item "railway-listing.json" "package.json" -Force
+    Copy-Item "render-listing.json" "package.json" -Force
     
     # Create deployment branch
     Write-Host "Creating deployment branch..." -ForegroundColor Yellow
